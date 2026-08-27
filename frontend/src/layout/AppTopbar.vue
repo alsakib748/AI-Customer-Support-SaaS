@@ -1,8 +1,32 @@
 <script setup>
+import { ref } from 'vue';
 import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
+import { useAuthStore } from '@/stores/auth.js';
+import { toast } from 'vue3-toastify';
+import { useRoute } from 'vue-router';
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
+
+const authStore = useAuthStore();
+const route = useRoute();
+
+const profileModal = ref(false);
+
+const profileView = () => {
+    profileModal.value = !profileModal.value;
+};
+
+const Logout = async () => {
+    try {
+        await authStore.logout();
+        route.push('/login');
+        toast.success('User logout successfully');
+    } catch (e) {
+        console.error('Login failed', e);
+    }
+}
+
 </script>
 
 <template>
@@ -53,7 +77,7 @@ const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
                 <i class="pi pi-ellipsis-v"></i>
             </button>
 
-            <div class="layout-topbar-menu hidden lg:block">
+            <div class="layout-topbar-menu hidden relative lg:block">
                 <div class="layout-topbar-menu-content">
                     <button type="button" class="layout-topbar-action">
                         <i class="pi pi-calendar"></i>
@@ -63,12 +87,35 @@ const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
                         <i class="pi pi-inbox"></i>
                         <span>Messages</span>
                     </button>
-                    <button type="button" class="layout-topbar-action">
+                    <button @click="profileView" type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
                         <span>Profile</span>
                     </button>
+
                 </div>
+
+                <div v-if="profileModal"
+                    class="max-w-sm rounded-md overflow-hidden shadow-lg absolute right-0 sm:top-24 md:top-13 bg-white">
+                    <a href="" class="">
+                        <div class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer">
+                            <i class="pi pi-user"></i>
+                            <span class="ms-2">My Profile</span>
+                        </div>
+                    </a>
+                    <form @submit.prevent="Logout" method="POST">
+                        <button type="submit" class="">
+                            <div class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer">
+                                <i class="pi pi-sign-out"></i>
+                                <span class="ms-2">Log Out</span>
+                            </div>
+                        </button>
+                    </form>
+                </div>
+
             </div>
+
+
+
         </div>
     </div>
 </template>

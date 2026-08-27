@@ -30,6 +30,9 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+
+        // dd($request);
+
         try {
             $result = $this->authService->register($request->all());
 
@@ -39,7 +42,10 @@ class AuthController extends Controller
                 'user',
                 $result['user']['id'],
                 null,
-                ['email' => $result['user']['email']]
+                [
+                    'email' => $result['user']['email'],
+                    'company' => $result['tenant']['name'],
+                ]
             );
 
             return response()->json([
@@ -48,6 +54,17 @@ class AuthController extends Controller
                 'data' => $result,
             ], 201);
         } catch (ValidationException $e) {
+
+            // Log failed registration attempt
+            $this->auditLogService->log(
+                'user_registration_failed',
+                null,
+                null,
+                null,
+                ['email' => $request->email],
+                ['reason' => 'Validation failed']
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -73,12 +90,22 @@ class AuthController extends Controller
 
             $result = $this->authService->login($request->only(['email', 'password']));
 
-            // Log login
-            // $this->auditLogService->log(
-            //     'user_logged_in',
-            //     'user',
-            //     $result['user']['id']
-            // );
+            // Log successful login
+            $this->auditLogService->log(
+                'user_logged_in',
+                'user',
+                $result['user']['id'],
+                null,
+                [
+                    'email' => $result['user']['email'],
+                    'ip' => $request->ip(),
+                ],
+                [
+                    'login_method' => 'password',
+                    'user_agent' => $request->userAgent(),
+                ]
+            );
+
 
             return response()->json([
                 'success' => true,
@@ -87,6 +114,16 @@ class AuthController extends Controller
             ]);
         } catch (ValidationException $e) {
             Log::warning('Login validation failed', ['errors' => $e->errors()]);
+
+            // Log failed login attempt
+            $this->auditLogService->log(
+                'user_login_failed',
+                'user',
+                null,
+                null,
+                ['email' => $request->email],
+                ['reason' => 'Invalid credentials']
+            );
 
             return response()->json([
                 'success' => false,
@@ -104,36 +141,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Determine error type for frontend handling
-     */
-    private function getErrorType(array $errors): string
-    {
-        $allErrors = [];
-        foreach ($errors as $field => $messages) {
-            $allErrors = array_merge($allErrors, $messages);
-        }
-
-        $errorString = implode(' ', $allErrors);
-
-        if (strpos($errorString, 'No account found') !== false) {
-            return 'user_not_found';
-        }
-        if (strpos($errorString, 'deactivated') !== false) {
-            return 'account_inactive';
-        }
-        if (strpos($errorString, 'verify your email') !== false) {
-            return 'email_not_verified';
-        }
-        if (strpos($errorString, 'password is incorrect') !== false) {
-            return 'invalid_password';
-        }
-        if (strpos($errorString, 'Invalid email or password') !== false) {
-            return 'invalid_credentials';
-        }
-
-        return 'validation_error';
-    }
 
     /**
      * Logout user
@@ -145,14 +152,18 @@ class AuthController extends Controller
     {
         try {
             $user = auth()->user();
-            $this->authService->logout();
 
-            // Log logout
-            $this->auditLogService->log(
-                'user_logged_out',
-                'user',
-                $user?->id
-            );
+            if ($user) {
+                $this->auditLogService->log(
+                    'user_logged_out',
+                    'user',
+                    $user->id,
+                    null,
+                    ['email' => $user->email]
+                );
+            }
+
+            $this->authService->logout();
 
             return response()->json([
                 'success' => true,

@@ -2,9 +2,6 @@
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 import { reactive } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import { Password } from 'primevue';
-import InputText from 'primevue';
-import Checkbox from 'primevue';
 
 const authStore = useAuthStore();
 
@@ -17,7 +14,9 @@ const form = reactive({
 const handleLogin = async () => {
     try {
         await authStore.login(form);
-    } catch (err) { }
+    } catch (err) {
+        console.error('Login error: ', err);
+    }
 };
 </script>
 
@@ -48,7 +47,7 @@ const handleLogin = async () => {
                             </g>
                         </svg>
                         <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to
-                            PrimeLand!</div>
+                            AI Customer Support!</div>
                         <span class="text-muted-color font-medium">Sign in to continue</span>
                     </div>
 
@@ -64,7 +63,7 @@ const handleLogin = async () => {
                             <Password id="password" type="password" v-model="form.password" placeholder="Password"
                                 :toggleMask="true" class="mb-4" fluid :feedback="false"></Password>
 
-                            <div class="flex items-center justify-between mt-2 mb-8 gap-8">
+                            <div class="flex items-center justify-between mt-2 mb-6 gap-8">
                                 <div class="flex items-center">
                                     <Checkbox v-model="form.remember" id="rememberme" binary class="mr-2"></Checkbox>
                                     <label for="rememberme">Remember me</label>
@@ -73,9 +72,18 @@ const handleLogin = async () => {
                                     class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot
                                     password?</span>
                             </div>
-                            <div v-if="authStore.errors" class="text-red-600 text-sm text-center pt-1 pb-2">
-                                <span class="text-lg">{{ authStore.errors }}</span>
+                            <div class="pt-2 pb-3 text-center">
+                                <router-link to="/register" class="cursor-pointer text-green-600">Don't have an account?
+                                    <span class="text-green-400 font-bold">Register</span></router-link>
                             </div>
+                            <!-- <div v-if="authStore.errors" class="text-red-600 text-sm text-center pb-2">
+                                <p v-if="authStore.errors.email" class="text-lg">{{ authStore.errors.email[0]
+                                    }}</p>
+                                <p v-if="authStore.errors.password" class="text-lg">{{ authStore.errors.password[0]
+                                }}</p>
+                                <p v-if="authStore.errors.account" class="text-lg">{{ authStore.errors.account[0]
+                                }}</p>
+                            </div> -->
                             <div>
                                 <button type="submit" :disabled="authStore.loading"
                                     class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50">

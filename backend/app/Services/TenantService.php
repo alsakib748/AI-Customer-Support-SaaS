@@ -25,36 +25,38 @@ class TenantService
         $slug = Str::slug($tenantName);
         $subdomain = $data['subdomain'] ?? Str::slug($tenantName) . '-' . Str::random(4);
 
-        // Create tenant
+        // Create tenant - Stancl will auto-generate the ID
         $tenant = Tenant::create([
-            'id' => (string) Str::uuid(),
             'name' => $tenantName,
-            'slug' => $slug . '-' . Str::random(4),
+            'slug' => $slug,
             'subdomain' => $subdomain,
             'domain' => $data['domain'] ?? null,
             'timezone' => $data['timezone'] ?? 'UTC',
             'default_language' => 'en',
             'status' => 'active',
+            'metadata' => [
+                'registered_from' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ],
+            'data' => [
+                'name' => $tenantName,
+                'slug' => $slug,
+                'subdomain' => $subdomain,
+                'domain' => $data['domain'] ?? null,
+                'timezone' => $data['timezone'] ?? 'UTC',
+                'default_language' => 'en',
+                'status' => 'active',
+            ],
         ]);
 
-        // Create domain records
-        // 1. Subdomain domain
+        // Create domain for subdomain
+        $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';
         Domain::create([
-            'domain' => $subdomain . '.' . config('tenancy.central_domains')[0],
+            'domain' => $subdomain . '.' . $centralDomain,
             'tenant_id' => $tenant->id,
             'is_primary' => false,
             'status' => 'active',
         ]);
-
-        // 2. Custom domain if provided
-        if ($data['domain'] ?? false) {
-            Domain::create([
-                'domain' => $data['domain'],
-                'tenant_id' => $tenant->id,
-                'is_primary' => true,
-                'status' => 'active',
-            ]);
-        }
 
         // Assign user as owner
         TenantUser::create([
@@ -64,7 +66,7 @@ class TenantService
             'accepted_at' => now(),
         ]);
 
-        // Assign owner role in Spatie
+        // Assign owner role
         $ownerRole = Role::firstOrCreate([
             'name' => 'owner',
             'guard_name' => 'api',

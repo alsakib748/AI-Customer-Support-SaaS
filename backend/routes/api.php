@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\TenantController;
 use Illuminate\Http\Request;
@@ -60,6 +61,13 @@ Route::prefix('v1')->group(function () {
         //     Route::put('avatar', [ProfileController::class, 'updateAvatar']);
         // });
 
+        // Audit Log Routes
+        Route::prefix('audit-logs')->group(function () {
+            Route::get('/', [AuditLogController::class, 'index']);
+            Route::get('/statistics', [AuditLogController::class, 'statistics']);
+            Route::get('/users/{userId}', [AuditLogController::class, 'getUserLogs']);
+        });
+
         // Test Route - Can be removed later
         Route::get('test', function () {
             $user = auth()->user();
@@ -76,5 +84,33 @@ Route::prefix('v1')->group(function () {
                 'roles' => $user->getRoleNames(),
             ]);
         });
+
+        Route::get('/test-audit-log', function () {
+            try {
+                $auditLogService = app(\App\Services\AuditLogService::class);
+
+                $result = $auditLogService->log(
+                    'test_log',
+                    'test',
+                    1,
+                    ['old' => 'value'],
+                    ['new' => 'value'],
+                    ['test' => 'metadata']
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Audit log created',
+                    'data' => $result,
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ], 500);
+            }
+        });
+
     });
 });

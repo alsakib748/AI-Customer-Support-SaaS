@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
@@ -13,9 +14,33 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, HasDomains, SoftDeletes;
 
+    // Tell Stancl which columns are real DB columns (not packed into the central 'data' JSON)
+    public static function getCustomColumns(): array
+    {
+        return [
+            'id',
+            'name',
+            'slug',
+            'subdomain',
+            'domain',
+            'logo',
+            'favicon',
+            'industry',
+            'timezone',
+            'default_language',
+            'support_email',
+            'support_phone',
+            'business_hours',
+            'settings',
+            'status',
+            'metadata',
+            'trial_ends_at',
+            'subscription_ends_at',
+        ];
+    }
+
     protected $fillable = [
         'id', // UUID from Stancl
-        'uuid',
         'name',
         'slug',
         'subdomain',
@@ -46,6 +71,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+
+    // Override the Stancl method to use the name column
+    public function getTenantName(): string
+    {
+        return $this->name ?? $this->data['name'] ?? 'Workspace';
+    }
 
     // Relationships
     public function users(): BelongsToMany

@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
+use App\Models\Domain;
 use App\Models\User;
 use App\Models\Tenant;
 use App\Models\TenantUser;
+use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
@@ -35,6 +39,7 @@ class AuthService
         $validator = Validator::make($data, [
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
+            'username' => 'string|unique:users',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
@@ -46,22 +51,37 @@ class AuthService
             throw new ValidationException($validator);
         }
 
+        // DB::beginTransaction();
+
+        // try {
         // Create user
         $user = User::create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
+            'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'phone' => $data['phone'] ?? null,
+            'company_name' => $data['company_name'] ?? null,
             'timezone' => $data['timezone'] ?? 'UTC',
             'uuid' => (string) Str::uuid(),
         ]);
 
         // Create default tenant
-        $tenant = $this->tenantService->createDefaultTenant($user, $data);
+
+        $tenant = $this->createTenant($user, $data);
+
+        // 4. Assign owner role
+        $ownerRole = Role::firstOrCreate([
+            'name' => 'owner',
+            'guard_name' => 'api',
+        ]);
+        $user->assignRole($ownerRole);
 
         // Generate JWT token
         $token = JWTAuth::fromUser($user);
+
+        // DB::commit();
 
         return [
             'user' => [
@@ -70,17 +90,94 @@ class AuthService
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'full_name' => $user->full_name,
+                'username' => $user->username,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'avatar_url' => $user->avatar_url,
+                'avatar' => $user->avatar,
                 'timezone' => $user->timezone,
                 'language' => $user->language,
                 'is_active' => $user->is_active,
                 'current_tenant_id' => $user->current_tenant_id,
             ],
-            'tenant' => $tenant,
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+                'subdomain' => $tenant->subdomain,
+                'domain' => $tenant->domain,
+                'logo_url' => $tenant->logo_url,
+                'status' => $tenant->status,
+            ],
             'token' => $token,
         ];
+        // } catch (Exception $e) {
+        //     DB::rollBack();
+        //     Log::error('Registration failed', [
+        //         'email' => $data['email'] ?? null,
+        //         'error' => $e->getMessage(),
+        //     ]);
+        //     throw $e;
+        // }
+    }
+
+    protected function createTenant(User $user, array $data): Tenant
+    {
+
+        // dd($user->full_name);
+
+        $tenantName = $data['company_name'] ?? $user->full_name . "'s Workspace";
+        $slug = Str::slug($tenantName) . '-' . Str::random(4);
+        $subdomain = $data['subdomain'] ?? Str::slug($tenantName) . '-' . Str::random(4);
+
+        $tenantId = (string) Str::uuid();
+
+        // Create tenant
+        $tenant = Tenant::create([
+            'id' => $tenantId,
+            'name' => $tenantName,
+            'slug' => $slug,
+            'subdomain' => $subdomain,
+            'domain' => $data['domain'] ?? null,
+            'timezone' => $data['timezone'] ?? 'UTC',
+            'default_language' => 'en',
+            'status' => 'active',
+            'metadata' => [
+                'registered_from' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ],
+        ]);
+
+        // Create domain record for subdomain
+        $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';
+        Domain::create([
+            'domain' => $subdomain . '.' . $centralDomain,
+            'tenant_id' => $tenant->id,
+            'is_primary' => false,
+            'status' => 'active',
+        ]);
+
+        // Create custom domain if provided
+        if ($data['domain'] ?? false) {
+            Domain::create([
+                'domain' => $data['domain'],
+                'tenant_id' => $tenant->id,
+                'is_primary' => true,
+                'status' => 'pending',
+            ]);
+        }
+
+        // Assign user as owner of tenant
+        TenantUser::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'role' => 'owner',
+            'accepted_at' => now(),
+        ]);
+
+        // Set current tenant
+        $user->update(['current_tenant_id' => $tenant->id]);
+
+        return $tenant;
     }
 
     /**
