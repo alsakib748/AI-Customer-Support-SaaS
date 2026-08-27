@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -87,7 +88,8 @@ class RolePermissionSeeder extends Seeder
 
         // Create roles with permissions
         $roles = [
-            'owner' => Permission::all(),
+            'super-admin' => Permission::all()->pluck('name')->toArray(),
+            'owner' => Permission::all()->pluck('name')->toArray(),
             'admin' => [
                 'users.view',
                 'users.create',
@@ -115,6 +117,8 @@ class RolePermissionSeeder extends Seeder
                 'team.view',
                 'team.invite',
                 'team.update',
+                'profile.view',
+                'profile.update',
             ],
             'manager' => [
                 'users.view',
@@ -135,6 +139,8 @@ class RolePermissionSeeder extends Seeder
                 'knowledge.update',
                 'analytics.view',
                 'team.view',
+                'profile.view',
+                'profile.update',
             ],
             'agent' => [
                 'customers.view',
@@ -144,33 +150,48 @@ class RolePermissionSeeder extends Seeder
                 'tickets.create',
                 'tickets.update',
                 'knowledge.view',
+                'profile.view',
+                'profile.update',
             ],
             'viewer' => [
                 'customers.view',
                 'conversations.view',
                 'tickets.view',
                 'analytics.view',
+                'profile.view',
+                'profile.update',
             ],
         ];
 
         // Create roles and assign permissions
         foreach ($roles as $roleName => $permissionNames) {
-            $role = Role::create(['name' => $roleName, 'guard_name' => 'api']);
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'api',
+            ]);
 
             $permissions = Permission::whereIn('name', $permissionNames)->get();
             $role->syncPermissions($permissions);
         }
 
-        // Create super admin user (optional)
-        $superAdmin = User::create([
-            'first_name' => 'Super',
-            'last_name' => 'Admin',
-            'email' => 'superadmin@example.com',
-            'password' => bcrypt('11111111'),
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-        ]);
+        // Create super admin user (optional - for development)
+        $superAdmin = User::where('email', 'superadmin@example.com')->first();
 
-        $superAdmin->assignRole('owner');
+        if (!$superAdmin) {
+            $superAdmin = User::create([
+                'first_name' => 'Super',
+                'last_name' => 'Admin',
+                'email' => 'superadmin@gmail.com',
+                'password' => bcrypt('11111111'),
+                'uuid' => (string) Str::uuid(),
+                'is_active' => true,
+            ]);
+        }
+
+        $superAdmin->assignRole('super-admin');
+
+        $this->command->info('Roles and permissions seeded successfully!');
+        $this->command->info('Super Admin created: superadmin@gmail.com / 11111111');
 
     }
 }

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 #[Fillable([
     'first_name',
@@ -28,9 +29,10 @@ use Spatie\Permission\Traits\HasRoles;
     'last_login_at',
     'last_login_ip',
     'current_tenant_id',
+    'uuid',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes, HasUuids, HasRoles;
@@ -63,10 +65,23 @@ class User extends Authenticatable
     {
         return [
             'user_id' => $this->id,
+            'uuid' => $this->uuid,
             'email' => $this->email,
             'tenant_id' => $this->current_tenant_id,
             'full_name' => $this->full_name,
         ];
+    }
+
+    // If you want to use a different column for UUID:
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    // Or if you want to generate UUIDs for multiple columns:
+    public function getUuidColumns(): array
+    {
+        return ['uuid'];
     }
 
     // Relationships

@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\User;
-
+use App\Models\Tenant;
+use App\Models\TenantUser;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Mail;
@@ -86,30 +88,59 @@ class AuthService
      */
     public function login(array $credentials): array
     {
+
+        // Log::info('AuthService::login called', ['credentials' => array_keys($credentials)]);
+
         $validator = Validator::make($credentials, [
             'email' => 'required|email',
-            'password' => 'required|string',
+            'password' => 'required',
         ]);
 
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
 
-        if (!$token = JWTAuth::attempt($credentials)) {
-            throw new ValidationException(
-                Validator::make([], ['email' => 'Invalid email or password'])
-            );
-        }
+        // Check if user exists
+        $user = User::where('email', $credentials['email'])->first();
 
-        $user = auth()->user();
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email address.']
+                // 'No account found with this email address.'
+            ]);
+        }
 
         // Check if user is active
         if (!$user->is_active) {
-            JWTAuth::invalidate($token);
-            throw new ValidationException(
-                Validator::make([], ['email' => 'Your account has been deactivated.'])
-            );
+            throw ValidationException::withMessages([
+                'account' => ['Your account has been deactivated. Please contact support.']
+                // 'Your account has been deactivated. Please contact support.'
+            ]);
         }
+
+        // Check email verification
+        if (!$user->hasVerifiedEmail()) {
+            // throw ValidationException::withMessages([
+            // 'email' => ['Please verify your email address before logging in.']
+            // ]);
+            throw ValidationException::withMessages([
+                'email' => ['Please verify your email address before logging in.']
+                // 'Please verify your email address before logging in.'
+            ]);
+        }
+
+        // Attempt login with JWT
+        if (!$token = JWTAuth::attempt($credentials)) {
+            throw ValidationException::withMessages([
+                'password' => ['The password you entered is incorrect.']
+                // 'The password you entered is incorrect.'
+            ]);
+        }
+
+        $user = auth()->user();
+        // Load user permissions
+        $user->load('roles.permissions');
+
 
         // Update last login
         $user->update([
@@ -118,16 +149,7 @@ class AuthService
         ]);
 
         // Get current tenant
-        $currentTenant = $user->currentTenant;
-
-        if (!$currentTenant) {
-            // If no current tenant, get first tenant
-            $firstTenant = $user->tenants()->first();
-            if ($firstTenant) {
-                $user->update(['current_tenant_id' => $firstTenant->id]);
-                $currentTenant = $firstTenant;
-            }
-        }
+        $currentTenant = $user->currentTenant ?? $user->tenants()->first();
 
         return [
             'user' => [
@@ -138,7 +160,7 @@ class AuthService
                 'full_name' => $user->full_name,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'avatar_url' => $user->avatar_url,
+                'avatar' => $user->avatar,
                 'timezone' => $user->timezone,
                 'language' => $user->language,
                 'is_active' => $user->is_active,

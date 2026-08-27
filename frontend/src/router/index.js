@@ -1,17 +1,55 @@
 import AppLayout from '@/layout/AppLayout.vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { toast } from 'vue3-toastify';
 
 const router = createRouter({
     history: createWebHistory(),
     routes: [
         {
+            path: '/login',
+            name: 'Login',
+            component: () => import('@/views/pages/auth/Login.vue'),
+            meta: {
+                requiresGuest: true,
+                title: 'Login'
+            }
+        },
+        {
+            path: '/auth/access',
+            name: 'accessDenied',
+            component: () => import('@/views/pages/auth/Access.vue'),
+            meta: {
+                requiresGuest: true,
+                title: 'Access Denied'
+            }
+        },
+        {
+            path: '/auth/error',
+            name: 'error',
+            component: () => import('@/views/pages/auth/Error.vue'),
+            meta: {
+                requiresGuest: true,
+                title: 'Error'
+            }
+        },
+        {
             path: '/',
             component: AppLayout,
+            meta: {
+                requiresAuth: true
+            },
             children: [
+                // Protected routes
                 {
-                    path: '/',
-                    name: 'dashboard',
-                    component: () => import('@/views/Dashboard.vue')
+                    path: '',
+                    redirect: '/dashboard'
+                },
+                {
+                    path: '/dashboard',
+                    name: 'Dashboard',
+                    component: () => import('@/views/Dashboard.vue'),
+                    meta: { requiresAuth: true }
                 },
                 {
                     path: '/uikit/formlayout',
@@ -124,12 +162,6 @@ const router = createRouter({
             name: 'notfound',
             component: () => import('@/views/pages/NotFound.vue')
         },
-
-        {
-            path: '/auth/login',
-            name: 'login',
-            component: () => import('@/views/pages/auth/Login.vue')
-        },
         {
             path: '/auth/access',
             name: 'accessDenied',
@@ -140,7 +172,84 @@ const router = createRouter({
             name: 'error',
             component: () => import('@/views/pages/auth/Error.vue')
         }
-    ]
+    ],
+    scrollBehavior(to, from, savedPosition) {
+        if (savedPosition) {
+            return savedPosition;
+        } else {
+            return { top: 0 };
+        }
+    }
+});
+
+// Navigation guards
+
+router.beforeEach(async (to, form, next) => {
+    // Set page title
+    document.title = to.meta.title ? `${to.meta.title} | AI Customer Support Saas` : 'AI Customer Support SaaS';
+
+    const authStore = useAuthStore();
+
+    // Wait for auth to be initialized
+    if (!authStore.initialized) {
+        await authStore.init();
+    }
+
+    const isAuthenticated = authStore.isAuthenticated;
+
+    // ============================================
+    // RULE 1: Protected routes - Require authentication
+    // ============================================
+    if (to.meta.requiresAuth) {
+        if (!isAuthenticated) {
+            // Store the intended route for redirect after login
+            authStore.setRedirectPath(to.fullPath);
+
+            toast.warning('Please login to access this page', {
+                autoClose: 3000,
+                position: 'top-right'
+            });
+
+            return next({
+                path: '/login',
+                query: { redirect: to.fullPath }
+            });
+        }
+        return next();
+    }
+
+    // ============================================
+    // RULE 2: Guest routes - Only for non-authenticated users
+    // ============================================
+    if (to.meta.requiresGuest) {
+        if (isAuthenticated) {
+            // Redirect authenticated users away from guest pages
+            toast.info('You are already logged in', {
+                autoClose: 3000,
+                position: 'top-right'
+            });
+            return next('/dashboard');
+        }
+        return next();
+    }
+
+    // ============================================
+    // RULE 3: Public routes - Allow all
+    // ============================================
+    next();
+});
+
+// After each navigation
+router.afterEach((to, from) => {
+    // Scroll to top on page change
+    if (to.path !== from.path) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+});
+
+// Handle navigation errors
+router.onError((error) => {
+    console.error('Router error:', error);
 });
 
 export default router;

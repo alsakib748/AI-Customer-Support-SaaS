@@ -18,6 +18,7 @@ module.exports = {
             {
                 order: ['script', 'template', 'style']
             }
-        ]
+        ],
+        'linebreak-style': ['error', 'windows']
     }
 };
