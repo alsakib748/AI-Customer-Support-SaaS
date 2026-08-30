@@ -61,6 +61,15 @@ const router = createRouter({
                     meta: { requiresAuth: true }
                 },
                 {
+                    path: '/settings/workspace',
+                    name: 'WorkspaceSettings',
+                    component: () => import('@/views/settings/Workspace.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Workspace Settings'
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')

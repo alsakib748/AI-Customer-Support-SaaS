@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\TenantController;
+use App\Http\Controllers\Api\V1\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +54,30 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{tenantId}/users/{userId}', [TenantController::class, 'removeUser']);
             Route::put('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole']);
         });
+
+        // ============================================
+        // WORKSPACE ROUTES
+        // ============================================
+        Route::prefix('workspace')->group(function () {
+            // Basic CRUD
+            Route::get('/', [WorkspaceController::class, 'show']);
+            Route::put('/', [WorkspaceController::class, 'update']);
+
+            // Logo Management
+            Route::post('/logo', [WorkspaceController::class, 'updateLogo']);
+            Route::delete('/logo', [WorkspaceController::class, 'deleteLogo']);
+
+            // Favicon Management
+            Route::post('/favicon', [WorkspaceController::class, 'updateFavicon']);
+            Route::delete('/favicon', [WorkspaceController::class, 'deleteFavicon']);
+
+            // Business Hours
+            Route::put('/business-hours', [WorkspaceController::class, 'updateBusinessHours']);
+
+            // Statistics
+            Route::get('/statistics', [WorkspaceController::class, 'statistics']);
+        });
+
 
         // Profile Routes
         // Route::prefix('profile')->group(function () {

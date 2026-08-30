@@ -215,16 +215,16 @@ class AuthService
             ]);
         }
 
-        // Check email verification
-        if (!$user->hasVerifiedEmail()) {
-            // throw ValidationException::withMessages([
-            // 'email' => ['Please verify your email address before logging in.']
-            // ]);
-            throw ValidationException::withMessages([
-                'email' => ['Please verify your email address before logging in.']
-                // 'Please verify your email address before logging in.'
-            ]);
-        }
+        // // Check email verification
+        // if (!$user->hasVerifiedEmail()) {
+        //     // throw ValidationException::withMessages([
+        //     // 'email' => ['Please verify your email address before logging in.']
+        //     // ]);
+        //     throw ValidationException::withMessages([
+        //         'email' => ['Please verify your email address before logging in.']
+        //         // 'Please verify your email address before logging in.'
+        //     ]);
+        // }
 
         // Attempt login with JWT
         if (!$token = JWTAuth::attempt($credentials)) {

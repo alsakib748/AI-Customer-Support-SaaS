@@ -4,12 +4,12 @@ import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
 import { useAuthStore } from '@/stores/auth.js';
 import { toast } from 'vue3-toastify';
-import { useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
 
 const authStore = useAuthStore();
-const route = useRoute();
+const router = useRouter();
 
 const profileModal = ref(false);
 
@@ -20,7 +20,7 @@ const profileView = () => {
 const Logout = async () => {
     try {
         await authStore.logout();
-        route.push('/login');
+        router.push('/login');
         toast.success('User logout successfully');
     } catch (e) {
         console.error('Login failed', e);
@@ -97,14 +97,16 @@ const Logout = async () => {
                 <div v-if="profileModal"
                     class="max-w-sm rounded-md overflow-hidden shadow-lg absolute right-0 sm:top-24 md:top-13 bg-white">
                     <a href="" class="">
-                        <div class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer">
+                        <div
+                            class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer dark:text-slate-800">
                             <i class="pi pi-user"></i>
                             <span class="ms-2">My Profile</span>
                         </div>
                     </a>
                     <form @submit.prevent="Logout" method="POST">
                         <button type="submit" class="">
-                            <div class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer">
+                            <div
+                                class="w-40 py-3 text-center hover:bg-teal-500 hover:text-white cursor-pointer dark:text-slate-800">
                                 <i class="pi pi-sign-out"></i>
                                 <span class="ms-2">Log Out</span>
                             </div>

@@ -1,6 +1,6 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
-import { reactive, ref, computed } from 'vue';
+import { reactive } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
 
@@ -55,7 +55,7 @@ const validateForm = () => {
     }
 
     if (!form.username || form.username.trim() == '') {
-        errors.username.value = 'Username field is required';
+        errors.username = 'Username field is required';
         isValid = false;
     }
     else if (form.username.length < 3) {
@@ -92,19 +92,18 @@ const validateForm = () => {
 }
 
 const onFormSubmit = async () => {
-    try {
-
-        if (!validateForm()) {
-            const firstError = Object.values(errors).find(error => error !== '');
-            if (firstError) {
-                toast.error(firstError);
-            }
-            return;
+    if (!validateForm()) {
+        const firstError = Object.values(errors).find(error => error !== '');
+        if (firstError) {
+            toast.error(firstError);
         }
+        return;
+    }
 
+    try {
         await authStore.register(form);
-    } catch (err) {
-        console.error('Login error: ', err);
+    } catch {
+        // Error toast is fired by the axios response interceptor in services/api.js
     }
 };
 

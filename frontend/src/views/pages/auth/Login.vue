@@ -14,8 +14,8 @@ const form = reactive({
 const handleLogin = async () => {
     try {
         await authStore.login(form);
-    } catch (err) {
-        console.error('Login error: ', err);
+    } catch {
+        // Error toast is fired by the axios response interceptor in services/api.js
     }
 };
 </script>

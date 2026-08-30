@@ -6,7 +6,16 @@ import router from './router';
 import Aura from '@primeuix/themes/aura';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
-import ToastService from 'primevue/toastservice';
+// import ToastService from 'primevue/toastservice';
+
+// Import components
+import Card from 'primevue/card';
+import InputText from 'primevue/inputtext';
+import Button from 'primevue/button';
+import Select from 'primevue/select';
+import ToggleSwitch from 'primevue/toggleswitch';
+import InputMask from 'primevue/inputmask';
+// import Toast from 'primevue/toast';
 
 import Vue3Toastify from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
@@ -28,7 +37,14 @@ app.use(PrimeVue, {
         }
     }
 });
-app.use(ToastService);
+// app.use(ToastService);
+app.component('Card', Card);
+app.component('InputText', InputText);
+app.component('Button', Button);
+app.component('Select', Select);
+app.component('ToggleSwitch', ToggleSwitch);
+app.component('InputMask', InputMask);
+// app.component('Toast', Toast);
 app.use(ConfirmationService);
 app.use(pinia);
 app.use(Vue3Toastify, {

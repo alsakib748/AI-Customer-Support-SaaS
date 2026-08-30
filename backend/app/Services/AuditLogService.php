@@ -24,7 +24,16 @@ class AuditLogService
     ): ?AuditLog {
         try {
             $user = Auth::user();
-            $tenant = app('current_tenant');
+
+            // current_tenant is only bound by the TenantAware middleware,
+            // which is NOT applied to public routes (register, login, forgot-password, etc).
+            // Resolve it safely so we don't throw on those routes.
+            $tenant = null;
+            try {
+                $tenant = app('current_tenant');
+            } catch (\Throwable $e) {
+                $tenant = null;
+            }
 
             // Get IP and User Agent safely
             $ip = null;
@@ -186,5 +195,52 @@ class AuditLogService
             ->limit($limit)
             ->get()
             ->toArray();
+    }
+
+    /**
+     * Get audit log statistics for a tenant (or globally if no tenant id given).
+     *
+     * @return array{ total: int, by_action: array<string,int>, by_resource_type: array<string,int>, recent: array }
+     */
+    public function getStatistics(?string $tenantId = null, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $query = AuditLog::query();
+
+        if ($tenantId) {
+            $query->forTenant($tenantId);
+        }
+
+        if ($startDate && $endDate) {
+            $query->dateRange($startDate, $endDate);
+        }
+
+        $total = (clone $query)->count();
+
+        $byAction = (clone $query)
+            ->selectRaw('action, COUNT(*) as count')
+            ->groupBy('action')
+            ->pluck('count', 'action')
+            ->toArray();
+
+        $byResourceType = (clone $query)
+            ->selectRaw('resource_type, COUNT(*) as count')
+            ->whereNotNull('resource_type')
+            ->groupBy('resource_type')
+            ->pluck('count', 'resource_type')
+            ->toArray();
+
+        $recent = (clone $query)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->toArray();
+
+        return [
+            'total' => $total,
+            'by_action' => $byAction,
+            'by_resource_type' => $byResourceType,
+            'recent' => $recent,
+        ];
     }
 }

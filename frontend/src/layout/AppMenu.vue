@@ -14,6 +14,16 @@ const model = ref([
         ]
     },
     {
+        label: 'Workspace',
+        items: [
+            {
+                label: 'Workspace',
+                icon: 'pi pi-fw pi-building',
+                to: '/settings/workspace'
+            }
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [

@@ -74,8 +74,11 @@ export const useAuthStore = defineStore('auth', () => {
             // Redirect to dashboard
             router.push('/dashboard');
 
+            toast.success(`Welcome back, ${data.user.first_name}`);
+
             return data;
         } catch (err) {
+            // Error toast is fired by the axios response interceptor in services/api.js
             error.value = err.response?.data?.errors || err.response?.data?.message || 'Registration failed';
             throw err;
         } finally {
@@ -109,42 +112,10 @@ export const useAuthStore = defineStore('auth', () => {
                 return data;
             }
         } catch (error) {
-            console.log('Validation error: ', error.response);
-            console.error('Login error:', error);
-
-            // Store errors for component display
+            // Error toast is fired by the axios response interceptor in services/api.js
             if (error.response?.data?.errors) {
                 errors.value = error.response.data.errors;
             }
-
-            // Use the enhanced toast service to show the actual error message
-            if (error.response?.status === 422) {
-                // Extract first error message from validation errors
-                // const errorMessage = toast.error(error.response?.data?.errors);
-
-                if (error.response?.data?.errors.email) {
-                    toast.error(error.response?.data?.errors.email);
-                }
-
-                if (error.response?.data?.errors.password) {
-                    toast.error(error.response?.data?.errors.password);
-                }
-
-                if (error.response?.data?.errors.account) {
-                    toast.error(error.response?.data?.errors.account);
-                }
-
-                // toast.error(error.response?.data?.errors);
-
-                // if (errorMessage) {
-                //     toast.error(errorMessage);
-                // } else {
-                //     toast.error(error.response?.data?.message || 'Validation failed');
-                // }
-            } else {
-                toast.handleApiError(error, 'Login failed. Please try again.');
-            }
-
             throw error;
         } finally {
             loading.value = false;
@@ -157,7 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             await api.post('/auth/logout');
         } catch (err) {
-            console.err('Logout error: ', err);
+            console.error('Logout error: ', err);
         } finally {
             clearAuth();
             router.push('/login');
