@@ -75,7 +75,6 @@ class WorkspaceService
         return $tenant->fresh();
     }
 
-
     /**
      * Delete workspace logo.
      */

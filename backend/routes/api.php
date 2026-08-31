@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Team\InvitationController;
+use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use Illuminate\Http\Request;
@@ -76,6 +78,33 @@ Route::prefix('v1')->group(function () {
 
             // Statistics
             Route::get('/statistics', [WorkspaceController::class, 'statistics']);
+        });
+
+        // ============================================
+        // TEAM MANAGEMENT ROUTES
+        // ============================================
+        Route::prefix('team')->group(function () {
+
+            // Members
+            Route::prefix('members')->group(function () {
+                Route::get('/', [TeamMemberController::class, 'index']);
+                Route::get('/statistics', [TeamMemberController::class, 'statistics']);
+                Route::get('/departments', [TeamMemberController::class, 'departments']);
+                Route::get('/{id}', [TeamMemberController::class, 'show']);
+                Route::put('/{id}', [TeamMemberController::class, 'update']);
+                Route::delete('/{id}', [TeamMemberController::class, 'destroy']);
+            });
+
+            // Invitations
+            Route::prefix('invitations')->group(function () {
+                Route::get('/', [InvitationController::class, 'index']);
+                Route::post('/', [InvitationController::class, 'store']);
+                Route::post('/{id}/resend', [InvitationController::class, 'resend']);
+                Route::delete('/{id}', [InvitationController::class, 'destroy']);
+            });
+
+            // Public invitation acceptance (no auth required)
+            Route::post('/invitations/accept/{token}', [InvitationController::class, 'accept']);
         });
 
 
