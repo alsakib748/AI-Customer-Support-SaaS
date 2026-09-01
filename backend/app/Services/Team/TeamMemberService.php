@@ -3,70 +3,302 @@
 
 namespace App\Services\Team;
 
+use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class TeamMemberService
 {
-    protected $tenant;
+    protected ?Tenant $tenant;
+    protected ?User $user;
+    protected ?string $tenantId;
 
-    public function __construct()
+    public function __construct(Request $request)
     {
-        $this->tenant = app('current_tenant');
+        $this->user = auth()->user();
+
+        Log::info('TeamMemberService constructor', [
+            'user_id' => $this->user?->id,
+            'user_email' => $this->user?->email,
+            'has_tenant_middleware' => $request->attributes->has('current_tenant'),
+            'request_headers' => $request->headers->all(),
+        ]);
+
+        $tenant = $request->attributes->get('current_tenant')
+            ?? app('current_tenant')
+            ?? ($this->user?->currentTenant);
+
+        if (!$tenant) {
+            $tenantId = $request->header('X-Tenant-Id')
+                ?? $request->header('X-Tenant-ID')
+                ?? $request->header('x-tenant-id');
+
+            if ($tenantId) {
+                $tenant = Tenant::find($tenantId);
+                Log::info('Tenant from header', ['tenant_id' => $tenantId]);
+            }
+        }
+
+        if (!$tenant && $this->user) {
+            $tenant = $this->user->tenants()->first();
+            Log::info('Tenant from first tenant', ['tenant_id' => $tenant?->id]);
+        }
+
+        if (!$tenant) {
+            Log::error('No tenant found in context', [
+                'user_id' => $this->user?->id,
+                'headers' => $request->headers->all(),
+                'attributes' => $request->attributes->all(),
+            ]);
+            throw new \RuntimeException('No tenant found in current context. Please select a workspace.');
+        }
+
+        $this->tenant = $tenant;
+        $this->tenantId = $tenant->id;
+
+        Log::info('TeamMemberService initialized', ['tenant_id' => $this->tenantId]);
+    }
+
+    /**
+     * Get current tenant ID
+     */
+    protected function getTenantId(): string
+    {
+        if (!$this->tenantId) {
+            throw new \RuntimeException('No tenant found in current context');
+        }
+        return $this->tenantId;
+    }
+
+    /**
+     * Check if current user has permission using Spatie
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        // Super admin has all permissions
+        if ($this->user->hasRole('super-admin')) {
+            return true;
+        }
+
+        // Check if user has the permission
+        return $this->user->hasPermissionTo($permission);
+    }
+
+    /**
+     * Check if current user can manage team
+     */
+    public function canManageTeam(): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        // Super admin can manage any team
+        if ($this->user->hasRole('super-admin')) {
+            return true;
+        }
+
+        // Check if user has any team management permission
+        return $this->user->hasAnyPermission([
+            'team.view',
+            'team.invite',
+            'team.update',
+            'team.remove',
+            'members.view',
+            'members.create',
+            'members.update',
+            'members.delete',
+        ]);
+    }
+
+    /**
+     * Check if current user can view members
+     */
+    public function canViewMembers(): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        // Super admin can view any team
+        if ($this->user->hasRole('super-admin')) {
+            return true;
+        }
+
+        // Check if user has any team viewing permission
+        return $this->user->hasAnyPermission([
+            'members.view',
+            'team.view',
+        ]);
+    }
+
+
+    /**
+     * Check if current user can invite members
+     */
+    public function canInviteMembers(): bool
+    {
+        return $this->hasPermission('team.invite');
+    }
+
+    /**
+     * Check if current user can update members
+     */
+    public function canUpdateMembers(): bool
+    {
+        return $this->hasPermission('members.update');
+    }
+
+    /**
+     * Check if current user can delete members
+     */
+    public function canDeleteMembers(): bool
+    {
+        return $this->hasPermission('members.delete');
     }
 
     /**
      * Get paginated team members
      */
+    // public function getMembers(array $filters = [])
+    // {
+    //     $query = TenantUser::query()
+    //         ->forTenant($this->getTenantId())
+    //         ->with('user');
+
+    //     // Search
+    //     if (!empty($filters['search'])) {
+    //         $query->search($filters['search']);
+    //     }
+
+    //     // Filter by department
+    //     if (!empty($filters['department'])) {
+    //         $query->where('department', $filters['department']);
+    //     }
+
+    //     // Filter by availability status
+    //     if (!empty($filters['availability_status'])) {
+    //         $query->where('availability_status', $filters['availability_status']);
+    //     }
+
+    //     // Filter by role
+    //     if (!empty($filters['role'])) {
+    //         $query->where('role', $filters['role']);
+    //     }
+
+    //     // Sorting
+    //     $sortField = $filters['sort'] ?? 'created_at';
+    //     $sortDirection = $filters['direction'] ?? 'desc';
+
+    //     $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role'];
+
+    //     if (in_array($sortField, $allowedSorts)) {
+    //         if ($sortField === 'name' || $sortField === 'email') {
+    //             $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
+    //                 $q->orderBy($sortField, $sortDirection);
+    //             });
+    //         } else {
+    //             $query->orderBy($sortField, $sortDirection);
+    //         }
+    //     } else {
+    //         $query->orderBy('created_at', 'desc');
+    //     }
+
+    //     $perPage = $filters['per_page'] ?? 20;
+    //     return $query->paginate($perPage);
+    // }
+
     public function getMembers(array $filters = [])
     {
-        $query = TenantUser::query()
-            ->forTenant($this->tenant->id)
-            ->with('user');
+        try {
+            $tenantId = $this->getTenantId();
 
-        // Search
-        if (!empty($filters['search'])) {
-            $query->search($filters['search']);
-        }
+            Log::info('Getting members for tenant', ['tenant_id' => $tenantId]);
 
-        // Filter by department
-        if (!empty($filters['department'])) {
-            $query->where('department', $filters['department']);
-        }
+            $query = TenantUser::query()
+                ->where('tenant_id', $tenantId)
+                ->with('user');
 
-        // Filter by availability status
-        if (!empty($filters['availability_status'])) {
-            $query->where('availability_status', $filters['availability_status']);
-        }
+            // dd($query);
 
-        // Filter by role
-        if (!empty($filters['role'])) {
-            $query->where('role', $filters['role']);
-        }
-
-        // Sorting
-        $sortField = $filters['sort'] ?? 'created_at';
-        $sortDirection = $filters['direction'] ?? 'desc';
-
-        // Whitelist allowed sort fields
-        $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role'];
-
-        if (in_array($sortField, $allowedSorts)) {
-            if ($sortField === 'name' || $sortField === 'email') {
-                $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
-                    $q->orderBy($sortField, $sortDirection);
+            // Search
+            if (!empty($filters['search'])) {
+                $search = $filters['search'];
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('first_name', 'ILIKE', "%{$search}%")
+                            ->orWhere('last_name', 'ILIKE', "%{$search}%")
+                            ->orWhere('email', 'ILIKE', "%{$search}%");
+                    })
+                        ->orWhere('department', 'ILIKE', "%{$search}%")
+                        ->orWhere('position', 'ILIKE', "%{$search}%");
                 });
-            } else {
-                $query->orderBy($sortField, $sortDirection);
             }
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
 
-        return $query->paginate($filters['per_page'] ?? 20);
+            // Filter by department
+            if (!empty($filters['department'])) {
+                $query->where('department', $filters['department']);
+            }
+
+
+
+            // Filter by availability status
+            if (!empty($filters['availability_status'])) {
+                $query->where('availability_status', $filters['availability_status']);
+            }
+
+
+            // Filter by role
+            if (!empty($filters['role'])) {
+                $query->where('role', $filters['role']);
+            }
+
+
+            // Sorting
+            $sortField = $filters['sort'] ?? 'created_at';
+            $sortDirection = $filters['direction'] ?? 'desc';
+
+            $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role'];
+
+            if (in_array($sortField, $allowedSorts)) {
+                if ($sortField === 'name' || $sortField === 'email') {
+                    $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
+                        $q->orderBy($sortField, $sortDirection);
+                    });
+                } else {
+                    $query->orderBy($sortField, $sortDirection);
+                }
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+
+            $perPage = $filters['per_page'] ?? 20;
+
+            // dd($perPage);
+
+            $result = $query->paginate($perPage);
+
+            // dd($result);
+
+            Log::info('Members fetched successfully', ['count' => $result->count()]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get members:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -75,7 +307,7 @@ class TeamMemberService
     public function getMember(int $id): TenantUser
     {
         $member = TenantUser::query()
-            ->forTenant($this->tenant->id)
+            ->forTenant($this->getTenantId())
             ->with('user')
             ->findOrFail($id);
 
@@ -89,13 +321,14 @@ class TeamMemberService
     {
         $member = $this->getMember($id);
 
-        // Don't allow updating owner's role/permissions here
+        // Prevent updating owner
         if ($member->isOwner()) {
             throw ValidationException::withMessages([
                 'role' => ['Cannot update the owner. Owner permissions are managed separately.']
             ]);
         }
 
+        // Update member fields
         $member->update([
             'department' => $data['department'] ?? $member->department,
             'position' => $data['position'] ?? $member->position,
@@ -105,10 +338,9 @@ class TeamMemberService
         ]);
 
         Log::info('Team member updated', [
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->getTenantId(),
             'member_id' => $member->id,
             'user_id' => auth()->id(),
-            'changes' => $data,
         ]);
 
         return $member->fresh()->load('user');
@@ -128,9 +360,9 @@ class TeamMemberService
             ]);
         }
 
-        // Check if this is the last owner (should never happen, but safety check)
+        // Check if this is the last owner (safety check)
         $ownerCount = TenantUser::query()
-            ->forTenant($this->tenant->id)
+            ->forTenant($this->getTenantId())
             ->where('role', 'owner')
             ->count();
 
@@ -144,7 +376,7 @@ class TeamMemberService
         $member->delete();
 
         Log::info('Team member removed', [
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->getTenantId(),
             'member_id' => $member->id,
             'user_id' => auth()->id(),
             'removed_user_id' => $member->user_id,
@@ -158,7 +390,11 @@ class TeamMemberService
      */
     public function getStatistics(): array
     {
-        $query = TenantUser::query()->forTenant($this->tenant->id);
+        // dd('worked !!');
+
+        $query = TenantUser::query()->forTenant($this->getTenantId());
+
+        // dd($query->count());
 
         return [
             'total' => $query->count(),
@@ -186,31 +422,11 @@ class TeamMemberService
     public function getDepartments(): array
     {
         return TenantUser::query()
-            ->forTenant($this->tenant->id)
+            ->forTenant($this->getTenantId())
             ->whereNotNull('department')
             ->select('department')
             ->distinct()
             ->pluck('department')
             ->toArray();
-    }
-
-    /**
-     * Check if user has permission to manage team
-     */
-    public function canManageTeam(): bool
-    {
-        $user = auth()->user();
-
-        if (!$user) {
-            return false;
-        }
-
-        $tenantUser = $user->currentTenantUser;
-
-        if (!$tenantUser) {
-            return false;
-        }
-
-        return $tenantUser->isAdmin() || $tenantUser->isOwner();
     }
 }

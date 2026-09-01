@@ -37,6 +37,9 @@ class User extends Authenticatable implements JWTSubject
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes, HasUuids, HasRoles;
 
+    // ⭐ IMPORTANT: Force this model to use central database
+    protected $connection = 'central';
+
     /**
      * Get the attributes that should be cast.
      *
@@ -88,7 +91,18 @@ class User extends Authenticatable implements JWTSubject
     public function tenants()
     {
         return $this->belongsToMany(Tenant::class, 'tenant_user')
-            ->withPivot('role', 'permissions', 'department', 'availability_status', 'skills')
+            ->withPivot(
+                'role',
+                'department',
+                'position',
+                'availability_status',
+                'max_concurrent_chats',
+                'skills',
+                'metadata',
+                'invited_at',
+                'accepted_at',
+                'deleted_at',
+            )
             ->withTimestamps();
     }
 

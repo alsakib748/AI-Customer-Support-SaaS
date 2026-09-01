@@ -14,12 +14,15 @@ class TeamMemberResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Handle case where user relationship might not be loaded
+        $user = $this->whenLoaded('user');
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
-            'name' => $this->user_name,
-            'email' => $this->user_email,
-            'avatar_url' => $this->user_avatar,
+            'name' => $user ? $user->full_name : $this->user_name,
+            'email' => $user ? $user->email : $this->user_email,
+            'avatar' => $user ? $user->avatar : null,
             'role' => $this->role,
             'role_label' => $this->role_label,
             'is_owner' => $this->is_owner,
@@ -34,6 +37,9 @@ class TeamMemberResource extends JsonResource
             'accepted_at' => $this->accepted_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            // Add Spatie permissions if user exists
+            'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
+            'roles' => $user ? $user->getRoleNames() : [],
         ];
     }
 

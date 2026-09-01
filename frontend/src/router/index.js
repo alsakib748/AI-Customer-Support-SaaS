@@ -43,7 +43,17 @@ const router = createRouter({
             }
         },
         {
+            path: '/setup/create-workspace',
+            name: 'CreateWorkspace',
+            component: () => import('@/views/pages/setup/CreateWorkspace.vue'),
+            meta: {
+                requiresAuth: true,
+                title: 'Create Workspace'
+            }
+        },
+        {
             path: '/',
+
             component: AppLayout,
             meta: {
                 requiresAuth: true
@@ -69,6 +79,29 @@ const router = createRouter({
                         title: 'Workspace Settings'
                     }
                 },
+                {
+                    path: '/team',
+                    name: 'Team',
+                    redirect: '/team/members'
+                },
+                {
+                    path: '/team/members',
+                    name: 'TeamMembers',
+                    component: () => import('@/views/team/Members.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Team Members'
+                    }
+                },
+                // {
+                //     path: '/team/invitations',
+                //     name: 'TeamInvitations',
+                //     component: () => import('@/views/team/Invitations.vue'),
+                //     meta: {
+                //         requiresAuth: true,
+                //         title: 'Team Invitations'
+                //     }
+                // },
                 {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
@@ -233,6 +266,15 @@ router.beforeEach(async (to, form, next) => {
                 query: { redirect: to.fullPath }
             });
         }
+
+        // Check if workspace is selected/exists
+        // if (!authStore.currentTenantId && to.path !== '/setup/create-workspace' && to.path !== '/settings/workspace') {
+        //     return next({
+        //         path: '/setup/create-workspace',
+        //         query: { redirect: to.fullPath }
+        //     });
+        // }
+
         return next();
     }
 

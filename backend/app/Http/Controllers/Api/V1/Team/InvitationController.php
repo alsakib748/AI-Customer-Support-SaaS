@@ -24,6 +24,13 @@ class InvitationController extends Controller
     public function index(Request $request)
     {
         try {
+            if (!$this->service->canManageInvitations()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to view invitations.',
+                ], 403);
+            }
+
             $filters = $request->only(['search', 'status', 'per_page']);
             $invitations = $this->service->getInvitations($filters);
 
@@ -37,6 +44,12 @@ class InvitationController extends Controller
                     'last_page' => $invitations->lastPage(),
                 ],
             ]);
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
 
         } catch (\Exception $e) {
             Log::error('Failed to get invitations:', ['error' => $e->getMessage()]);
@@ -54,6 +67,13 @@ class InvitationController extends Controller
     public function store(InviteMemberRequest $request)
     {
         try {
+            if (!$this->service->canManageInvitations()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to send invitations.',
+                ], 403);
+            }
+
             $invitation = $this->service->createInvitation($request->validated());
 
             return response()->json([
@@ -69,19 +89,123 @@ class InvitationController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
         } catch (\Exception $e) {
             Log::error('Failed to create invitation:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to send invitation.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Accept an invitation
+     * Resend an invitation
+     */
+    public function resend($id)
+    {
+        try {
+            if (!$this->service->canManageInvitations()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to resend invitations.',
+                ], 403);
+            }
+
+            $invitation = $this->service->resendInvitation($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invitation resent successfully.',
+                'data' => $invitation,
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot resend invitation.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invitation not found.',
+            ], 404);
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to resend invitation:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to resend invitation.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Revoke an invitation
+     */
+    public function destroy($id)
+    {
+        try {
+            if (!$this->service->canManageInvitations()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to revoke invitations.',
+                ], 403);
+            }
+
+            $this->service->revokeInvitation($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invitation revoked successfully.',
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot revoke invitation.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invitation not found.',
+            ], 404);
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to revoke invitation:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to revoke invitation.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Accept an invitation (Public - No Auth Required)
      */
     public function accept(Request $request, $token)
     {
@@ -120,80 +244,6 @@ class InvitationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to accept invitation.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Resend an invitation
-     */
-    public function resend($id)
-    {
-        try {
-            $invitation = $this->service->resendInvitation($id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Invitation resent successfully.',
-                'data' => $invitation,
-            ]);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot resend invitation.',
-                'errors' => $e->errors(),
-            ], 422);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invitation not found.',
-            ], 404);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to resend invitation:', ['error' => $e->getMessage()]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to resend invitation.',
-            ], 500);
-        }
-    }
-
-    /**
-     * Revoke an invitation
-     */
-    public function destroy($id)
-    {
-        try {
-            $this->service->revokeInvitation($id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Invitation revoked successfully.',
-            ]);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot revoke invitation.',
-                'errors' => $e->errors(),
-            ], 422);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invitation not found.',
-            ], 404);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to revoke invitation:', ['error' => $e->getMessage()]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to revoke invitation.',
             ], 500);
         }
     }

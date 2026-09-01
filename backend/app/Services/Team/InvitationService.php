@@ -3,21 +3,65 @@
 
 namespace App\Services\Team;
 
+use App\Models\Tenant;
 use App\Models\TenantInvitation;
 use App\Models\TenantUser;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class InvitationService
 {
-    protected $tenant;
+    protected Tenant $tenant;
+    protected ?User $user;
 
-    public function __construct()
+    public function __construct(Request $request)
     {
-        $this->tenant = app('current_tenant');
+        $this->user = auth()->user();
+
+        $tenant = $request->attributes->get('current_tenant')
+            ?? app('current_tenant')
+            ?? ($this->user?->currentTenant);
+
+        if (!$tenant) {
+            $tenantId = $request->header('X-Tenant-Id')
+                ?? $request->header('X-Tenant-ID')
+                ?? $request->header('x-tenant-id');
+
+            if ($tenantId) {
+                $tenant = Tenant::find($tenantId);
+            }
+        }
+
+        if (!$tenant && $this->user) {
+            $tenant = $this->user->tenants()->first();
+        }
+
+        if (!$tenant) {
+            throw new \RuntimeException('No tenant found in current context');
+        }
+
+        $this->tenant = $tenant;
+    }
+
+    /**
+     * Check if user can manage invitations
+     */
+    public function canManageInvitations(): bool
+    {
+        if (!$this->user) {
+            return false;
+        }
+
+        if ($this->user->hasRole('super-admin')) {
+            return true;
+        }
+
+        return $this->user->hasPermissionTo('team.invite');
     }
 
     /**
@@ -135,7 +179,6 @@ class InvitationService
         $user = User::where('email', $data['email'])->first();
 
         if (!$user) {
-            // Create new user
             $user = User::create([
                 'first_name' => $data['first_name'] ?? '',
                 'last_name' => $data['last_name'] ?? '',
@@ -170,6 +213,13 @@ class InvitationService
             'skills' => [],
             'accepted_at' => now(),
         ]);
+
+        // Assign Spatie role
+        $role = Role::firstOrCreate([
+            'name' => $invitation->role,
+            'guard_name' => 'api',
+        ]);
+        $user->assignRole($role);
 
         // Mark invitation as accepted
         $invitation->update([
@@ -210,7 +260,6 @@ class InvitationService
             ]);
         }
 
-        // Update expiry date
         $invitation->update([
             'expires_at' => now()->addDays(7),
             'token' => Str::random(64),

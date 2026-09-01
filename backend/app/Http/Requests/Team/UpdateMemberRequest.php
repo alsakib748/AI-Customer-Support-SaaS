@@ -49,18 +49,14 @@ class UpdateMemberRequest extends FormRequest
             'max_concurrent_chats.required' => 'Maximum concurrent chats is required.',
             'max_concurrent_chats.min' => 'Maximum concurrent chats must be at least 1.',
             'max_concurrent_chats.max' => 'Maximum concurrent chats cannot exceed 50.',
-            'skills.*.max' => 'Skill names cannot exceed 50 characters.',
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'department' => 'department',
-            'position' => 'position',
             'availability_status' => 'availability status',
             'max_concurrent_chats' => 'maximum concurrent chats',
-            'skills' => 'skills',
         ];
     }
 

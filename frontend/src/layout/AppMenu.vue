@@ -24,6 +24,21 @@ const model = ref([
         ]
     },
     {
+        label: 'Team Management',
+        items: [
+            {
+                label: 'Team',
+                icon: 'pi pi-fw pi-slack',
+                to: '/team/members'
+            },
+            {
+                label: 'Team Invitations',
+                icon: 'pi pi-fw pi-slack',
+                to: '/team/members'
+            },
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [

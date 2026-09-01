@@ -21,6 +21,33 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const workspaceSupportPhone = computed(() => workspace.value?.support_phone || '');
 
     // Actions
+    const createWorkspace = async (data) => {
+        saving.value = true;
+        errors.value = {};
+
+        try {
+            const response = await workspaceService.createWorkspace(data);
+
+            if (response.data.success) {
+                // The response contains the new tenant
+                workspace.value = response.data.data;
+                toast.success(response.data.message || 'Workspace created successfully');
+                return response.data;
+            }
+        } catch (error) {
+            console.error('Failed to create workspace:', error);
+
+            if (error.response?.data?.errors) {
+                errors.value = error.response.data.errors;
+            }
+
+            toast.error(error.response?.data?.message || 'Failed to create workspace');
+            throw error;
+        } finally {
+            saving.value = false;
+        }
+    };
+
     const fetchWorkspace = async () => {
         loading.value = true;
         errors.value = {};
@@ -210,8 +237,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
         // Actions
         fetchWorkspace,
+        createWorkspace,
         updateWorkspace,
         updateLogo,
+
         deleteLogo,
         updateFavicon,
         deleteFavicon,

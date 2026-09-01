@@ -2,8 +2,16 @@ import api from './api';
 
 class WorkspaceService {
     /**
+     * Create a new workspace
+     */
+    createWorkspace(data) {
+        return api.post('/tenants', data);
+    }
+
+    /**
      * Get current workspace
      */
+
     getWorkspace() {
         return api.get('/workspace');
     }

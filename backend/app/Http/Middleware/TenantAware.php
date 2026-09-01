@@ -27,7 +27,10 @@ class TenantAware
 
         // 2. From header
         if (!$tenant) {
-            $tenantId = $request->header('X-Tenant-Id');
+            $tenantId = $request->header('X-Tenant-Id')
+                ?? $request->header('X-Tenant-ID')
+                ?? $request->header('x-tenant-id');
+
             if ($tenantId) {
                 $tenant = Tenant::find($tenantId);
             }
@@ -43,7 +46,23 @@ class TenantAware
 
         //4. From authenticated user's current tenant
         if (!$tenant && auth()->check()) {
-            $tenantId = auth()->user()->current_tenant_id;
+            $user = auth()->user();
+            \Illuminate\Support\Facades\Log::info('TenantAware: Checking user for tenant', [
+                'user_id' => $user->id,
+                'current_tenant_id' => $user->current_tenant_id,
+                'has_tenants' => $user->tenants()->exists()
+            ]);
+
+            $tenantId = $user->current_tenant_id;
+
+            // Fallback to the first tenant the user belongs to if no current tenant is set
+            if (!$tenantId && $user->tenants()->exists()) {
+                $tenantId = $user->tenants()->first()->id;
+                \Illuminate\Support\Facades\Log::info('TenantAware: Falling back to first tenant', [
+                    'tenant_id' => $tenantId
+                ]);
+            }
+
             if ($tenantId) {
                 $tenant = Tenant::find($tenantId);
             }

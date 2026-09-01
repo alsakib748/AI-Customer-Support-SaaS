@@ -9,9 +9,22 @@ import { toast } from 'vue3-toastify';
  * Returns void (fire-and-forget). Callers may `throw err` afterwards
  * if they want to abort further handling.
  */
+// Keep track of recently shown errors to avoid duplicates
+const shownErrors = new Set();
+const ERROR_TIMEOUT = 5000;
+
 export function showApiError(err, fallback = 'Something went wrong. Please try again.') {
     const status = err?.response?.status;
     const data = err?.response?.data;
+    const message = data?.message || err?.message || fallback;
+
+    // Prevent duplicate toasts for the same message within the timeout period
+    if (shownErrors.has(message)) {
+        return;
+    }
+
+    shownErrors.add(message);
+    setTimeout(() => shownErrors.delete(message), ERROR_TIMEOUT);
 
     // 422 — Laravel validation errors: one toast per field message
     if (status === 422 && data?.errors && typeof data.errors === 'object') {
@@ -32,8 +45,6 @@ export function showApiError(err, fallback = 'Something went wrong. Please try a
     if (status === 401) return;
 
     // 403 / 404 / 500 / network / anything else
-    const message = data?.message || err?.message || fallback;
-
     toast.error(message);
 }
 

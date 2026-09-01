@@ -57,9 +57,8 @@ Route::prefix('v1')->group(function () {
             Route::put('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole']);
         });
 
-        // ============================================
-        // WORKSPACE ROUTES
-        // ============================================
+        // todo; ======================  WORKSPACE ROUTES =======================
+
         Route::prefix('workspace')->group(function () {
             // Basic CRUD
             Route::get('/', [WorkspaceController::class, 'show']);
@@ -80,9 +79,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/statistics', [WorkspaceController::class, 'statistics']);
         });
 
-        // ============================================
-        // TEAM MANAGEMENT ROUTES
-        // ============================================
+        // todo; ===================== TEAM MANAGEMENT ROUTES =====================
         Route::prefix('team')->group(function () {
 
             // Members
@@ -103,8 +100,6 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/{id}', [InvitationController::class, 'destroy']);
             });
 
-            // Public invitation acceptance (no auth required)
-            Route::post('/invitations/accept/{token}', [InvitationController::class, 'accept']);
         });
 
 
@@ -166,5 +161,42 @@ Route::prefix('v1')->group(function () {
             }
         });
 
+        Route::get('/debug/tenant', function (Request $request) {
+            return response()->json([
+                'user' => auth()->user()?->id,
+                'tenant_from_attributes' => $request->attributes->get('current_tenant')?->id,
+                'user_current_tenant' => auth()->user()?->current_tenant_id,
+                'header_tenant' => $request->header('X-Tenant-ID'),
+                'user_tenants' => auth()->user()?->tenants()->pluck('id')->toArray(),
+                'headers' => $request->headers->all(),
+            ]);
+        });
+
+        Route::get('/debug/members', function (Request $request) {
+            try {
+                $members = \App\Models\TenantUser::with('user')->limit(5)->get();
+                return response()->json([
+                    'success' => true,
+                    'count' => $members->count(),
+                    'data' => $members->map(function ($m) {
+                        return [
+                            'id' => $m->id,
+                            'user_name' => $m->user?->full_name,
+                            'email' => $m->user?->email,
+                            'role' => $m->role,
+                        ];
+                    }),
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        });
+
     });
 });
+
+Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class, 'accept']);

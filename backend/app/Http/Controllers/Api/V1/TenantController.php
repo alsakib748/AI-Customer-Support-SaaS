@@ -35,8 +35,9 @@ class TenantController extends Controller
             if (!$tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tenant found',
-                ], 404);
+                    'message' => 'No workspace found. Please select a workspace.',
+                    'error' => 'tenant_not_found',
+                ], 400);
             }
 
             return response()->json([

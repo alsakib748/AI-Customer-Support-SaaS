@@ -241,19 +241,19 @@ export const useAuthStore = defineStore('auth', () => {
         // }
     };
 
-    // // Has permission helper
+    // Has permission helper
     // const hasPermission = (permission) => {
     //     if (isSuperAdmin.value) return true;
     //     return permissions.some((p) => userPermissions.value.includes(p));
     // };
 
-    // // Has any permission helper
+    // Has any permission helper
     // const hasAnyPermission = (permissions) => {
     //     if (isSuperAdmin.value) return true;
     //     return permissions.some((p) => userPermissions.value.includes(p));
     // };
 
-    // // Has all permissions helper
+    // Has all permissions helper
     // const hasAllPermissions = (permissions) => {
     //     if (isSuperAdmin.value) return true;
     //     return permissions.every((p) => userPermissions.value.includes(p));

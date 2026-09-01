@@ -10,11 +10,14 @@ class TenantUser extends Pivot
 {
     protected $table = 'tenant_user';
 
+    // Force using central connection
+    protected $connection = 'central';
+
     protected $fillable = [
         'tenant_id',
         'user_id',
         'role',
-        'permissions',
+        // 'permissions',
         'department',
         'position',
         'availability_status',
@@ -26,7 +29,7 @@ class TenantUser extends Pivot
     ];
 
     protected $casts = [
-        'permissions' => 'array',
+        // 'permissions' => 'array',
         'skills' => 'array',
         'metadata' => 'array',
         'max_concurrent_chats' => 'integer',
@@ -37,8 +40,12 @@ class TenantUser extends Pivot
     protected $appends = [
         'user_name',
         'user_email',
-        'user_avatar',
+        // 'user_avatar',
+        'avatar',
         'is_owner',
+        'role_label',
+        'availability_status_label',
+        'availability_status_color',
     ];
 
     // ============================================
@@ -113,6 +120,11 @@ class TenantUser extends Pivot
             ->withTimestamps();
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
@@ -122,27 +134,27 @@ class TenantUser extends Pivot
     // ACCESSORS
     // ============================================
 
-    public function getUserNameAttribute(): string
+    public function getUserNameAttribute()
     {
         return $this->user?->full_name ?? $this->user?->email ?? 'Unknown User';
     }
 
-    public function getUserEmailAttribute(): string
+    public function getUserEmailAttribute()
     {
         return $this->user?->email ?? '';
     }
 
-    public function getUserAvatarAttribute(): ?string
+    public function getUserAvatarAttribute()
     {
         return $this->user?->avatar;
     }
 
-    public function getIsOwnerAttribute(): bool
+    public function getIsOwnerAttribute()
     {
         return $this->role === 'owner';
     }
 
-    public function getAvailabilityStatusLabelAttribute(): string
+    public function getAvailabilityStatusLabelAttribute()
     {
         $labels = [
             'online' => 'Online',
@@ -154,7 +166,7 @@ class TenantUser extends Pivot
         return $labels[$this->availability_status] ?? $this->availability_status;
     }
 
-    public function getAvailabilityStatusColorAttribute(): string
+    public function getAvailabilityStatusColorAttribute()
     {
         $colors = [
             'online' => 'success',
@@ -166,7 +178,7 @@ class TenantUser extends Pivot
         return $colors[$this->availability_status] ?? 'secondary';
     }
 
-    public function getRoleLabelAttribute(): string
+    public function getRoleLabelAttribute()
     {
         $labels = [
             'owner' => 'Owner',
@@ -245,17 +257,30 @@ class TenantUser extends Pivot
         return $this->role === 'agent';
     }
 
-    public function hasPermission($permission)
+    public function hasPermission(string $permission): bool
     {
         if ($this->isOwner()) {
             return true;
         }
+        return $this->user?->hasPermissionTo($permission) ?? false;
+    }
 
-        if (empty($this->permissions)) {
-            return false;
-        }
-
-        return in_array($permission, $this->permissions);
+    /**
+     * Check if user can manage team
+     */
+    public function canManageTeam(): bool
+    {
+        return $this->isAdmin() ||
+            $this->user?->hasAnyPermission([
+                'team.view',
+                'team.invite',
+                'team.update',
+                'team.remove',
+                'members.view',
+                'members.create',
+                'members.update',
+                'members.delete',
+            ]) ?? false;
     }
 
     public function isAvailable(): bool

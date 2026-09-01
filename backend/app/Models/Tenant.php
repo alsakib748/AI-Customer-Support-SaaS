@@ -14,6 +14,9 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, HasDomains, SoftDeletes;
 
+    // ⭐ IMPORTANT: Force this model to use central database
+    protected $connection = 'central';
+
     // Tell Stancl which columns are real DB columns (not packed into the central 'data' JSON)
     public static function getCustomColumns(): array
     {

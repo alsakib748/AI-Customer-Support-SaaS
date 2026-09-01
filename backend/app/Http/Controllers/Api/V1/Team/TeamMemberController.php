@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Log;
 
 class TeamMemberController extends Controller
 {
-
     protected TeamMemberService $service;
 
     public function __construct(TeamMemberService $service)
@@ -26,6 +25,14 @@ class TeamMemberController extends Controller
     public function index(Request $request)
     {
         try {
+            // Check if user can view members
+            // if (!$this->service->canViewMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to view team members.',
+            //     ], 403);
+            // }
+
             $filters = $request->only([
                 'search',
                 'department',
@@ -36,17 +43,34 @@ class TeamMemberController extends Controller
                 'per_page',
             ]);
 
+            // Set defaults
+            $filters['search'] = $filters['search'] ?? '';
+            $filters['sort'] = $filters['sort'] ?? 'created_at';
+            $filters['direction'] = $filters['direction'] ?? 'desc';
+            $filters['per_page'] = $filters['per_page'] ?? 20;
+
             $members = $this->service->getMembers($filters);
+
 
             return new TeamMemberCollection($members);
 
-        } catch (\Exception $e) {
-            Log::error('Failed to get team members:', ['error' => $e->getMessage()]);
+        } catch (\RuntimeException $e) {
+            Log::error('Runtime error in team members:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve team members.',
+                'message' => $e->getMessage(),
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get team members:', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve team members: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -54,9 +78,16 @@ class TeamMemberController extends Controller
     /**
      * Get a single team member
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
+            // if (!$this->service->canViewMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to view team members.',
+            //     ], 403);
+            // }
+
             $member = $this->service->getMember($id);
 
             return new TeamMemberResource($member);
@@ -67,13 +98,18 @@ class TeamMemberController extends Controller
                 'message' => 'Team member not found.',
             ], 404);
 
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
         } catch (\Exception $e) {
             Log::error('Failed to get team member:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve team member.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -84,6 +120,13 @@ class TeamMemberController extends Controller
     public function update(UpdateMemberRequest $request, $id)
     {
         try {
+            // if (!$this->service->canUpdateMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to update team members.',
+            //     ], 403);
+            // }
+
             $member = $this->service->updateMember($id, $request->validated());
 
             return (new TeamMemberResource($member))
@@ -104,13 +147,18 @@ class TeamMemberController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
         } catch (\Exception $e) {
             Log::error('Failed to update team member:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update team member.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -118,9 +166,16 @@ class TeamMemberController extends Controller
     /**
      * Remove a team member
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
+            // if (!$this->service->canDeleteMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to remove team members.',
+            //     ], 403);
+            // }
+
             $this->service->removeMember($id);
 
             return response()->json([
@@ -141,13 +196,18 @@ class TeamMemberController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
         } catch (\Exception $e) {
             Log::error('Failed to remove team member:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove team member.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -158,12 +218,29 @@ class TeamMemberController extends Controller
     public function statistics(Request $request)
     {
         try {
+            // if (!$this->service->canViewMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to view team statistics.',
+            //     ], 403);
+            // }
+
+            // dd('worked');
+
             $statistics = $this->service->getStatistics();
+
+            // dd($statistics);
 
             return response()->json([
                 'success' => true,
                 'data' => $statistics,
             ]);
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
 
         } catch (\Exception $e) {
             Log::error('Failed to get team statistics:', ['error' => $e->getMessage()]);
@@ -171,7 +248,6 @@ class TeamMemberController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve team statistics.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -182,6 +258,13 @@ class TeamMemberController extends Controller
     public function departments(Request $request)
     {
         try {
+            // if (!$this->service->canViewMembers()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to view departments.',
+            //     ], 403);
+            // }
+
             $departments = $this->service->getDepartments();
 
             return response()->json([
@@ -189,15 +272,19 @@ class TeamMemberController extends Controller
                 'data' => $departments,
             ]);
 
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
         } catch (\Exception $e) {
             Log::error('Failed to get departments:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve departments.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
-
 }
