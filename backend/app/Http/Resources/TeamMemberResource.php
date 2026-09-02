@@ -15,7 +15,8 @@ class TeamMemberResource extends JsonResource
     public function toArray(Request $request): array
     {
         // Handle case where user relationship might not be loaded
-        $user = $this->whenLoaded('user');
+        $user = $this->relationLoaded('user') ? $this->user : null;
+        $tenant = $this->relationLoaded('tenant') ? $this->tenant : null;
 
         return [
             'id' => $this->id,
@@ -37,6 +38,12 @@ class TeamMemberResource extends JsonResource
             'accepted_at' => $this->accepted_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            // Tenant information (for Super Admin)
+            'tenant' => $tenant ? [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+            ] : null,
             // Add Spatie permissions if user exists
             'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
             'roles' => $user ? $user->getRoleNames() : [],

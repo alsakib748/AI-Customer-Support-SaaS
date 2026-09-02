@@ -6,6 +6,13 @@ class TeamService {
     // ============================================
 
     /**
+     * Get all tenants (for Super Admin)
+     */
+    getTenants() {
+        return api.get('/team/members/tenants');
+    }
+
+    /**
      * Get team members with filters
      */
     getMembers(params = {}) {

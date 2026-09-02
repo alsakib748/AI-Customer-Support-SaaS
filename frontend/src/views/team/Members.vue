@@ -1,8 +1,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 import { useTeamStore } from '@/stores/team';
 // import { useToast } from 'primevue/usetoast';
 
+const authStore = useAuthStore();
 const teamStore = useTeamStore();
 // const toast = useToast();
 
@@ -49,6 +51,15 @@ const inviteForm = reactive({
 // COMPUTED
 // ============================================
 
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+const tenants = computed(() => teamStore.tenants);
+const selectedTenantId = computed({
+    get: () => teamStore.selectedTenantId,
+    set: (value) => {
+        teamStore.selectedTenantId = value;
+        teamStore.fetchMembers();
+    },
+});
 const loading = computed(() => teamStore.loading);
 const saving = computed(() => teamStore.saving);
 const deleting = computed(() => teamStore.deleting);
@@ -221,10 +232,19 @@ const getError = (field) => {
 // LIFECYCLE
 // ============================================
 
-onMounted(() => {
+onMounted(async () => {
+
+    if (isSuperAdmin.value) {
+        await teamStore.fetchTenants();
+    }
+    await teamStore.fetchMembers();
+
     loadData();
     // console.log('Fetch Statistics: ', teamStore.fetchStatistics());
     // console.log('Fetch Departments: ', teamStore.fetchDepartments());
+
+    // If Super Admin, load all tenants first
+
 });
 
 // Watch for search filter changes
@@ -240,14 +260,25 @@ watch(() => filters.search, () => {
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0">Team Members</h1>
-                <p class="text-surface-600 dark:text-surface-400">Manage your team members and their permissions</p>
+                <p class="text-surface-600 dark:text-surface-400">
+                    {{ isSuperAdmin ? 'Manage all team members across all workspaces' : 'Manage your team members' }}
+                </p>
             </div>
             <div class="flex gap-3">
                 <Button label="Invite Member" icon="pi pi-user-plus" severity="primary" @click="showInviteDialog = true"
-                    v-if="canManageTeam" />
+                    v-if="canManageTeam && !isSuperAdmin" />
                 <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
                     :loading="loading" />
             </div>
+        </div>
+
+        <!-- Tenant Filter (Super Admin Only) -->
+        <div v-if="isSuperAdmin" class="mb-4 flex items-center gap-3">
+            <label class="font-medium text-surface-700 dark:text-surface-300">Workspace:</label>
+            <Select v-model="selectedTenantId" :options="tenants" optionLabel="name" optionValue="id"
+                placeholder="All Workspaces" class="w-64" @change="applyFilters" clearable />
+            <span class="text-sm text-surface-500">Showing {{ totalMembers }} members across {{ tenants.length }}
+                workspaces</span>
         </div>
 
         <!-- Statistics Cards -->
@@ -304,6 +335,11 @@ watch(() => filters.search, () => {
                 <Select v-model="filters.role" :options="roleOptions" optionLabel="label" optionValue="value"
                     placeholder="Role" class="w-full" @change="applyFilters" clearable />
             </div>
+            <!-- Additional filter for Super Admin -->
+            <div v-if="isSuperAdmin" class="w-48">
+                <Select v-model="filters.tenant_id" :options="tenants" optionLabel="name" optionValue="id"
+                    placeholder="Filter by Workspace" class="w-full" @change="applyFilters" clearable />
+            </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
@@ -311,6 +347,14 @@ watch(() => filters.search, () => {
         <DataTable :value="members" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalMembers"
             :lazy="true" @page="onPageChange" @sort="onSortChange" class="w-full" v-model:sortField="filters.sort"
             v-model:sortOrder="sortOrder">
+
+            <!-- Tenant Column (Super Admin Only) -->
+            <Column v-if="isSuperAdmin" field="tenant.name" header="Workspace" sortable>
+                <template #body="{ data }">
+                    <span class="font-medium">{{ data.tenant?.name || 'N/A' }}</span>
+                </template>
+            </Column>
+
             <Column field="name" header="Name" sortable>
                 <template #body="{ data }">
                     <div class="flex items-center gap-3">

@@ -17,20 +17,28 @@ class TeamMemberService
     protected ?User $user;
     protected ?string $tenantId;
 
+    protected bool $isSuperAdmin = false;
+
     public function __construct(Request $request)
     {
         $this->user = auth()->user();
 
-        Log::info('TeamMemberService constructor', [
-            'user_id' => $this->user?->id,
-            'user_email' => $this->user?->email,
-            'has_tenant_middleware' => $request->attributes->has('current_tenant'),
-            'request_headers' => $request->headers->all(),
-        ]);
+        // Check if user is Super Admin
+        if ($this->user && $this->user->hasRole('super-admin')) {
+            $this->isSuperAdmin = true;
+            Log::info('Super Admin accessing team service', ['user_id' => $this->user->id]);
+            // Super Admin doesn't need a specific tenant
+            return;
+        }
 
-        $tenant = $request->attributes->get('current_tenant')
-            ?? app('current_tenant')
-            ?? ($this->user?->currentTenant);
+        // Log::info('TeamMemberService constructor', [
+        //     'user_id' => $this->user?->id,
+        //     'user_email' => $this->user?->email,
+        //     'has_tenant_middleware' => $request->attributes->has('current_tenant'),
+        //     'request_headers' => $request->headers->all(),
+        // ]);
+
+        $tenant = $request->attributes->get('current_tenant');
 
         if (!$tenant) {
             $tenantId = $request->header('X-Tenant-Id')
@@ -49,12 +57,7 @@ class TeamMemberService
         }
 
         if (!$tenant) {
-            Log::error('No tenant found in context', [
-                'user_id' => $this->user?->id,
-                'headers' => $request->headers->all(),
-                'attributes' => $request->attributes->all(),
-            ]);
-            throw new \RuntimeException('No tenant found in current context. Please select a workspace.');
+            throw new \RuntimeException('No workspace found. Please create or select a workspace.');
         }
 
         $this->tenant = $tenant;
@@ -128,8 +131,8 @@ class TeamMemberService
             return false;
         }
 
-        // Super admin can view any team
-        if ($this->user->hasRole('super-admin')) {
+        // Super Admin can view all members
+        if ($this->isSuperAdmin) {
             return true;
         }
 
@@ -219,78 +222,87 @@ class TeamMemberService
     public function getMembers(array $filters = [])
     {
         try {
-            $tenantId = $this->getTenantId();
+            $query = TenantUser::query()->with('user');
 
-            Log::info('Getting members for tenant', ['tenant_id' => $tenantId]);
+            // If Super Admin, show all members across all tenants
+            if ($this->isSuperAdmin) {
+                Log::info('Super Admin viewing all team members', ['user_id' => $this->user->id]);
 
-            $query = TenantUser::query()
-                ->where('tenant_id', $tenantId)
-                ->with('user');
-
-            // dd($query);
-
-            // Search
-            if (!empty($filters['search'])) {
-                $search = $filters['search'];
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->where('first_name', 'ILIKE', "%{$search}%")
-                            ->orWhere('last_name', 'ILIKE', "%{$search}%")
-                            ->orWhere('email', 'ILIKE', "%{$search}%");
-                    })
-                        ->orWhere('department', 'ILIKE', "%{$search}%")
-                        ->orWhere('position', 'ILIKE', "%{$search}%");
-                });
-            }
-
-            // Filter by department
-            if (!empty($filters['department'])) {
-                $query->where('department', $filters['department']);
-            }
-
-
-
-            // Filter by availability status
-            if (!empty($filters['availability_status'])) {
-                $query->where('availability_status', $filters['availability_status']);
-            }
-
-
-            // Filter by role
-            if (!empty($filters['role'])) {
-                $query->where('role', $filters['role']);
-            }
-
-
-            // Sorting
-            $sortField = $filters['sort'] ?? 'created_at';
-            $sortDirection = $filters['direction'] ?? 'desc';
-
-            $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role'];
-
-            if (in_array($sortField, $allowedSorts)) {
-                if ($sortField === 'name' || $sortField === 'email') {
-                    $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
-                        $q->orderBy($sortField, $sortDirection);
-                    });
-                } else {
-                    $query->orderBy($sortField, $sortDirection);
+                // Optional: Add tenant filter if specified
+                if (!empty($filters['tenant_id'])) {
+                    $query->where('tenant_id', $filters['tenant_id']);
                 }
-            } else {
-                $query->orderBy('created_at', 'desc');
+
+                // Add tenant relationship for display
+                $query->with('tenant');
+
+                return $this->applyFiltersAndPagination($query, $filters);
             }
 
-            $perPage = $filters['per_page'] ?? 20;
+            // Normal users - only their tenant
+            $tenantId = $this->getTenantId();
+            $query->where('tenant_id', $tenantId);
 
-            // dd($perPage);
+            return $this->applyFiltersAndPagination($query, $filters);
 
-            $result = $query->paginate($perPage);
+            // // Search
+            // if (!empty($filters['search'])) {
+            //     $search = $filters['search'];
+            //     $query->where(function ($q) use ($search) {
+            //         $q->whereHas('user', function ($userQuery) use ($search) {
+            //             $userQuery->where('first_name', 'ILIKE', "%{$search}%")
+            //                 ->orWhere('last_name', 'ILIKE', "%{$search}%")
+            //                 ->orWhere('email', 'ILIKE', "%{$search}%");
+            //         })
+            //             ->orWhere('department', 'ILIKE', "%{$search}%")
+            //             ->orWhere('position', 'ILIKE', "%{$search}%");
+            //     });
+            // }
 
-            // dd($result);
+            // // Filter by department
+            // if (!empty($filters['department'])) {
+            //     $query->where('department', $filters['department']);
+            // }
 
-            Log::info('Members fetched successfully', ['count' => $result->count()]);
+            // // Filter by availability status
+            // if (!empty($filters['availability_status'])) {
+            //     $query->where('availability_status', $filters['availability_status']);
+            // }
 
-            return $result;
+            // // Filter by role
+            // if (!empty($filters['role'])) {
+            //     $query->where('role', $filters['role']);
+            // }
+
+            // // Sorting
+            // $sortField = $filters['sort'] ?? 'created_at';
+            // $sortDirection = $filters['direction'] ?? 'desc';
+
+            // $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role'];
+
+            // if (in_array($sortField, $allowedSorts)) {
+            //     if ($sortField === 'name' || $sortField === 'email') {
+            //         $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
+            //             $q->orderBy($sortField, $sortDirection);
+            //         });
+            //     } else {
+            //         $query->orderBy($sortField, $sortDirection);
+            //     }
+            // } else {
+            //     $query->orderBy('created_at', 'desc');
+            // }
+
+            // $perPage = $filters['per_page'] ?? 20;
+
+            // // dd($perPage);
+
+            // $result = $query->paginate($perPage);
+
+            // // dd($result);
+
+            // Log::info('Members fetched successfully', ['count' => $result->count()]);
+
+            // return $result;
 
         } catch (\Exception $e) {
             Log::error('Failed to get members:', [
@@ -302,15 +314,80 @@ class TeamMemberService
     }
 
     /**
+     * Apply filters and pagination to query
+     */
+    protected function applyFiltersAndPagination($query, array $filters = [])
+    {
+        // Search
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('first_name', 'ILIKE', "%{$search}%")
+                        ->orWhere('last_name', 'ILIKE', "%{$search}%")
+                        ->orWhere('email', 'ILIKE', "%{$search}%");
+                })
+                    ->orWhere('department', 'ILIKE', "%{$search}%")
+                    ->orWhere('position', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        // Filter by department
+        if (!empty($filters['department'])) {
+            $query->where('department', $filters['department']);
+        }
+
+        // Filter by availability status
+        if (!empty($filters['availability_status'])) {
+            $query->where('availability_status', $filters['availability_status']);
+        }
+
+        // Filter by role
+        if (!empty($filters['role'])) {
+            $query->where('role', $filters['role']);
+        }
+
+        // Filter by tenant (for Super Admin)
+        if (!empty($filters['tenant_id'])) {
+            $query->where('tenant_id', $filters['tenant_id']);
+        }
+
+        // Sorting
+        $sortField = $filters['sort'] ?? 'created_at';
+        $sortDirection = $filters['direction'] ?? 'desc';
+
+        $allowedSorts = ['name', 'email', 'department', 'position', 'availability_status', 'created_at', 'role', 'tenant_id'];
+
+        if (in_array($sortField, $allowedSorts)) {
+            if ($sortField === 'name' || $sortField === 'email') {
+                $query->whereHas('user', function ($q) use ($sortField, $sortDirection) {
+                    $q->orderBy($sortField, $sortDirection);
+                });
+            } else {
+                $query->orderBy($sortField, $sortDirection);
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $perPage = $filters['per_page'] ?? 20;
+        return $query->paginate($perPage);
+    }
+
+    /**
      * Get a single team member
      */
     public function getMember(int $id): TenantUser
     {
-        $member = TenantUser::query()
-            ->forTenant($this->getTenantId())
-            ->with('user')
-            ->findOrFail($id);
+        $query = TenantUser::query()->with('user');
 
+        // Super Admin can access any member
+        if (!$this->isSuperAdmin) {
+            $tenantId = $this->getTenantId();
+            $query->where('tenant_id', $tenantId);
+        }
+
+        $member = $query->findOrFail($id);
         return $member;
     }
 
@@ -322,13 +399,12 @@ class TeamMemberService
         $member = $this->getMember($id);
 
         // Prevent updating owner
-        if ($member->isOwner()) {
+        if ($member->isOwner() && !$this->isSuperAdmin) {
             throw ValidationException::withMessages([
                 'role' => ['Cannot update the owner. Owner permissions are managed separately.']
             ]);
         }
 
-        // Update member fields
         $member->update([
             'department' => $data['department'] ?? $member->department,
             'position' => $data['position'] ?? $member->position,
@@ -338,9 +414,10 @@ class TeamMemberService
         ]);
 
         Log::info('Team member updated', [
-            'tenant_id' => $this->getTenantId(),
+            'tenant_id' => $member->tenant_id,
             'member_id' => $member->id,
             'user_id' => auth()->id(),
+            'is_super_admin' => $this->isSuperAdmin,
         ]);
 
         return $member->fresh()->load('user');
@@ -353,8 +430,8 @@ class TeamMemberService
     {
         $member = $this->getMember($id);
 
-        // Prevent removing the owner
-        if ($member->isOwner()) {
+        // Prevent removing the owner (unless Super Admin)
+        if ($member->isOwner() && !$this->isSuperAdmin) {
             throw ValidationException::withMessages([
                 'member' => ['Cannot remove the workspace owner.'],
             ]);
@@ -390,9 +467,51 @@ class TeamMemberService
      */
     public function getStatistics(): array
     {
-        // dd('worked !!');
+        $query = TenantUser::query();
 
-        $query = TenantUser::query()->forTenant($this->getTenantId());
+        // Super Admin sees all tenants
+        if ($this->isSuperAdmin) {
+            Log::info('Super Admin viewing all team statistics', ['user_id' => $this->user->id]);
+
+            return [
+                'total' => $query->count(),
+                'online' => (clone $query)->where('availability_status', 'online')->count(),
+                'away' => (clone $query)->where('availability_status', 'away')->count(),
+                'offline' => (clone $query)->where('availability_status', 'offline')->count(),
+                'busy' => (clone $query)->where('availability_status', 'busy')->count(),
+                'by_role' => (clone $query)
+                    ->selectRaw('role, count(*) as count')
+                    ->groupBy('role')
+                    ->pluck('count', 'role')
+                    ->toArray(),
+                'by_department' => (clone $query)
+                    ->whereNotNull('department')
+                    ->selectRaw('department, count(*) as count')
+                    ->groupBy('department')
+                    ->pluck('count', 'department')
+                    ->toArray(),
+                'by_tenant' => (clone $query)
+                    ->selectRaw('tenant_id, count(*) as count')
+                    ->groupBy('tenant_id')
+                    ->with('tenant')
+                    ->get()
+                    ->map(function ($item) {
+                        return [
+                            'tenant_id' => $item->tenant_id,
+                            'tenant_name' => $item->tenant?->name ?? 'Unknown',
+                            'count' => $item->count,
+                        ];
+                    })
+                    ->toArray(),
+                'is_super_admin' => true,
+            ];
+        }
+
+
+        $tenantId = $this->getTenantId();
+        $query->where('tenant_id', $tenantId);
+
+        // $query = TenantUser::query()->forTenant($this->getTenantId());
 
         // dd($query->count());
 
@@ -421,12 +540,40 @@ class TeamMemberService
      */
     public function getDepartments(): array
     {
-        return TenantUser::query()
-            ->forTenant($this->getTenantId())
+
+        $query = TenantUser::query();
+
+        // Super Admin sees all departments
+        if ($this->isSuperAdmin) {
+            Log::info('Super Admin viewing all departments', ['user_id' => $this->user->id]);
+            return $query->whereNotNull('department')
+                ->select('department')
+                ->distinct()
+                ->pluck('department')
+                ->toArray();
+        }
+
+        $tenantId = $this->getTenantId();
+
+        return $query->where('tenant_id', $tenantId)
             ->whereNotNull('department')
             ->select('department')
             ->distinct()
             ->pluck('department')
             ->toArray();
     }
+
+    public function getTenants(): array
+    {
+        if (!$this->isSuperAdmin) {
+            return [];
+        }
+
+        return Tenant::active()
+            ->select('id', 'name', 'slug', 'status')
+            ->orderBy('name')
+            ->get()
+            ->toArray();
+    }
+
 }

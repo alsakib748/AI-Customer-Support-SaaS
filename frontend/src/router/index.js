@@ -42,15 +42,15 @@ const router = createRouter({
                 title: 'Error'
             }
         },
-        {
-            path: '/setup/create-workspace',
-            name: 'CreateWorkspace',
-            component: () => import('@/views/pages/setup/CreateWorkspace.vue'),
-            meta: {
-                requiresAuth: true,
-                title: 'Create Workspace'
-            }
-        },
+        // {
+        //     path: '/setup/create-workspace',
+        //     name: 'CreateWorkspace',
+        //     component: () => import('@/views/pages/setup/CreateWorkspace.vue'),
+        //     meta: {
+        //         requiresAuth: false,
+        //         title: 'Create Workspace'
+        //     }
+        // },
         {
             path: '/',
 
@@ -93,15 +93,6 @@ const router = createRouter({
                         title: 'Team Members'
                     }
                 },
-                // {
-                //     path: '/team/invitations',
-                //     name: 'TeamInvitations',
-                //     component: () => import('@/views/team/Invitations.vue'),
-                //     meta: {
-                //         requiresAuth: true,
-                //         title: 'Team Invitations'
-                //     }
-                // },
                 {
                     path: '/uikit/formlayout',
                     name: 'formlayout',

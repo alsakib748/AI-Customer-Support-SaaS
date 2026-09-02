@@ -7,6 +7,8 @@ export const useTeamStore = defineStore('team', () => {
     // ============================================
     // STATE
     // ============================================
+    const tenants = ref([]);
+    const selectedTenantId = ref(null);
 
     const members = ref([]);
     const currentMember = ref(null);
@@ -72,6 +74,11 @@ export const useTeamStore = defineStore('team', () => {
         try {
             const mergedParams = { ...filters.value, ...params };
 
+            // If Super Admin and tenant filter is selected
+            if (selectedTenantId.value) {
+                mergedParams.tenant_id = selectedTenantId.value;
+            }
+
             // Clean params
             Object.keys(mergedParams).forEach((key) => {
                 if (mergedParams[key] === null || mergedParams[key] === undefined) {
@@ -103,6 +110,21 @@ export const useTeamStore = defineStore('team', () => {
             throw error;
         } finally {
             loading.value = false;
+        }
+    };
+
+    const fetchTenants = async () => {
+        try {
+            const response = await teamService.getTenants();
+
+            if (response.data.success) {
+                tenants.value = response.data.data || [];
+                return tenants.value;
+            }
+        } catch (error) {
+            console.error('Failed to fetch tenants:', error);
+            toast.error('Failed to load tenants');
+            return [];
         }
     };
 
@@ -407,6 +429,8 @@ export const useTeamStore = defineStore('team', () => {
 
     return {
         // State
+        tenants,
+        selectedTenantId,
         members,
         currentMember,
         invitations,
@@ -433,6 +457,7 @@ export const useTeamStore = defineStore('team', () => {
 
         // Member Actions
         fetchMembers,
+        fetchTenants,
         fetchMember,
         updateMember,
         removeMember,

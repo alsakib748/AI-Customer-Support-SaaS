@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -17,6 +18,23 @@ class TenantAware
      */
     public function handle(Request $request, Closure $next): Response
     {
+
+        // Check if user is Super Admin
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('super-admin')) {
+            // Super Admin doesn't need tenant context
+            // They can access platform-level routes
+            Log::info('Super Admin accessing route without tenant', [
+                'user_id' => $user->id,
+                'path' => $request->path(),
+            ]);
+
+            // Set a special flag for Super Admin
+            $request->attributes->set('is_super_admin', true);
+
+            return $next($request);
+        }
 
         $tenant = null;
 

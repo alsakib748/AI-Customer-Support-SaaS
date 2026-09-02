@@ -41,13 +41,14 @@ class TeamMemberController extends Controller
                 'sort',
                 'direction',
                 'per_page',
+                'tenant_id',
             ]);
 
             // Set defaults
-            $filters['search'] = $filters['search'] ?? '';
-            $filters['sort'] = $filters['sort'] ?? 'created_at';
-            $filters['direction'] = $filters['direction'] ?? 'desc';
-            $filters['per_page'] = $filters['per_page'] ?? 20;
+            // $filters['search'] = $filters['search'] ?? '';
+            // $filters['sort'] = $filters['sort'] ?? 'created_at';
+            // $filters['direction'] = $filters['direction'] ?? 'desc';
+            // $filters['per_page'] = $filters['per_page'] ?? 20;
 
             $members = $this->service->getMembers($filters);
 
@@ -71,6 +72,29 @@ class TeamMemberController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve team members: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all tenants (for Super Admin)
+     */
+    public function tenants(Request $request)
+    {
+        try {
+            $tenants = $this->service->getTenants();
+
+            return response()->json([
+                'success' => true,
+                'data' => $tenants,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get tenants:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve tenants.',
             ], 500);
         }
     }

@@ -30,12 +30,7 @@ const model = ref([
                 label: 'Team',
                 icon: 'pi pi-fw pi-slack',
                 to: '/team/members'
-            },
-            {
-                label: 'Team Invitations',
-                icon: 'pi pi-fw pi-slack',
-                to: '/team/members'
-            },
+            }
         ]
     },
     {

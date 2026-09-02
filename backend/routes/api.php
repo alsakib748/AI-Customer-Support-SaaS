@@ -82,11 +82,15 @@ Route::prefix('v1')->group(function () {
         // todo; ===================== TEAM MANAGEMENT ROUTES =====================
         Route::prefix('team')->group(function () {
 
-            // Members
+
             Route::prefix('members')->group(function () {
                 Route::get('/', [TeamMemberController::class, 'index']);
                 Route::get('/statistics', [TeamMemberController::class, 'statistics']);
                 Route::get('/departments', [TeamMemberController::class, 'departments']);
+
+                Route::get('/tenants', [TeamMemberController::class, 'tenants']); // Super Admin only
+                // Members
+
                 Route::get('/{id}', [TeamMemberController::class, 'show']);
                 Route::put('/{id}', [TeamMemberController::class, 'update']);
                 Route::delete('/{id}', [TeamMemberController::class, 'destroy']);
