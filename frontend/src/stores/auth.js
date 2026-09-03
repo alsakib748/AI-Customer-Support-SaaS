@@ -242,22 +242,49 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     // Has permission helper
-    // const hasPermission = (permission) => {
-    //     if (isSuperAdmin.value) return true;
-    //     return permissions.some((p) => userPermissions.value.includes(p));
-    // };
+    const hasPermission = (permission) => {
+        if (isSuperAdmin.value) return true;
+
+        // If no permission provided, return false
+        if (!permission) return false;
+
+        // Check if user has the specific permission
+        return userPermissions.value.includes(permission);
+    };
 
     // Has any permission helper
-    // const hasAnyPermission = (permissions) => {
-    //     if (isSuperAdmin.value) return true;
-    //     return permissions.some((p) => userPermissions.value.includes(p));
-    // };
+    const hasAnyPermission = (permissions) => {
+        if (isSuperAdmin.value) return true;
+
+        // If no permissions provided, return false
+        if (!permissions) return false;
+
+        // If permissions is a string, convert to array
+        const permArray = Array.isArray(permissions) ? permissions : [permissions];
+
+        // If array is empty, return false
+        if (permArray.length === 0) return false;
+
+        // Check if user has any of the permissions
+        return permArray.some((p) => userPermissions.value.includes(p));
+    };
 
     // Has all permissions helper
-    // const hasAllPermissions = (permissions) => {
-    //     if (isSuperAdmin.value) return true;
-    //     return permissions.every((p) => userPermissions.value.includes(p));
-    // };
+    const hasAllPermissions = (permissions) => {
+        if (isSuperAdmin.value) return true;
+
+        // If no permissions provided, return false
+        if (!permissions) return false;
+
+        // If permissions is a string, convert to array
+        const permArray = Array.isArray(permissions) ? permissions : [permissions];
+
+        // If array is empty, return false
+        if (permArray.length === 0) return false;
+
+        // Check if user has all of the permissions
+        return permArray.every((p) => userPermissions.value.includes(p));
+    };
 
     return {
         // State
@@ -290,9 +317,9 @@ export const useAuthStore = defineStore('auth', () => {
         clearAuth,
         setAuth,
         setRedirectPath,
-        getRedirectPath
-        // hasPermission,
-        // hasAnyPermission,
-        // hasAllPermissions
+        getRedirectPath,
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions
     };
 });

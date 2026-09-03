@@ -22,11 +22,12 @@ class TenantService
     public function createDefaultTenant(User $user, array $data): Tenant
     {
         $tenantName = $data['company_name'] ?? $user->full_name . "'s Workspace";
-        $slug = Str::slug($tenantName);
+        $slug = Str::slug($tenantName) . '-' . Str::random(4);
         $subdomain = $data['subdomain'] ?? Str::slug($tenantName) . '-' . Str::random(4);
 
         // Create tenant - Stancl will auto-generate the ID
         $tenant = Tenant::create([
+            'id' => (string) Str::uuid(),
             'name' => $tenantName,
             'slug' => $slug,
             'subdomain' => $subdomain,
@@ -48,6 +49,8 @@ class TenantService
                 'status' => 'active',
             ],
         ]);
+
+        Tenancy::initialize($tenant);
 
         // Create domain for subdomain
         $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';

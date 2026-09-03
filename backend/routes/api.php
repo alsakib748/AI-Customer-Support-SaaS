@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Customer\CustomerController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
@@ -106,19 +107,32 @@ Route::prefix('v1')->group(function () {
 
         });
 
+        // Customer Management Routes
+        Route::prefix('customers')->group(function () {
+            // Main CRUD
+            Route::get('/', [CustomerController::class, 'index']);
+            Route::post('/', [CustomerController::class, 'store']);
+            Route::get('/statistics', [CustomerController::class, 'statistics']);
+            Route::get('/tags', [CustomerController::class, 'tags']);
+            Route::get('/export', [CustomerController::class, 'export']);
+            Route::get('/{id}', [CustomerController::class, 'show']);
+            Route::put('/{id}', [CustomerController::class, 'update']);
+            Route::delete('/{id}', [CustomerController::class, 'destroy']);
 
-        // Profile Routes
-        // Route::prefix('profile')->group(function () {
-        //     Route::get('/', [ProfileController::class, 'show']);
-        //     Route::put('/', [ProfileController::class, 'update']);
-        //     Route::put('avatar', [ProfileController::class, 'updateAvatar']);
-        // });
+            // Restore (soft delete)
+            Route::post('/{id}/restore', [CustomerController::class, 'restore']);
+            Route::delete('/{id}/force', [CustomerController::class, 'forceDelete']);
 
-        // Audit Log Routes
-        Route::prefix('audit-logs')->group(function () {
-            Route::get('/', [AuditLogController::class, 'index']);
-            Route::get('/statistics', [AuditLogController::class, 'statistics']);
-            Route::get('/users/{userId}', [AuditLogController::class, 'getUserLogs']);
+            // Block/Unblock
+            Route::post('/{id}/block', [CustomerController::class, 'block']);
+            Route::post('/{id}/unblock', [CustomerController::class, 'unblock']);
+
+            // Tags
+            Route::post('/{id}/tags', [CustomerController::class, 'addTag']);
+            Route::delete('/{id}/tags/{tag}', [CustomerController::class, 'removeTag']);
+
+            // Bulk Operations
+            Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete']);
         });
 
         // Test Route - Can be removed later

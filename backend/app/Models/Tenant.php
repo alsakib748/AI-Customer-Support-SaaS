@@ -75,6 +75,16 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'updated_at' => 'datetime',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Override the Stancl method to use the name column
     public function getTenantName(): string

@@ -14,7 +14,7 @@ const model = ref([
         ]
     },
     {
-        label: 'Workspace',
+        // label: 'Workspace',
         items: [
             {
                 label: 'Workspace',
@@ -24,12 +24,22 @@ const model = ref([
         ]
     },
     {
-        label: 'Team Management',
+        // label: 'Team Management',
         items: [
             {
-                label: 'Team',
+                label: 'Team Management',
                 icon: 'pi pi-fw pi-slack',
                 to: '/team/members'
+            }
+        ]
+    },
+    {
+        // label: 'Customers Management',
+        items: [
+            {
+                label: 'Customers Management',
+                icon: 'pi pi-fw pi-users',
+                to: '/customers'
             }
         ]
     },

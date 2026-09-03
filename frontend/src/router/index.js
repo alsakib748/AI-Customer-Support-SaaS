@@ -94,6 +94,16 @@ const router = createRouter({
                     }
                 },
                 {
+                    path: '/customers',
+                    name: 'Customers',
+                    component: () => import('@/views/customers/CustomerList.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Customers'
+                        // permissions: ['customers.view'],
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')
@@ -265,6 +275,21 @@ router.beforeEach(async (to, form, next) => {
         //         query: { redirect: to.fullPath }
         //     });
         // }
+
+        // Check if route requires specific permissions
+        if (to.meta.permissions && isAuthenticated) {
+            const hasAccess = authStore.hasAnyPermission(to.meta.permissions);
+
+            if (!hasAccess) {
+                toast.error('You do not have permission to access this page');
+                return next('/dashboard');
+            }
+        }
+
+        // Redirect authenticated users from guest pages
+        if (to.meta.requiresGuest && isAuthenticated) {
+            return next('/dashboard');
+        }
 
         return next();
     }

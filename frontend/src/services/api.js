@@ -9,7 +9,8 @@ const api = axios.create({
         'Content-Type': 'application/json',
         Accept: 'application/json'
     },
-    timeout: 30000
+    timeout: 30000,
+    withCredentials: false
 });
 
 // Request interceptor - Add token
