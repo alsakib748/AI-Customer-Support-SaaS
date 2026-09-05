@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Conversation\ConversationController;
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
@@ -107,7 +108,7 @@ Route::prefix('v1')->group(function () {
 
         });
 
-        // Customer Management Routes
+        //todo; =========== Customer Management Routes ==========
         Route::prefix('customers')->group(function () {
             // Main CRUD
             Route::get('/', [CustomerController::class, 'index']);
@@ -133,6 +134,25 @@ Route::prefix('v1')->group(function () {
 
             // Bulk Operations
             Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete']);
+        });
+
+        // todo; ========== Conversation Routes ===========
+        Route::prefix('conversations')->group(function () {
+            Route::get('/', [ConversationController::class, 'index']);
+            Route::post('/', [ConversationController::class, 'store']);
+            Route::get('/statistics', [ConversationController::class, 'statistics']);
+            Route::get('/{id}', [ConversationController::class, 'show']);
+            Route::put('/{id}', [ConversationController::class, 'update']);
+            Route::delete('/{id}', [ConversationController::class, 'destroy']);
+
+            // Status Actions
+            Route::post('/{id}/resolve', [ConversationController::class, 'resolve']);
+            Route::post('/{id}/reopen', [ConversationController::class, 'reopen']);
+            Route::post('/{id}/close', [ConversationController::class, 'close']);
+
+            // Assignment Actions
+            Route::post('/{id}/assign', [ConversationController::class, 'assign']);
+            Route::post('/{id}/unassign', [ConversationController::class, 'unassign']);
         });
 
         // Test Route - Can be removed later

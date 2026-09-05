@@ -2,6 +2,7 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\Tenant\Conversation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -188,6 +189,23 @@ class Customer extends Model
             return $t !== $tag;
         });
         $this->update(['tags' => array_values($tags)]);
+    }
+
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
+    public function activeConversation()
+    {
+        return $this->hasOne(Conversation::class)
+            ->whereIn('status', ['open', 'pending'])
+            ->latest('last_message_at');
+    }
+
+    public function getActiveConversationAttribute()
+    {
+        return $this->activeConversation()->first();
     }
 
 }

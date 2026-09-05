@@ -44,6 +44,16 @@ const model = ref([
         ]
     },
     {
+        // label: 'Customers Management',
+        items: [
+            {
+                label: 'Conversation',
+                icon: 'pi pi-fw pi-send',
+                to: '/conversations'
+            }
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [
