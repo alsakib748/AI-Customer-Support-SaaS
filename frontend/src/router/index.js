@@ -114,6 +114,16 @@ const router = createRouter({
                     }
                 },
                 {
+                    path: '/conversations/:id',
+                    name: 'ConversationShow',
+                    component: () => import('@/views/conversations/ConversationShow.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Conversation',
+                        permissions: ['conversations.view']
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')

@@ -103,7 +103,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation created successfully 🎉',
+                    'message' => 'Conversation created successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -187,7 +187,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation updated successfully 🎉',
+                    'message' => 'Conversation updated successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -275,7 +275,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation resolved successfully ✅',
+                    'message' => 'Conversation resolved successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -319,7 +319,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation reopened successfully 🔄',
+                    'message' => 'Conversation reopened successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -363,7 +363,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation closed successfully 🔒',
+                    'message' => 'Conversation closed successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -407,7 +407,7 @@ class ConversationController extends Controller
 
             return (new ConversationResource($conversation))
                 ->additional([
-                    'message' => 'Conversation assigned successfully 👤',
+                    'message' => 'Conversation assigned successfully',
                 ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

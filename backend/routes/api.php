@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Conversation\ConversationController;
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
+use App\Http\Controllers\Api\V1\Message\MessageController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
@@ -153,6 +154,20 @@ Route::prefix('v1')->group(function () {
             // Assignment Actions
             Route::post('/{id}/assign', [ConversationController::class, 'assign']);
             Route::post('/{id}/unassign', [ConversationController::class, 'unassign']);
+        });
+
+        // todo; Message Routes - Nested under conversations
+        Route::prefix('conversations/{conversation}')->group(function () {
+
+            Route::get('/messages', [MessageController::class, 'index']);
+            Route::post('/messages', [MessageController::class, 'store']);
+            Route::post('/notes', [MessageController::class, 'addNote']);
+        });
+
+        // todo; Standalone message routes
+        Route::prefix('messages')->group(function () {
+            Route::get('/{id}', [MessageController::class, 'show']);
+            Route::delete('/{id}', [MessageController::class, 'destroy']);
         });
 
         // Test Route - Can be removed later

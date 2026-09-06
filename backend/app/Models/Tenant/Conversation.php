@@ -5,6 +5,7 @@ namespace App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Conversation extends Model
@@ -52,10 +53,6 @@ class Conversation extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    public function messages(): HasMany
-    {
-        return $this->hasMany(Message::class);
-    }
 
     //todo; =============== ACCESSORS ================
 
@@ -291,6 +288,44 @@ class Conversation extends Model
         $this->update([
             'last_message_at' => now(),
         ]);
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    public function latestMessage(): HasOne
+    {
+        return $this->hasOne(Message::class)->latest('created_at');
+    }
+
+    public function publicMessages(): HasMany
+    {
+        return $this->hasMany(Message::class)->where('is_internal', false);
+    }
+
+    public function internalNotes(): HasMany
+    {
+        return $this->hasMany(Message::class)
+            ->where('is_internal', true)
+            ->where('message_type', 'internal_note');
+    }
+
+    public function getMessagesCountAttribute(): int
+    {
+        return $this->messages()->count();
+    }
+
+    public function getPublicMessagesCountAttribute(): int
+    {
+        return $this->messages()->where('is_internal', false)->count();
+    }
+
+    public function hasUnreadMessages(): bool
+    {
+        // Will be implemented with read receipts later
+        return false;
     }
 
 }

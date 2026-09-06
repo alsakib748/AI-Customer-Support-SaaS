@@ -1,12 +1,13 @@
 <!-- src/views/conversations/ConversationList.vue -->
-
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useConversationStore } from '@/stores/conversation';
 import { useCustomerStore } from '@/stores/customer';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 
+const router = useRouter();
 const conversationStore = useConversationStore();
 const customerStore = useCustomerStore();
 const authStore = useAuthStore();
@@ -92,7 +93,7 @@ const loadData = async () => {
     await Promise.all([
         conversationStore.fetchConversations({ ...filters }),
         conversationStore.fetchStatistics(),
-        customerStore.fetchCustomers({ per_page: 100 }), // Load customers for dropdown
+        customerStore.fetchCustomers({ per_page: 100 }),
     ]);
 };
 
@@ -132,8 +133,8 @@ const onSortChange = (event) => {
 };
 
 const viewConversation = (conversation) => {
-    selectedConversation.value = conversation;
-    showDetailsDialog.value = true;
+    // Navigate to conversation detail or show modal
+    router.push(`/conversations/${conversation.id}`);
 };
 
 const handleCreate = async () => {
@@ -159,10 +160,8 @@ const resetCreateForm = () => {
 const handleResolve = async (conversation) => {
     try {
         await conversationStore.resolveConversation(conversation.id);
+        // toast.success('Conversation resolved successfully ✅');
         await loadData();
-        if (selectedConversation.value?.id === conversation.id) {
-            selectedConversation.value = conversationStore.currentConversation;
-        }
     } catch (error) {
         // Error handled in store
     }
@@ -171,10 +170,20 @@ const handleResolve = async (conversation) => {
 const handleReopen = async (conversation) => {
     try {
         await conversationStore.reopenConversation(conversation.id);
+        // toast.success('Conversation reopened successfully 🔄');
         await loadData();
-        if (selectedConversation.value?.id === conversation.id) {
-            selectedConversation.value = conversationStore.currentConversation;
-        }
+    } catch (error) {
+        // Error handled in store
+    }
+};
+
+const handleClose = async (conversation) => {
+    if (!confirm('Are you sure you want to close this conversation?')) return;
+
+    try {
+        await conversationStore.closeConversation(conversation.id);
+        // toast.success('Conversation closed successfully 🔒');
+        await loadData();
     } catch (error) {
         // Error handled in store
     }
@@ -183,10 +192,8 @@ const handleReopen = async (conversation) => {
 const handleAssignToMe = async (conversation) => {
     try {
         await conversationStore.assignConversation(conversation.id, authStore.user.id);
+        // toast.success('Conversation assigned to you 👤');
         await loadData();
-        if (selectedConversation.value?.id === conversation.id) {
-            selectedConversation.value = conversationStore.currentConversation;
-        }
     } catch (error) {
         // Error handled in store
     }
@@ -195,10 +202,8 @@ const handleAssignToMe = async (conversation) => {
 const handleUnassign = async (conversation) => {
     try {
         await conversationStore.unassignConversation(conversation.id);
+        // toast.success('Conversation unassigned successfully');
         await loadData();
-        if (selectedConversation.value?.id === conversation.id) {
-            selectedConversation.value = conversationStore.currentConversation;
-        }
     } catch (error) {
         // Error handled in store
     }
@@ -231,6 +236,7 @@ const formatDate = (date) => {
         minute: '2-digit',
     });
 };
+
 
 const getFieldError = (field) => {
     return conversationStore.getFieldError(field);
@@ -385,18 +391,37 @@ watch(() => filters.search, () => {
                 </template>
             </Column>
 
-            <Column header="Actions" style="width: 150px">
+            <Column header="Actions" style="width: 200px">
                 <template #body="{ data }">
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 flex-wrap">
+                        <!-- View Button -->
                         <Button icon="pi pi-eye" severity="info" text rounded @click="viewConversation(data)"
-                            tooltip="View" />
-                        <Button v-if="canUpdateConversations && data.status !== 'resolved' && data.status !== 'closed'"
+                            tooltip="View Details" />
+
+                        <!-- Resolve Button (Open/Pending only) -->
+                        <Button v-if="canUpdateConversations && (data.status === 'open' || data.status === 'pending')"
                             icon="pi pi-check" severity="success" text rounded @click="handleResolve(data)"
                             tooltip="Resolve" />
+
+                        <!-- Reopen Button (Resolved/Closed only) -->
                         <Button
                             v-if="canUpdateConversations && (data.status === 'resolved' || data.status === 'closed')"
                             icon="pi pi-refresh" severity="warning" text rounded @click="handleReopen(data)"
                             tooltip="Reopen" />
+
+                        <!-- Close Button (Open/Pending/Resolved only) -->
+                        <Button v-if="canUpdateConversations && data.status !== 'closed'" icon="pi pi-times"
+                            severity="secondary" text rounded @click="handleClose(data)" tooltip="Close" />
+
+                        <!-- Assign to Me Button (in list) -->
+                        <Button v-if="canUpdateConversations && !data.assigned_user_id" icon="pi pi-user-plus"
+                            severity="primary" text rounded @click="handleAssignToMe(data)" tooltip="Assign to Me" />
+
+                        <!-- Unassign Button (in list) -->
+                        <Button v-if="canUpdateConversations && data.assigned_user_id" icon="pi pi-user-minus"
+                            severity="secondary" text rounded @click="handleUnassign(data)" tooltip="Unassign" />
+
+                        <!-- Delete Button -->
                         <Button v-if="canDeleteConversations" icon="pi pi-trash" severity="danger" text rounded
                             @click="confirmDelete(data)" tooltip="Delete" />
                     </div>
@@ -467,13 +492,16 @@ watch(() => filters.search, () => {
                     </div>
                     <div class="flex gap-2">
                         <Button
-                            v-if="canUpdateConversations && selectedConversation.status !== 'resolved' && selectedConversation.status !== 'closed'"
+                            v-if="canUpdateConversations && (selectedConversation.status === 'open' || selectedConversation.status === 'pending')"
                             icon="pi pi-check" label="Resolve" severity="success" size="small"
                             @click="handleResolve(selectedConversation)" />
                         <Button
                             v-if="canUpdateConversations && (selectedConversation.status === 'resolved' || selectedConversation.status === 'closed')"
                             icon="pi pi-refresh" label="Reopen" severity="warning" size="small"
                             @click="handleReopen(selectedConversation)" />
+                        <Button v-if="canUpdateConversations && selectedConversation.status !== 'closed'"
+                            icon="pi pi-times" label="Close" severity="secondary" size="small"
+                            @click="handleClose(selectedConversation)" />
                         <Button icon="pi pi-times" severity="secondary" text @click="showDetailsDialog = false" />
                     </div>
                 </div>
@@ -515,7 +543,7 @@ watch(() => filters.search, () => {
                     <div class="text-center text-surface-500 py-8">
                         <i class="pi pi-comments text-4xl mb-2 block"></i>
                         <p>Messages will appear here</p>
-                        <p class="text-sm">(Message module coming soon)</p>
+                        <p class="text-sm">Click "View" to see full conversation</p>
                     </div>
                 </div>
 
@@ -531,11 +559,25 @@ watch(() => filters.search, () => {
             </div>
         </Dialog>
 
+        <!-- Conversation Details Dialog -->
+        <Dialog v-model:visible="showDetailsDialog">
+            <!-- ... -->
+            <div class="flex gap-2">
+                <!-- ✅ Assign to Me button -->
+                <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus"
+                    label="Assign to Me" severity="primary" size="small"
+                    @click="handleAssignToMe(selectedConversation)" />
+
+                <!-- ✅ Unassign button -->
+                <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus"
+                    label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
+            </div>
+        </Dialog>
+
         <!-- Toast -->
-        <Toast />
+        <!-- <Toast /> -->
     </div>
 </template>
-
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
