@@ -54,6 +54,16 @@ const model = ref([
         ]
     },
     {
+        // label: 'Customers Management',
+        items: [
+            {
+                label: 'Chat Widgets',
+                icon: 'pi pi-fw pi-comments',
+                to: '/settings/chat-widgets'
+            }
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [

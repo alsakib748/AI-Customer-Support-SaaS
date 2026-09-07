@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
+use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
 use App\Http\Controllers\Api\V1\Conversation\ConversationController;
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
 use App\Http\Controllers\Api\V1\Message\MessageController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
+use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -170,6 +173,25 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', [MessageController::class, 'destroy']);
         });
 
+        // todo; Chat Widgets
+        Route::prefix('chat-widgets')->group(function () {
+            Route::get('/', [ChatWidgetController::class, 'index']);
+            Route::post('/', [ChatWidgetController::class, 'store']);
+            Route::get('/{chatWidget}', [ChatWidgetController::class, 'show']);
+            Route::put('/{chatWidget}', [ChatWidgetController::class, 'update']);
+            Route::delete('/{chatWidget}', [ChatWidgetController::class, 'destroy']);
+
+            // Actions
+            Route::post('/{chatWidget}/enable', [ChatWidgetController::class, 'enable']);
+            Route::post('/{chatWidget}/disable', [ChatWidgetController::class, 'disable']);
+            Route::post('/{chatWidget}/regenerate-key', [ChatWidgetController::class, 'regenerateKey']);
+            Route::get('/{chatWidget}/installation-code', [ChatWidgetController::class, 'installationCode']);
+
+            // Statistics
+            Route::get('/{chatWidget}/statistics', [WidgetStatisticsController::class, 'show']);
+            Route::get('/{chatWidget}/analytics', [WidgetStatisticsController::class, 'analytics']);
+        });
+
         // Test Route - Can be removed later
         Route::get('test', function () {
             $user = auth()->user();
@@ -252,4 +274,29 @@ Route::prefix('v1')->group(function () {
     });
 });
 
+Route::prefix('v1/widget')->group(function () {
+    Route::post('/bootstrap', [WidgetController::class, 'bootstrap'])
+        ->middleware('widget.rate.limit:30,60');
+
+    Route::post('/session', [WidgetController::class, 'session'])
+        ->middleware('widget.rate.limit:20,60');
+
+    Route::post('/messages', [WidgetController::class, 'sendMessage'])
+        ->middleware('widget.rate.limit:20,60');
+
+    Route::get('/messages', [WidgetController::class, 'getMessages'])
+        ->middleware('widget.rate.limit:30,60');
+
+    Route::get('/conversation', [WidgetController::class, 'getConversation'])
+        ->middleware('widget.rate.limit:30,60');
+});
+
 Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class, 'accept']);
+
+Route::prefix('v1/widget')->group(function () {
+    Route::post('/bootstrap', [WidgetController::class, 'bootstrap']);
+    Route::post('/session', [WidgetController::class, 'session']);
+    Route::post('/messages', [WidgetController::class, 'sendMessage']);
+    Route::get('/messages', [WidgetController::class, 'getMessages']);
+    Route::get('/conversation', [WidgetController::class, 'getConversation']);
+});

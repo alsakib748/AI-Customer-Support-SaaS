@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => \App\Http\Middleware\JWTAuthMiddleware::class,
             'tenant.aware' => \App\Http\Middleware\TenantAware::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'widget.rate.limit' => \App\Http\Middleware\WidgetRateLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

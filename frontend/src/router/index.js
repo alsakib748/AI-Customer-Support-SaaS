@@ -53,7 +53,6 @@ const router = createRouter({
         // },
         {
             path: '/',
-
             component: AppLayout,
             meta: {
                 requiresAuth: true
@@ -121,6 +120,16 @@ const router = createRouter({
                         requiresAuth: true,
                         title: 'Conversation',
                         permissions: ['conversations.view']
+                    }
+                },
+                {
+                    path: '/settings/chat-widgets',
+                    name: 'ChatWidgets',
+                    component: () => import('@/views/settings/ChatWidgets.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Chat Widgets'
+                        // permissions: ['widgets.view']
                     }
                 },
                 {
