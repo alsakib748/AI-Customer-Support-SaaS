@@ -10,10 +10,18 @@ use App\Http\Controllers\Api\V1\Message\MessageController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
+use App\Http\Controllers\Api\V1\Ticket\TicketCommentController;
+use App\Http\Controllers\Api\V1\Ticket\TicketController;
 use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
+use App\Models\TenantUser;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+
+
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -190,6 +198,30 @@ Route::prefix('v1')->group(function () {
             // Statistics
             Route::get('/{chatWidget}/statistics', [WidgetStatisticsController::class, 'show']);
             Route::get('/{chatWidget}/analytics', [WidgetStatisticsController::class, 'analytics']);
+        });
+
+        // todo; Ticket Routes
+        Route::prefix('tickets')->group(function () {
+            Route::get('/', [TicketController::class, 'index']);
+            Route::post('/', [TicketController::class, 'store']);
+            Route::get('/statistics', [TicketController::class, 'statistics']);
+            Route::get('/{id}', [TicketController::class, 'show']);
+            Route::put('/{id}', [TicketController::class, 'update']);
+            Route::delete('/{id}', [TicketController::class, 'destroy']);
+
+            // Status Actions
+            Route::post('/{id}/assign', [TicketController::class, 'assign']);
+            Route::post('/{id}/unassign', [TicketController::class, 'unassign']);
+            Route::post('/{id}/start', [TicketController::class, 'start']);
+            Route::post('/{id}/pending', [TicketController::class, 'pending']);
+            Route::post('/{id}/resolve', [TicketController::class, 'resolve']);
+            Route::post('/{id}/reopen', [TicketController::class, 'reopen']);
+            Route::post('/{id}/close', [TicketController::class, 'close']);
+
+            // Comment Routes
+            Route::get('/{ticket}/comments', [TicketCommentController::class, 'index']);
+            Route::post('/{ticket}/comments', [TicketCommentController::class, 'store']);
+            Route::delete('/{ticket}/comments/{comment}', [TicketCommentController::class, 'destroy']);
         });
 
         // Test Route - Can be removed later

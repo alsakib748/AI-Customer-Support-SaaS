@@ -316,7 +316,7 @@ onMounted(() => {
                 <template #content>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-warning">{{ totalWidgets - activeWidgets - disabledWidgets
-                        }}</div>
+                            }}</div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Inactive</div>
                     </div>
                 </template>

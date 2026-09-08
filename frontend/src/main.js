@@ -48,8 +48,8 @@ app.component('InputMask', InputMask);
 app.use(ConfirmationService);
 app.use(pinia);
 app.use(Vue3Toastify, {
-    autoClose: false,
-    // autoClose: 5000,
+    // autoClose: false,
+    autoClose: 5000,
     position: 'top-right',
     theme: 'colored',
     // extra for manual close

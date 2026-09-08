@@ -133,6 +133,16 @@ const router = createRouter({
                     }
                 },
                 {
+                    path: '/tickets',
+                    name: 'Tickets',
+                    component: () => import('@/views/tickets/Tickets.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Tickets'
+                        // permissions: ['tickets.view']
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')
