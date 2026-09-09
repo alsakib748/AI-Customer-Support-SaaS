@@ -143,6 +143,46 @@ const router = createRouter({
                     }
                 },
                 {
+                    path: '/knowledge-base',
+                    name: 'KnowledgeBase',
+                    component: () => import('@/views/knowledge-base/KnowledgeBase.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Knowledge Base'
+                        // permissions: ['knowledge.view']
+                    }
+                },
+                {
+                    path: '/knowledge-base/articles/create',
+                    name: 'ArticleCreate',
+                    component: () => import('@/views/knowledge-base/ArticleCreate.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Create Article'
+                        // permissions: ['knowledge.create']
+                    }
+                },
+                {
+                    path: '/knowledge-base/articles/:id/edit',
+                    name: 'ArticleEdit',
+                    component: () => import('@/views/knowledge-base/ArticleEdit.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Edit Article'
+                        // permissions: ['knowledge.update']
+                    }
+                },
+                {
+                    path: '/knowledge-base/articles/:id',
+                    name: 'ArticleShow',
+                    component: () => import('@/views/knowledge-base/ArticleShow.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Article Details'
+                        // permissions: ['knowledge.view']
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')

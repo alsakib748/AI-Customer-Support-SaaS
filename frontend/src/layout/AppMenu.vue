@@ -74,6 +74,16 @@ const model = ref([
         ]
     },
     {
+        // label: 'Customers Management',
+        items: [
+            {
+                label: 'KnowledgeBase',
+                icon: 'pi pi-fw pi-book',
+                to: '/knowledge-base'
+            }
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [

@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -11,6 +14,7 @@
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "ezyang/htmlpurifier": "^4.18",
         "spatie/laravel-permission": "^8.3",
         "stancl/tenancy": "^3.10",
         "tymon/jwt-auth": "^2.3"

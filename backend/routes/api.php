@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
 use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
 use App\Http\Controllers\Api\V1\Conversation\ConversationController;
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
+use App\Http\Controllers\Api\V1\KnowledgeBase\ArticleController;
+use App\Http\Controllers\Api\V1\KnowledgeBase\CategoryController;
 use App\Http\Controllers\Api\V1\Message\MessageController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
@@ -222,6 +224,37 @@ Route::prefix('v1')->group(function () {
             Route::get('/{ticket}/comments', [TicketCommentController::class, 'index']);
             Route::post('/{ticket}/comments', [TicketCommentController::class, 'store']);
             Route::delete('/{ticket}/comments/{comment}', [TicketCommentController::class, 'destroy']);
+        });
+
+        //todo; Knowledge Base Routes
+        Route::prefix('knowledge-base')->group(function () {
+
+            //todo; Categories
+            Route::prefix('categories')->group(function () {
+                Route::get('/', [CategoryController::class, 'index']);
+                Route::get('/all', [CategoryController::class, 'all']);
+                Route::post('/', [CategoryController::class, 'store']);
+                Route::get('/{id}', [CategoryController::class, 'show']);
+                Route::put('/{id}', [CategoryController::class, 'update']);
+                Route::delete('/{id}', [CategoryController::class, 'destroy']);
+                Route::post('/{id}/activate', [CategoryController::class, 'activate']);
+                Route::post('/{id}/deactivate', [CategoryController::class, 'deactivate']);
+            });
+
+            //todo; Articles
+            Route::prefix('articles')->group(function () {
+                Route::get('/', [ArticleController::class, 'index']);
+                Route::get('/statistics', [ArticleController::class, 'statistics']);
+                Route::get('/search/ai', [ArticleController::class, 'searchForAI']);
+                Route::post('/', [ArticleController::class, 'store']);
+                Route::get('/{id}', [ArticleController::class, 'show']);
+                Route::put('/{id}', [ArticleController::class, 'update']);
+                Route::delete('/{id}', [ArticleController::class, 'destroy']);
+                Route::post('/{id}/publish', [ArticleController::class, 'publish']);
+                Route::post('/{id}/unpublish', [ArticleController::class, 'unpublish']);
+                Route::post('/{id}/archive', [ArticleController::class, 'archive']);
+            });
+
         });
 
         // Test Route - Can be removed later
