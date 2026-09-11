@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 class WidgetController extends Controller
 {
+
     /**
      * Embed widget in an iframe-friendly page
      */

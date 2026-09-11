@@ -74,6 +74,14 @@ class ChatWidget extends Model
         return $this->hasMany(WidgetSession::class);
     }
 
+    /**
+     * ✅ Tenant relationship (virtual — set by controller)
+     */
+    public function tenant()
+    {
+        return $this->belongsTo(\App\Models\Tenant::class, 'tenant_id');
+    }
+
     // ============================================
     // ACCESSORS
     // ============================================
@@ -151,13 +159,13 @@ class ChatWidget extends Model
         $this->update(['public_key' => 'cw_' . Str::random(32)]);
     }
 
-    public function isOriginAllowed(string $origin): bool
+    public function isOriginAllowed(?string $origin): bool
     {
         if (empty($this->allowed_origins)) {
             return true;
         }
 
-        return in_array($origin, $this->allowed_origins);
+        return $origin !== null && in_array($origin, $this->allowed_origins, true);
     }
 
     public function getInstallationCode(): string

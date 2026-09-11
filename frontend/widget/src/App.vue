@@ -1,11 +1,11 @@
 <!-- widget/src/App.vue -->
-
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import axios from 'axios';
+import { EventSourcePolyfill } from 'event-source-polyfill';
 
 // ============================================
-// PROPS (from URL params)
+// PROPS
 // ============================================
 
 const props = defineProps({
@@ -34,6 +34,11 @@ const visitorToken = ref(null);
 const conversationId = ref(null);
 const messagesContainer = ref(null);
 const messagesEnd = ref(null);
+
+// Streaming state
+const isStreaming = ref(false);
+const streamingContent = ref('');
+let streamController = null;
 
 // Widget Configuration
 const widgetConfig = reactive({
@@ -64,6 +69,25 @@ const customerForm = reactive({
 const primaryColor = computed(() => widgetConfig.primaryColor || '#4F46E5');
 
 const hasMessages = computed(() => messages.value.length > 0);
+
+// ✅ Fixed: use widgetConfig.headerTitle
+const headerTitle = computed(() => widgetConfig.headerTitle || 'Chat with us');
+
+// ✅ Fixed: use widgetConfig.avatar
+const avatar = computed(() => widgetConfig.avatar);
+
+// ✅ Fixed: use widgetConfig.requireEmail
+const requireEmail = computed(() => widgetConfig.requireEmail);
+
+// ✅ Fixed: use widgetConfig.requirePhone
+const requirePhone = computed(() => widgetConfig.requirePhone);
+
+// ✅ Fixed: use widgetConfig.requireName
+const requireName = computed(() => widgetConfig.requireName);
+
+const welcomeMessage = computed(() => widgetConfig.welcomeMessage || 'Hi! How can we help you today?');
+
+const offlineMessage = computed(() => widgetConfig.offlineMessage || 'Our team is currently offline. Please leave a message and we\'ll get back to you.');
 
 const statusClass = computed(() => {
     if (isOffline.value) return 'status-offline';
@@ -134,6 +158,10 @@ const scrollToBottom = () => {
     });
 };
 
+const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 // ============================================
 // API METHODS
 // ============================================
@@ -172,6 +200,7 @@ const bootstrapWidget = async () => {
         }
     } catch (error) {
         console.error('Widget bootstrap failed:', error);
+        isOffline.value = true;
     }
 };
 
@@ -204,6 +233,7 @@ const createSession = async () => {
         }
     } catch (error) {
         console.error('Session creation failed:', error);
+        isOffline.value = true;
     }
 };
 
@@ -257,6 +287,7 @@ const sendMessage = async () => {
 
         if (response.data.success) {
             newMessage.value = '';
+
             // Add message to list
             const newMsg = response.data.data.message;
             messages.value.push({
@@ -277,14 +308,140 @@ const sendMessage = async () => {
             showCustomerForm.value = false;
             scrollToBottom();
 
-            // Poll for new messages (agent responses)
-            startPolling();
+            // ✅ Start AI streaming if AI is enabled
+            if (response.data.data.ai_enabled && response.data.data.conversation) {
+                startAIStreaming(newMsg.id);
+            } else {
+                // Fallback to polling
+                startPolling();
+            }
         }
     } catch (error) {
         console.error('Send message failed:', error);
     } finally {
         isSending.value = false;
     }
+};
+
+/**
+ * ✅ Start AI streaming
+ */
+const startAIStreaming = (messageId) => {
+    if (!conversationId.value) {
+        console.log('No conversation ID for streaming');
+        return;
+    }
+
+    console.log('🟢 Starting AI stream for message:', messageId);
+
+    isStreaming.value = true;
+    streamingContent.value = '';
+
+    // Create streaming AI message in the list
+    const streamingMessage = {
+        id: 'streaming-' + Date.now(),
+        content: '',
+        created_at: new Date().toISOString(),
+        is_streaming: true,
+        sender: {
+            type: 'ai',
+            name: 'AI Assistant',
+        },
+    };
+    messages.value.push(streamingMessage);
+    scrollToBottom();
+
+    const apiUrl = axios.defaults.baseURL || '/api/v1';
+    const url = `${apiUrl}/ai/stream/${conversationId.value}/${messageId}?token=${sessionToken.value}`;
+
+    console.log('🟢 Stream URL:', url);
+
+    try {
+        const eventSource = new EventSourcePolyfill(url, {
+            headers: {
+                'Authorization': `Bearer ${sessionToken.value}`,
+                'Accept': 'text/event-stream',
+            },
+            heartbeatTimeout: 120000,
+        });
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                switch (data.type) {
+                    case 'start':
+                        console.log('🟢 Stream started');
+                        break;
+
+                    case 'chunk':
+                        streamingContent.value += data.content;
+                        // Update the streaming message in real-time
+                        const msgIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        if (msgIndex !== -1) {
+                            messages.value[msgIndex].content = streamingContent.value;
+                        }
+                        scrollToBottom();
+                        break;
+
+                    case 'complete':
+                        console.log('🟢 Stream complete');
+                        // Update the streaming message with final data
+                        const finalIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        if (finalIndex !== -1) {
+                            messages.value[finalIndex].id = data.message_id || streamingMessage.id;
+                            messages.value[finalIndex].is_streaming = false;
+                        }
+                        isStreaming.value = false;
+                        streamingContent.value = '';
+                        eventSource.close();
+                        break;
+
+                    case 'error':
+                        console.error('🟢 Stream error:', data.message);
+                        const errorIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        if (errorIndex !== -1) {
+                            messages.value[errorIndex].content = 'I apologize, but I am unable to respond right now. Please try again.';
+                            messages.value[errorIndex].is_streaming = false;
+                        }
+                        isStreaming.value = false;
+                        streamingContent.value = '';
+                        eventSource.close();
+                        break;
+                }
+            } catch (error) {
+                console.error('Error parsing stream data:', error);
+            }
+        };
+
+        eventSource.onerror = (error) => {
+            console.error('🟢 Stream connection error:', error);
+            isStreaming.value = false;
+            streamingContent.value = '';
+            eventSource.close();
+
+            // Fallback to polling
+            startPolling();
+        };
+
+        streamController = eventSource;
+
+    } catch (error) {
+        console.error('Failed to initialize stream:', error);
+        isStreaming.value = false;
+        streamingContent.value = '';
+        // Fallback to polling
+        startPolling();
+    }
+};
+
+const stopAIStreaming = () => {
+    if (streamController) {
+        streamController.close();
+        streamController = null;
+    }
+    isStreaming.value = false;
+    streamingContent.value = '';
 };
 
 const submitCustomerInfo = async () => {
@@ -312,7 +469,6 @@ const submitCustomerInfo = async () => {
     // If we have a session, send the customer info
     if (sessionToken.value) {
         try {
-            // Send a test message to register customer info
             const response = await axios.post('/widget/messages', {
                 session_token: sessionToken.value,
                 content: customerForm.name || 'Starting chat',
@@ -334,12 +490,8 @@ const submitCustomerInfo = async () => {
     return true;
 };
 
-const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
-
 // ============================================
-// POLLING (Temp until WebSockets)
+// POLLING (Fallback)
 // ============================================
 
 let pollingInterval = null;
@@ -347,7 +499,7 @@ let pollingInterval = null;
 const startPolling = () => {
     stopPolling();
     pollingInterval = setInterval(async () => {
-        if (!sessionToken.value || !isOpen.value) return;
+        if (!sessionToken.value || !isOpen.value || isStreaming.value) return;
 
         try {
             const response = await axios.get('/widget/messages', {
@@ -363,12 +515,12 @@ const startPolling = () => {
                     messages.value = newMessages;
                     scrollToBottom();
 
-                    // Show notification if new message from agent
+                    // Show notification if new message from agent or AI
                     if (!document.hasFocus() && newMessages.length > 0) {
                         const lastMsg = newMessages[newMessages.length - 1];
                         if (lastMsg.sender.type === 'agent' || lastMsg.sender.type === 'ai') {
                             hasUnread.value = true;
-                            unreadCount.value = newMessages.length - (messages.value.length - newMessages.length);
+                            unreadCount.value = newMessages.length - messages.value.length;
                         }
                     }
                 }
@@ -376,7 +528,7 @@ const startPolling = () => {
         } catch (error) {
             console.error('Polling error:', error);
         }
-    }, 3000);
+    }, 5000);
 };
 
 const stopPolling = () => {
@@ -404,6 +556,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopPolling();
+    stopAIStreaming();
 });
 
 // Watch messages for scrolling
@@ -454,7 +607,7 @@ watch(() => messages.value.length, () => {
                 <!-- Welcome Message -->
                 <div v-if="!hasMessages && !isLoading" class="welcome-message">
                     <div class="welcome-icon">💬</div>
-                    <p class="welcome-text">{{ welcomeMessage || 'Hi! How can we help you today?' }}</p>
+                    <p class="welcome-text">{{ welcomeMessage }}</p>
                 </div>
 
                 <!-- Loading -->
@@ -464,15 +617,22 @@ watch(() => messages.value.length, () => {
                     </div>
                 </div>
 
-                <!-- Messages -->
+                <!-- ✅ FIXED: Messages Loop with AI Streaming Support -->
                 <div v-for="message in messages" :key="message.id" class="message-wrapper">
                     <div class="message" :class="{
-                        'message-customer': message.sender.type === 'customer',
-                        'message-agent': message.sender.type === 'agent',
-                        'message-ai': message.sender.type === 'ai',
-                        'message-system': message.sender.type === 'system',
+                        'message-customer': message.sender?.type === 'customer',
+                        'message-agent': message.sender?.type === 'agent',
+                        'message-ai': message.sender?.type === 'ai',
+                        'message-system': message.sender?.type === 'system',
                     }">
-                        <div class="message-content">{{ message.content }}</div>
+                        <div class="message-content">
+                            <!-- AI Streaming with cursor -->
+                            <span v-if="message.is_streaming">
+                                {{ message.content }}
+                                <span class="typing-cursor">|</span>
+                            </span>
+                            <span v-else>{{ message.content }}</span>
+                        </div>
                         <div class="message-time">{{ formatTime(message.created_at) }}</div>
                     </div>
                 </div>
@@ -482,18 +642,18 @@ watch(() => messages.value.length, () => {
 
             <!-- Customer Info Form (if required) -->
             <div v-if="showCustomerForm" class="customer-form">
-                <div class="form-group">
-                    <label>Your Name</label>
+                <div v-if="requireName" class="form-group">
+                    <label>Your Name *</label>
                     <input v-model="customerForm.name" placeholder="Enter your name"
                         @keyup.enter="submitCustomerInfo" />
                 </div>
                 <div v-if="requireEmail" class="form-group">
-                    <label>Email Address</label>
+                    <label>Email Address *</label>
                     <input v-model="customerForm.email" type="email" placeholder="Enter your email"
                         @keyup.enter="submitCustomerInfo" />
                 </div>
                 <div v-if="requirePhone" class="form-group">
-                    <label>Phone Number</label>
+                    <label>Phone Number *</label>
                     <input v-model="customerForm.phone" type="tel" placeholder="Enter your phone"
                         @keyup.enter="submitCustomerInfo" />
                 </div>
@@ -503,9 +663,9 @@ watch(() => messages.value.length, () => {
             <!-- Composer -->
             <div v-else class="chat-composer">
                 <textarea v-model="newMessage" placeholder="Type a message..." rows="1"
-                    @keydown.enter.prevent="sendMessage" :disabled="isSending || isClosed"></textarea>
+                    @keydown.enter.prevent="sendMessage" :disabled="isSending || isClosed || isStreaming"></textarea>
                 <button class="send-button" @click="sendMessage"
-                    :disabled="!newMessage.trim() || isSending || isClosed">
+                    :disabled="!newMessage.trim() || isSending || isClosed || isStreaming">
                     <svg v-if="!isSending" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <line x1="22" y1="2" x2="11" y2="13" />
@@ -517,8 +677,7 @@ watch(() => messages.value.length, () => {
 
             <!-- Offline Message -->
             <div v-if="isOffline" class="offline-message">
-                <p>{{ offlineMessage || 'Our team is currently offline. Please leave a message and we\'ll get back to
-                you.' }}</p>
+                <p>{{ offlineMessage }}</p>
             </div>
         </div>
     </div>
@@ -670,7 +829,6 @@ watch(() => messages.value.length, () => {
     max-height: 400px;
 }
 
-/* Scrollbar */
 .chat-messages::-webkit-scrollbar {
     width: 4px;
 }
@@ -748,6 +906,7 @@ watch(() => messages.value.length, () => {
     max-width: 100%;
     font-size: 12px;
     border-radius: 8px;
+    margin: 0 auto;
 }
 
 .message-time {
@@ -762,6 +921,30 @@ watch(() => messages.value.length, () => {
 
 .message-agent .message-time {
     text-align: right;
+}
+
+/* ✅ Streaming cursor */
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: currentColor;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+    vertical-align: middle;
+}
+
+@keyframes blink {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
 }
 
 /* ============================================ */

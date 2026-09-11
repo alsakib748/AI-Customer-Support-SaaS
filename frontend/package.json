@@ -10,8 +10,9 @@
   "dependencies": {
     "@primeuix/themes": "^2.0.0",
     "axios": "^1.19.0",
-    "chart.js": "3.3.2",
+    "chart.js": "^3.3.2",
     "dompurify": "^3.4.15",
+    "event-source-polyfill": "^1.0.31",
     "pinia": "^4.0.3",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",

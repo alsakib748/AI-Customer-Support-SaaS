@@ -140,5 +140,6 @@ class WidgetSession extends Model
     public function associateConversation(Conversation $conversation): void
     {
         $this->update(['current_conversation_id' => $conversation->id]);
+        $this->unsetRelation('currentConversation');
     }
 }

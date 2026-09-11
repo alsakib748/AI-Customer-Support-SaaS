@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
+use App\Http\Controllers\Api\V1\AI\AIStreamController;
+use App\Http\Controllers\Api\V1\AI\AIUsageController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
@@ -34,6 +37,16 @@ use Illuminate\Support\Facades\Route;
 | API Routes - Version 1
 |--------------------------------------------------------------------------
 */
+
+Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class, 'accept']);
+
+Route::prefix('v1/widget')->group(function () {
+    Route::post('/bootstrap', [WidgetController::class, 'bootstrap']);
+    Route::post('/session', [WidgetController::class, 'session']);
+    Route::post('/messages', [WidgetController::class, 'sendMessage']);
+    Route::get('/messages', [WidgetController::class, 'getMessages']);
+    Route::get('/conversation', [WidgetController::class, 'getConversation']);
+});
 
 Route::prefix('v1')->group(function () {
 
@@ -257,6 +270,62 @@ Route::prefix('v1')->group(function () {
 
         });
 
+        // todo; AI Routes
+        Route::prefix('ai')->group(function () {
+            Route::get('/configuration', [AIConfigurationController::class, 'show']);
+            Route::put('/configuration', [AIConfigurationController::class, 'update']);
+            Route::post('/test', [AIConfigurationController::class, 'test']);
+
+            // AI Streaming
+            // Route::get('/ai/stream/{conversation}/{message}', [AIStreamController::class, 'stream']);
+
+            // Streaming
+            Route::get('/stream/{conversation}/{message}', [AIStreamController::class, 'stream']);
+
+            // Usage & Analytics
+            Route::get('/usage', [AIUsageController::class, 'index']);
+            Route::get('/health', [AIUsageController::class, 'health']);
+            Route::get('/analytics', [AIUsageController::class, 'analytics']);
+            Route::get('/logs', [AIUsageController::class, 'logs']);
+        });
+
+        // AI Check
+        Route::get('/debug/ai-check', function () {
+            try {
+                $tenant = app('current_tenant');
+                $config = \App\Models\Tenant\AIConfiguration::first();
+                $gemini = app(\App\Ai\Services\GeminiService::class);
+
+                return response()->json([
+                    'tenant' => $tenant ? [
+                        'id' => $tenant->id,
+                        'name' => $tenant->name,
+                    ] : null,
+                    'ai_config' => $config,
+                    'ai_enabled' => $config?->enabled ?? false,
+                    'auto_reply_enabled' => $config?->auto_reply_enabled ?? false,
+                    'streaming_enabled' => $config?->streaming_enabled ?? false,
+                    'provider' => $config?->provider ?? 'gemini',
+                    'model' => $config?->model ?? 'gemini-1.5-flash',
+                    'gemini_configured' => $gemini->isConfigured(),
+                    'tools_available' => [
+                        'search_knowledge_base',
+                        'get_customer',
+                        'get_conversation',
+                        'create_ticket',
+                        'escalate_conversation',
+                        'rag_search',
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        });
+
+
         // Test Route - Can be removed later
         Route::get('test', function () {
             $user = auth()->user();
@@ -354,14 +423,4 @@ Route::prefix('v1/widget')->group(function () {
 
     Route::get('/conversation', [WidgetController::class, 'getConversation'])
         ->middleware('widget.rate.limit:30,60');
-});
-
-Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class, 'accept']);
-
-Route::prefix('v1/widget')->group(function () {
-    Route::post('/bootstrap', [WidgetController::class, 'bootstrap']);
-    Route::post('/session', [WidgetController::class, 'session']);
-    Route::post('/messages', [WidgetController::class, 'sendMessage']);
-    Route::get('/messages', [WidgetController::class, 'getMessages']);
-    Route::get('/conversation', [WidgetController::class, 'getConversation']);
 });

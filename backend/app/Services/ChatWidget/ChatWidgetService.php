@@ -6,6 +6,7 @@ namespace App\Services\ChatWidget;
 use App\Models\Tenant\ChatWidget;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Conversation;
+use App\Models\Tenant\AIConfiguration;
 use App\Models\Tenant\Message;
 use App\Models\Tenant\WidgetSession;
 use App\Services\Conversation\ConversationService;
@@ -33,7 +34,7 @@ class ChatWidgetService
     /**
      * Bootstrap the widget
      */
-    public function bootstrap(string $publicKey, string $origin): array
+    public function bootstrap(string $publicKey, ?string $origin = null): array
     {
         $widget = ChatWidget::active()
             ->byPublicKey($publicKey)
@@ -52,13 +53,19 @@ class ChatWidgetService
             ]);
         }
 
+        $aiConfig = AIConfiguration::first();
+        $aiEnabled = $aiConfig
+            && $aiConfig->enabled
+            && $aiConfig->auto_reply_enabled;
+
         return [
             'widget' => $this->formatWidgetConfig($widget),
             'features' => [
                 'attachments' => false,
                 'voice' => false,
-                'ai' => false,
+                'ai' => (bool) $aiEnabled,
                 'realtime' => false,
+                'streaming' => (bool) ($aiConfig?->streaming_enabled ?? false),
             ],
         ];
     }

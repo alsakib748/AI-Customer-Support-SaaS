@@ -182,6 +182,27 @@ const router = createRouter({
                         // permissions: ['knowledge.view']
                     }
                 },
+                // AI Routes
+                {
+                    path: '/settings/ai',
+                    name: 'AISettings',
+                    component: () => import('@/views/settings/AISettings.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'AI Settings'
+                        // permissions: ['ai.configure']
+                    }
+                },
+                {
+                    path: '/ai/analytics',
+                    name: 'AIAnalytics',
+                    component: () => import('@/views/ai/AIAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'AI Analytics'
+                        // permissions: ['ai.view']
+                    }
+                },
                 {
                     path: '/uikit/formlayout',
                     name: 'formlayout',

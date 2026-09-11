@@ -84,6 +84,23 @@ const model = ref([
         ]
     },
     {
+        label: 'AI',
+        icon: 'pi pi-fw pi-user',
+        // path: '/auth',
+        items: [
+            {
+                label: 'AI Settings',
+                icon: 'pi pi-cog',
+                to: '/settings/ai'
+            },
+            {
+                label: 'AI Analytics',
+                icon: 'pi pi-chart-bar',
+                to: '/ai/analytics'
+            }
+        ]
+    },
+    {
         label: 'UI Components',
         path: '/uikit',
         items: [

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.aware' => \App\Http\Middleware\TenantAware::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'widget.rate.limit' => \App\Http\Middleware\WidgetRateLimit::class,
+            'ai.rate.limit' => \App\Http\Middleware\AIRateLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

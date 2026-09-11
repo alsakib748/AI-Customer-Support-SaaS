@@ -16,6 +16,30 @@ use Spatie\Permission\Models\Permission;
 
 class TenantService
 {
+
+    public function initializeDefaultAIConfiguration(Tenant $tenant): void
+    {
+        \Stancl\Tenancy\Facades\Tenancy::initialize($tenant);
+
+        try {
+            if (!\App\Models\Tenant\AIConfiguration::exists()) {
+                \App\Models\Tenant\AIConfiguration::create([
+                    'provider' => 'gemini',
+                    'model' => 'gemini-1.5-flash',
+                    'enabled' => true,
+                    'auto_reply_enabled' => true,
+                    'auto_escalation_enabled' => true,
+                    'streaming_enabled' => true,
+                    'knowledge_base_enabled' => true,
+                    'temperature' => 0.7,
+                    'max_tokens' => 2000,
+                ]);
+            }
+        } finally {
+            \Stancl\Tenancy\Facades\Tenancy::end();
+        }
+    }
+
     /**
      * Create default tenant for new user
      */

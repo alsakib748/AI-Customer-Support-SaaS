@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => env('AI_PROVIDER', 'openai'),
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
@@ -102,8 +102,18 @@ return [
         'gemini' => [
             'driver' => 'gemini',
             'key' => env('GEMINI_API_KEY'),
+            'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
             'url' => env('GEMINI_URL', 'https://generativelanguage.googleapis.com/v1beta/'),
         ],
+
+        // 'gemini' => [
+        //     'driver' => GeminiDriver::class,
+        //     'api_key' => env('GEMINI_API_KEY'),
+        //     'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+        //     'max_tokens' => env('GEMINI_MAX_TOKENS', 2000),
+        //     'temperature' => env('GEMINI_TEMPERATURE', 0.7),
+        //     'embedding_model' => 'text-embedding-004',
+        // ],
 
         'groq' => [
             'driver' => 'groq',
@@ -152,6 +162,50 @@ return [
         'xai' => [
             'driver' => 'xai',
             'key' => env('XAI_API_KEY'),
+        ],
+    ],
+
+    // todo; Custom
+
+    'features' => [
+        'enabled' => env('AI_ENABLED', true),
+        'streaming' => env('AI_STREAMING_ENABLED', true),
+        'queue_processing' => env('AI_QUEUE_PROCESSING', true),
+        'embedding' => env('AI_EMBEDDING_ENABLED', false),
+        'rag' => env('AI_RAG_ENABLED', false),
+    ],
+
+    'limits' => [
+        'max_messages_per_conversation' => env('AI_MAX_MESSAGES_PER_CONVERSATION', 50),
+        'max_tokens_per_response' => env('AI_MAX_TOKENS_PER_RESPONSE', 2000),
+        'max_requests_per_minute' => env('AI_MAX_REQUESTS_PER_MINUTE', 60),
+        'max_requests_per_day' => env('AI_MAX_REQUESTS_PER_DAY', 1000),
+    ],
+
+    'gemini' => [
+        'safety_settings' => [
+            [
+                'category' => 'HARM_CATEGORY_HARASSMENT',
+                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE',
+            ],
+            [
+                'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE',
+            ],
+            [
+                'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE',
+            ],
+            [
+                'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE',
+            ],
+        ],
+        'generation_config' => [
+            'temperature' => 0.7,
+            'top_p' => 0.95,
+            'top_k' => 40,
+            'maxOutputTokens' => 2000,
         ],
     ],
 

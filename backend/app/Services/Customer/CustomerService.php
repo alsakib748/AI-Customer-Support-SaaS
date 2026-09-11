@@ -19,10 +19,27 @@ class CustomerService
         // Try multiple ways to get the tenant
         $tenant = null;
 
+        // 1. From Stancl tenancy (most reliable)
+        try {
+            $tenant = tenancy()->tenant;
+        } catch (\Exception $e) {
+            // Ignore
+            Log::error($e->getMessage());
+        }
+
         // 1. From request attributes (set by TenantAware middleware)
         if ($request->attributes->has('current_tenant')) {
             $tenant = $request->attributes->get('current_tenant');
             Log::info('Tenant from attributes', ['tenant_id' => $tenant?->id]);
+        }
+
+        if (!$tenant) {
+            try {
+                $tenant = app('current_tenant');
+            } catch (\Exception $e) {
+                // Ignore
+                Log::error($e->getMessage());
+            }
         }
 
         // 2. From authenticated user's current tenant
@@ -89,6 +106,14 @@ class CustomerService
             throw new \RuntimeException('No tenant found in current context');
         }
         return $this->tenantId;
+    }
+
+    /**
+     * Check if tenant is available
+     */
+    public function hasTenant(): bool
+    {
+        return !is_null($this->tenant);
     }
 
     /**

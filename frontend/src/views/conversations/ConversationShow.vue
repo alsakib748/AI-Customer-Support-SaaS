@@ -1,6 +1,6 @@
 <!-- src/views/conversations/ConversationShow.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConversationStore } from '@/stores/conversation';
 import { useMessageStore } from '@/stores/message';
@@ -11,12 +11,15 @@ import { useAuthStore } from '@/stores/auth';
 import MessageBubble from '@/components/messages/MessageBubble.vue';
 import MessageComposer from '@/components/messages/MessageComposer.vue';
 import InternalNote from '@/components/messages/InternalNote.vue';
+import streamingService from '@/services/streamingService';
+import AIStreamingMessage from '@/components/ai/AIStreamingMessage.vue';
 
 const route = useRoute();
 const router = useRouter();
 const conversationStore = useConversationStore();
 const messageStore = useMessageStore();
 const authStore = useAuthStore();
+
 // const toast = useToast();
 
 // ============================================
@@ -30,9 +33,17 @@ const noteContent = ref('');
 const messagesContainer = ref(null);
 const messagesEnd = ref(null);
 
+
+// Streaming state
+const isStreaming = ref(false);
+const streamingContent = ref('');
+const streamingMessageId = ref(null);
+let streamController = null;
+
 const conversationFilters = reactive({
     search: '',
 });
+
 
 // ============================================
 // COMPUTED
@@ -65,6 +76,9 @@ const selectConversation = async (conversation) => {
 };
 
 const loadConversation = async (id) => {
+    // Close any existing stream
+    stopStreaming();
+
     await conversationStore.fetchConversation(id);
     await loadMessages(id);
     scrollToBottom();
@@ -75,11 +89,35 @@ const loadMessages = async (conversationId) => {
 };
 
 
-const sendMessage = async (messageContent) => {
-    // console.log('🟢 ConversationShow: sendMessage called');
-    // console.log('🟢 ConversationShow: messageContent:', messageContent);
-    // console.log('🟢 ConversationShow: currentConversation:', currentConversation.value);
+// todo; Old
+// const sendMessage = async (messageContent) => {
 
+//     if (!messageContent?.trim()) {
+//         console.log('🟢 ConversationShow: Message is empty');
+//         return;
+//     }
+
+//     if (!currentConversation.value) {
+//         console.log('🟢 ConversationShow: No conversation selected');
+//         // toast.error('No conversation selected');
+//         return;
+//     }
+
+//     // console.log('🟢 ConversationShow: Sending to store...');
+
+//     try {
+//         const result = await messageStore.sendMessage(
+//             currentConversation.value.id,
+//             { content: messageContent.trim() }
+//         );
+//         console.log('🟢 ConversationShow: Message sent successfully:', result);
+//         scrollToBottom();
+//         await loadConversations();
+//     } catch (error) {
+//         console.error('🟢 ConversationShow: Error sending message:', error);
+//     }
+// };
+const sendMessage = async (messageContent) => {
     if (!messageContent?.trim()) {
         console.log('🟢 ConversationShow: Message is empty');
         return;
@@ -91,20 +129,115 @@ const sendMessage = async (messageContent) => {
         return;
     }
 
-    // console.log('🟢 ConversationShow: Sending to store...');
+    // Close any existing stream before sending new message
+    stopStreaming();
+
+    console.log('🟢 ConversationShow: Sending message...');
 
     try {
         const result = await messageStore.sendMessage(
             currentConversation.value.id,
             { content: messageContent.trim() }
         );
+
         console.log('🟢 ConversationShow: Message sent successfully:', result);
         scrollToBottom();
         await loadConversations();
+
+        // ✅ Start AI streaming after message is sent
+        if (result?.data?.id) {
+            startStreaming(result.data.id);
+        }
+
     } catch (error) {
         console.error('🟢 ConversationShow: Error sending message:', error);
+        // toast.error('Failed to send message. Please try again.');
     }
 };
+/**
+ * Start AI streaming
+ */
+const startStreaming = (messageId) => {
+    if (!currentConversation.value) {
+        console.log('No conversation selected for streaming');
+        return;
+    }
+
+    // Don't start streaming if AI is not enabled
+    // Could check AI configuration here
+
+    isStreaming.value = true;
+    streamingContent.value = '';
+    streamingMessageId.value = messageId;
+
+    // Close existing stream
+    if (streamController) {
+        streamController.close();
+        streamController = null;
+    }
+
+    console.log('🟢 Starting AI stream for message:', messageId);
+
+    streamController = streamingService.streamAIResponse(
+        currentConversation.value.id,
+        messageId,
+        // On message chunk
+        (chunk) => {
+            console.log('🟢 Streaming chunk:', chunk.substring(0, 50) + '...');
+            streamingContent.value += chunk;
+        },
+        // On complete
+        (data) => {
+            console.log('🟢 Streaming complete:', data);
+            isStreaming.value = false;
+            streamingMessageId.value = null;
+            streamController = null;
+
+            // Refresh messages to show the complete AI response
+            loadMessages(currentConversation.value.id);
+            scrollToBottom();
+
+            // Show success toast
+            // toast.success('AI response received! 🤖');
+        },
+        // On error
+        (error) => {
+            console.error('🟢 Streaming error:', error);
+            isStreaming.value = false;
+            streamingMessageId.value = null;
+            streamController = null;
+
+            // Show error toast
+            // toast.error('AI response failed. Please try again.');
+
+            // Clean up streaming message
+            streamingContent.value = '';
+        }
+    );
+
+    // Set a timeout in case streaming doesn't start
+    setTimeout(() => {
+        if (isStreaming.value && streamingContent.value === '') {
+            console.warn('Streaming timeout - no data received');
+            // Don't close it, just log
+        }
+    }, 5000);
+};
+
+/**
+ * Stop streaming
+ */
+const stopStreaming = () => {
+    if (streamController) {
+        console.log('🟢 Stopping stream');
+        streamController.close();
+        streamController = null;
+    }
+    isStreaming.value = false;
+    streamingContent.value = '';
+    streamingMessageId.value = null;
+};
+
 
 const submitNote = async () => {
     if (!noteContent.value.trim() || !currentConversation.value) return;
@@ -121,6 +254,8 @@ const submitNote = async () => {
         // Error handled in store
     }
 };
+
+
 
 const handleResolve = async () => {
     if (!currentConversation.value) return;
@@ -143,6 +278,7 @@ const handleReopen = async () => {
         // Error handled in store
     }
 };
+
 
 const handleClose = async () => {
     if (!currentConversation.value) return;
@@ -169,6 +305,8 @@ const scrollToBottom = () => {
     });
 };
 
+
+
 // ============================================
 // LIFECYCLE
 // ============================================
@@ -193,8 +331,12 @@ watch(() => route.params.id, async (newId) => {
 watch(() => messages.value.length, () => {
     scrollToBottom();
 });
-</script>
 
+// Clean up streaming on component unmount
+onUnmounted(() => {
+    stopStreaming();
+});
+</script>
 <template>
     <div class="flex h-[calc(100vh-120px)] bg-surface-50 dark:bg-surface-950">
         <!-- ============================================ -->
@@ -265,17 +407,14 @@ watch(() => messages.value.length, () => {
                     <Tag :value="currentConversation.status_label" :severity="currentConversation.status_color" />
                     <Tag :value="currentConversation.priority_label" :severity="currentConversation.priority_color" />
 
-                    <!-- Resolve Button -->
                     <Button
                         v-if="canReply && (currentConversation.status === 'open' || currentConversation.status === 'pending')"
                         icon="pi pi-check" label="Resolve" severity="success" size="small" @click="handleResolve" />
 
-                    <!-- Reopen Button -->
                     <Button
                         v-if="canReply && (currentConversation.status === 'resolved' || currentConversation.status === 'closed')"
                         icon="pi pi-refresh" label="Reopen" severity="warning" size="small" @click="handleReopen" />
 
-                    <!-- Close Button -->
                     <Button v-if="canReply && currentConversation.status !== 'closed'" icon="pi pi-times" label="Close"
                         severity="secondary" size="small" @click="handleClose" />
 
@@ -309,8 +448,13 @@ watch(() => messages.value.length, () => {
                     <MessageBubble v-else :message="message" />
                 </template>
 
+                <!-- ✅ AI Streaming Message -->
+                <AIStreamingMessage v-if="isStreaming && streamingContent" :content="streamingContent"
+                    :is-streaming="true" />
+
                 <!-- Empty State -->
-                <div v-if="!loadingMessages && messages.length === 0" class="text-center py-12 text-surface-500">
+                <div v-if="!loadingMessages && messages.length === 0 && !isStreaming"
+                    class="text-center py-12 text-surface-500">
                     <i class="pi pi-comments text-4xl mb-2 block"></i>
                     <p>No messages yet</p>
                     <p class="text-sm">Start the conversation by sending a message</p>
@@ -321,9 +465,8 @@ watch(() => messages.value.length, () => {
             </div>
 
             <!-- Message Composer -->
-            <!-- Message Composer -->
             <MessageComposer v-if="currentConversation && canReply" @send="sendMessage" @addNote="showNoteDialog = true"
-                :disabled="currentConversation.status === 'closed'" :sending="sending" />
+                :disabled="currentConversation.status === 'closed' || isStreaming" :sending="sending || isStreaming" />
 
             <!-- Conversation Closed Message -->
             <div v-else-if="currentConversation && currentConversation.status === 'closed'"
@@ -353,7 +496,7 @@ watch(() => messages.value.length, () => {
         </Dialog>
 
         <!-- Toast -->
-        <!-- <Toast /> -->
+        <Toast />
     </div>
 </template>
 
