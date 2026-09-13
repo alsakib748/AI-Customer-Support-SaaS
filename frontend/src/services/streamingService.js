@@ -1,7 +1,5 @@
 // src/services/streamingService.js
 
-import { EventSourcePolyfill } from 'event-source-polyfill';
-
 class StreamingService {
     /**
      * Stream AI response using EventSource

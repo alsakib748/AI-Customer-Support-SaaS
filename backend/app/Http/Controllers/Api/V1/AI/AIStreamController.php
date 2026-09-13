@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1\AI;
 use App\Ai\Services\AIService;
 use App\Ai\Services\AIStreamingService;
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\AIConfiguration;
 use App\Models\Tenant\Conversation;
+use App\Models\Tenant\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -36,11 +38,11 @@ class AIStreamController extends Controller
                 ], 404);
             }
 
-            // Verify message is from customer
-            if ($message->sender_type !== 'customer') {
+            // AI can respond to messages from customers or agents.
+            if (!in_array($message->sender_type, ['customer', 'agent'], true)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only customer messages can be streamed.',
+                    'message' => 'Only customer or agent messages can be streamed.',
                 ], 400);
             }
 

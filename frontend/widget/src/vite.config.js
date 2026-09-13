@@ -19,6 +19,10 @@ export default defineConfig({
         minify: true,
         sourcemap: false
     },
+    optimizeDeps: {
+        noDiscovery: true,
+        include: ['event-source-polyfill']
+    },
     server: {
         port: 3001,
         cors: true
