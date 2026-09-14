@@ -3,6 +3,7 @@
 
 namespace App\Ai\Services;
 
+use App\Models\Tenant\AIConfiguration;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,8 @@ class GeminiService
     public function __construct()
     {
         $this->apiKey = (string) config('ai.providers.gemini.key', '');
-        $this->model = config('ai.providers.gemini.model', 'gemini-3.6-flash');
+        $this->model = AIConfiguration::query()->value('model')
+            ?: config('ai.providers.gemini.model', 'gemini-1.5-flash');
         $this->safetySettings = config('ai.gemini.safety_settings', []);
         $this->generationConfig = config('ai.gemini.generation_config', []);
         $this->maxRetries = (int) config('ai.gemini.max_retries', 3);
@@ -166,7 +168,7 @@ class GeminiService
                     ),
                 ];
 
-                $response = Http::withHeaders([
+                $response = Http::timeout(60)->connectTimeout(10)->withHeaders([
                     'Content-Type' => 'application/json',
                 ])->post($url, $payload);
 
@@ -256,6 +258,10 @@ class GeminiService
     public function streamContent(string $prompt, callable $callback, array $options = []): void
     {
         try {
+            if (!$this->canMakeRequest()) {
+                throw new \RuntimeException('Daily API quota exceeded. Please try again tomorrow.');
+            }
+
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:streamGenerateContent?key={$this->apiKey}&alt=sse";
 
             $payload = [
@@ -273,7 +279,7 @@ class GeminiService
                 ),
             ];
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(120)->connectTimeout(10)->withHeaders([
                 'Content-Type' => 'application/json',
             ])->withOptions([
                         'stream' => true,
@@ -286,6 +292,8 @@ class GeminiService
                 ]);
                 return;
             }
+
+            $this->trackRequest();
 
             $body = $response->getBody();
             $buffer = '';

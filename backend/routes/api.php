@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
-use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
 use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
@@ -19,13 +18,7 @@ use App\Http\Controllers\Api\V1\Ticket\TicketCommentController;
 use App\Http\Controllers\Api\V1\Ticket\TicketController;
 use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
-use App\Models\TenantUser;
-use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-
-
 
 
 // Route::get('/user', function (Request $request) {
@@ -272,139 +265,30 @@ Route::prefix('v1')->group(function () {
 
         // todo; AI Routes
         Route::prefix('ai')->group(function () {
-            Route::get('/configuration', [AIConfigurationController::class, 'show']);
-            Route::put('/configuration', [AIConfigurationController::class, 'update']);
-            Route::post('/test', [AIConfigurationController::class, 'test']);
+            Route::get('/configuration', [AIConfigurationController::class, 'show'])
+                ->middleware('ai.rate.limit:60,60');
+            Route::put('/configuration', [AIConfigurationController::class, 'update'])
+                ->middleware('ai.rate.limit:20,60');
+            Route::post('/test', [AIConfigurationController::class, 'test'])
+                ->middleware('ai.rate.limit:10,60');
 
             // AI Streaming
             // Route::get('/ai/stream/{conversation}/{message}', [AIStreamController::class, 'stream']);
 
             // Streaming
-            Route::get('/stream/{conversation}/{message}', [AIStreamController::class, 'stream']);
+            Route::get('/stream/{conversation}/{message}', [AIStreamController::class, 'stream'])
+                ->middleware('ai.rate.limit:10,60');
 
             // Usage & Analytics
-            Route::get('/usage', [AIUsageController::class, 'index']);
-            Route::get('/health', [AIUsageController::class, 'health']);
-            Route::get('/analytics', [AIUsageController::class, 'analytics']);
-            Route::get('/logs', [AIUsageController::class, 'logs']);
+            Route::get('/usage', [AIUsageController::class, 'index'])
+                ->middleware('ai.rate.limit:60,60');
+            Route::get('/health', [AIUsageController::class, 'health'])
+                ->middleware('ai.rate.limit:60,60');
+            Route::get('/analytics', [AIUsageController::class, 'analytics'])
+                ->middleware('ai.rate.limit:60,60');
+            Route::get('/logs', [AIUsageController::class, 'logs'])
+                ->middleware('ai.rate.limit:60,60');
         });
-
-        // AI Check
-        Route::get('/debug/ai-check', function () {
-            try {
-                $tenant = app('current_tenant');
-                $config = \App\Models\Tenant\AIConfiguration::first();
-                $gemini = app(\App\Ai\Services\GeminiService::class);
-
-                return response()->json([
-                    'tenant' => $tenant ? [
-                        'id' => $tenant->id,
-                        'name' => $tenant->name,
-                    ] : null,
-                    'ai_config' => $config,
-                    'ai_enabled' => $config?->enabled ?? false,
-                    'auto_reply_enabled' => $config?->auto_reply_enabled ?? false,
-                    'streaming_enabled' => $config?->streaming_enabled ?? false,
-                    'provider' => $config?->provider ?? 'gemini',
-                    'model' => $config?->model ?? 'gemini-1.5-flash',
-                    'gemini_configured' => $gemini->isConfigured(),
-                    'tools_available' => [
-                        'search_knowledge_base',
-                        'get_customer',
-                        'get_conversation',
-                        'create_ticket',
-                        'escalate_conversation',
-                        'rag_search',
-                    ],
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-            }
-        });
-
-
-        // Test Route - Can be removed later
-        Route::get('test', function () {
-            $user = auth()->user();
-            $tenant = app('current_tenant');
-
-            return response()->json([
-                'message' => 'Authenticated successfully',
-                'user' => $user->only(['id', 'email', 'full_name']),
-                'tenant' => $tenant ? [
-                    'id' => $tenant->id,
-                    'name' => $tenant->name,
-                ] : null,
-                'permissions' => $user->getAllPermissions()->pluck('name'),
-                'roles' => $user->getRoleNames(),
-            ]);
-        });
-
-        Route::get('/test-audit-log', function () {
-            try {
-                $auditLogService = app(\App\Services\AuditLogService::class);
-
-                $result = $auditLogService->log(
-                    'test_log',
-                    'test',
-                    1,
-                    ['old' => 'value'],
-                    ['new' => 'value'],
-                    ['test' => 'metadata']
-                );
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Audit log created',
-                    'data' => $result,
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ], 500);
-            }
-        });
-
-        Route::get('/debug/tenant', function (Request $request) {
-            return response()->json([
-                'user' => auth()->user()?->id,
-                'tenant_from_attributes' => $request->attributes->get('current_tenant')?->id,
-                'user_current_tenant' => auth()->user()?->current_tenant_id,
-                'header_tenant' => $request->header('X-Tenant-ID'),
-                'user_tenants' => auth()->user()?->tenants()->pluck('id')->toArray(),
-                'headers' => $request->headers->all(),
-            ]);
-        });
-
-        Route::get('/debug/members', function (Request $request) {
-            try {
-                $members = \App\Models\TenantUser::with('user')->limit(5)->get();
-                return response()->json([
-                    'success' => true,
-                    'count' => $members->count(),
-                    'data' => $members->map(function ($m) {
-                        return [
-                            'id' => $m->id,
-                            'user_name' => $m->user?->full_name,
-                            'email' => $m->user?->email,
-                            'role' => $m->role,
-                        ];
-                    }),
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-            }
-        });
-
     });
 });
 

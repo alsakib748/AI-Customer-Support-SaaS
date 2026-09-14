@@ -95,7 +95,7 @@ class ChatWidgetService
 
         Log::info('Widget session created', [
             'widget_id' => $widget->id,
-            'session_token' => $session->session_token,
+            'session_token_prefix' => substr($session->session_token, 0, 8) . '...',
         ]);
 
         return $session;

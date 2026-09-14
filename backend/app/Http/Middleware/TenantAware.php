@@ -6,7 +6,6 @@ use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\Response;
 
 class TenantAware
@@ -36,13 +35,39 @@ class TenantAware
 
         $tenant = null;
 
-        // 1. Try to get from header
-        $tenantId = $request->header('X-Tenant-ID');
+        // 1. Try to get from the header or SSE query string.
+        // EventSource cannot send custom headers, so streaming clients use tenant_id.
+        $tenantId = $request->header('X-Tenant-ID') ?? $request->query('tenant_id');
         if ($tenantId) {
-            $tenant = Tenant::find($tenantId);
-            if ($tenant) {
-                Log::info('Tenant from header', ['tenant_id' => $tenantId]);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required.',
+                ], 401);
             }
+
+            $tenant = Tenant::find($tenantId);
+            if (!$tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant not found.',
+                ], 404);
+            }
+
+            if (!$user->hasTenantAccess($tenant->id)) {
+                Log::warning('Tenant access denied', [
+                    'user_id' => $user->id,
+                    'tenant_id' => $tenant->id,
+                    'path' => $request->path(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this tenant.',
+                ], 403);
+            }
+
+            Log::info('Tenant from header', ['tenant_id' => $tenantId]);
         }
 
         // 2. Try to get from authenticated user
@@ -75,8 +100,12 @@ class TenantAware
                 'path' => $request->path(),
                 'user_id' => $user?->id,
                 'user_email' => $user?->email,
-                'headers' => $request->headers->all(),
             ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant context is required.',
+            ], 403);
         }
 
 

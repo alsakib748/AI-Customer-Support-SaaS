@@ -7,7 +7,6 @@ use App\Events\Message\MessageCreated;
 use App\Models\Tenant\Conversation;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Message;
-use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -120,15 +119,12 @@ class MessageService
             ]);
         }
 
-        $isInternal = $data['is_internal'] ?? false;
-        $messageType = $isInternal ? 'internal_note' : 'text';
-
         return $this->createMessage($conversation, [
             'sender_type' => 'agent',
             'sender_id' => $user->id,
-            'message_type' => $messageType,
+            'message_type' => 'text',
             'content' => $data['content'],
-            'is_internal' => $isInternal,
+            'is_internal' => false,
         ]);
     }
 

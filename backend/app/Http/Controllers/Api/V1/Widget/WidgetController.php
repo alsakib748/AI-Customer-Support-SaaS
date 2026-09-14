@@ -100,6 +100,7 @@ class WidgetController extends Controller
 
             // ✅ Initialize tenant
             $this->initializeTenant($widget->tenant);
+            $this->validateWidgetOrigin($widget, $request);
 
             $session = $this->widgetService()->getOrCreateSession(
                 $widget,
@@ -124,6 +125,13 @@ class WidgetController extends Controller
                     'has_conversation' => $session->has_conversation,
                 ],
             ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
 
         } catch (\Exception $e) {
             Log::error('Widget session failed:', ['error' => $e->getMessage()]);
@@ -161,6 +169,7 @@ class WidgetController extends Controller
 
             // ✅ Initialize tenant
             $this->initializeTenant($session->widget->tenant);
+            $this->validateWidgetOrigin($session->widget, $request);
 
             // Get or create customer
             $customer = $this->widgetService()->getOrCreateCustomer($session, [
@@ -214,7 +223,7 @@ class WidgetController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send message: ' . $e->getMessage(),
+                'message' => 'Failed to send message.',
             ], 500);
         }
     }
@@ -241,6 +250,7 @@ class WidgetController extends Controller
 
             // ✅ Initialize tenant
             $this->initializeTenant($session->widget->tenant);
+            $this->validateWidgetOrigin($session->widget, $request);
 
             $limit = $request->input('limit', 50);
             $messages = $this->widgetService()->getMessages($session, $limit);
@@ -288,6 +298,7 @@ class WidgetController extends Controller
 
             // ✅ Initialize tenant
             $this->initializeTenant($session->widget->tenant);
+            $this->validateWidgetOrigin($session->widget, $request);
 
             $conversation = $this->widgetService()->getConversation($session);
 
@@ -421,6 +432,17 @@ class WidgetController extends Controller
     protected function widgetService(): ChatWidgetService
     {
         return app(ChatWidgetService::class);
+    }
+
+    protected function validateWidgetOrigin(ChatWidget $widget, Request $request): void
+    {
+        $origin = $request->headers->get('origin');
+
+        if (!$widget->isOriginAllowed($origin)) {
+            throw ValidationException::withMessages([
+                'origin' => ['This domain is not allowed for this widget.'],
+            ]);
+        }
     }
 
 }

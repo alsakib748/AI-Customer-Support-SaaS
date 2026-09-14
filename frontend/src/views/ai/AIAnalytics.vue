@@ -85,6 +85,11 @@ const formatDate = (date) => {
     return new Date(date).toLocaleString();
 };
 
+const formatNumber = (value, decimals = 0) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(decimals) : Number(0).toFixed(decimals);
+};
+
 // ============================================
 // LIFECYCLE
 // ============================================
@@ -115,7 +120,7 @@ onMounted(() => {
             <Card>
                 <template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-success">{{ (health.success_rate || 0).toFixed(1) }}%</div>
+                        <div class="text-2xl font-bold text-success">{{ formatNumber(health.success_rate, 1) }}%</div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Success Rate</div>
                     </div>
                 </template>
@@ -123,7 +128,7 @@ onMounted(() => {
             <Card>
                 <template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-warning">{{ (health.avg_response_time || 0).toFixed(0) }}ms
+                        <div class="text-2xl font-bold text-warning">{{ formatNumber(health.avg_response_time) }}ms
                         </div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Avg Response Time</div>
                     </div>
@@ -132,7 +137,7 @@ onMounted(() => {
             <Card>
                 <template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-info">${{ (analytics.total_cost || 0).toFixed(2) }}</div>
+                        <div class="text-2xl font-bold text-info">${{ formatNumber(analytics.total_cost, 2) }}</div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Total Cost</div>
                     </div>
                 </template>

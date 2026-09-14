@@ -4,7 +4,6 @@ namespace App\Http\Requests\Message;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreMessageRequest extends FormRequest
 {
@@ -29,14 +28,6 @@ class StoreMessageRequest extends FormRequest
                 'string',
                 'max:10000',
             ],
-            'message_type' => [
-                'sometimes',
-                Rule::in(['text', 'internal_note']),
-            ],
-            'is_internal' => [
-                'sometimes',
-                'boolean',
-            ],
         ];
     }
 
@@ -45,7 +36,6 @@ class StoreMessageRequest extends FormRequest
         return [
             'content.required' => 'Message content is required.',
             'content.max' => 'Message cannot exceed 10,000 characters.',
-            'message_type.in' => 'Invalid message type.',
         ];
     }
 }

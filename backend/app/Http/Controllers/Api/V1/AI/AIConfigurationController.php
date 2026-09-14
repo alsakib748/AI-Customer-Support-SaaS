@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\AI;
 
 use App\Http\Controllers\Controller;
+use App\Ai\Services\GeminiService;
 use App\Models\Tenant\AIConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -139,7 +140,7 @@ class AIConfigurationController extends Controller
     /**
      * Test AI configuration
      */
-    public function test(Request $request)
+    public function test(Request $request, GeminiService $geminiService)
     {
         try {
             // if (!auth()->user()->hasPermissionTo('ai.configure')) {
@@ -160,16 +161,27 @@ class AIConfigurationController extends Controller
                 'message' => ['required', 'string', 'max:500'],
             ]);
 
-            // Test AI connection
-            // This would use the Laravel AI SDK to send a test message
-            // For now, return a simulated response
+            $response = $geminiService->generateContent($validated['message'], [
+                'maxOutputTokens' => 256,
+            ]);
+
+            if (!$response['success']) {
+                Log::warning('AI configuration test failed', [
+                    'error' => $response['error'] ?? 'Unknown provider error',
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'AI provider test failed.',
+                ], 502);
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'AI test completed successfully ✅',
+                'message' => 'AI test completed successfully.',
                 'data' => [
-                    'response' => 'AI is working correctly! This is a test response.',
-                    'provider' => config('ai.default'),
+                    'response' => $response['content'],
+                    'provider' => 'gemini',
                 ],
             ]);
 

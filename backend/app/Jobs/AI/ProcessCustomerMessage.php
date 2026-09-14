@@ -19,6 +19,11 @@ class ProcessCustomerMessage implements ShouldQueue
     public $timeout = 120;
     public $tries = 3;
 
+    public function backoff(): array
+    {
+        return [10, 30, 60];
+    }
+
     protected ?Message $message = null;
     protected int $messageId;
     protected string $tenantId;
@@ -68,7 +73,7 @@ class ProcessCustomerMessage implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $this->fail($e);
+            throw $e;
         } finally {
             Tenancy::end();
         }
