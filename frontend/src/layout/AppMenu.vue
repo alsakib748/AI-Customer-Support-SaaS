@@ -9,12 +9,112 @@ const model = ref([
             {
                 label: 'Dashboard',
                 icon: 'pi pi-fw pi-home',
-                to: '/'
+                to: '/dashboard'
+                // to: '/'
             }
         ]
     },
     {
-        // label: 'Workspace',
+        label: 'Analytics & Reporting',
+        icon: 'pi pi-fw pi-briefcase',
+        path: '/pages',
+        items: [
+            {
+                label: 'Crud',
+                icon: 'pi pi-fw pi-pencil',
+                to: '/pages/crud'
+            },
+            {
+                label: 'Auth',
+                icon: 'pi pi-fw pi-user',
+                path: '/auth',
+                items: [
+                    {
+                        label: 'Login',
+                        icon: 'pi pi-fw pi-sign-in',
+                        to: '/login'
+                    },
+                    {
+                        label: 'Error',
+                        icon: 'pi pi-fw pi-times-circle',
+                        to: '/auth/error'
+                    },
+                    {
+                        label: 'Access Denied',
+                        icon: 'pi pi-fw pi-lock',
+                        to: '/auth/access'
+                    }
+                ]
+            },
+        ]
+    },
+    {
+        label: 'Analytics & Reporting',
+        icon: 'pi pi-chart-bar',
+        // permission: ['analytics.view'],
+        items: [
+            {
+                label: 'Overview',
+                icon: 'pi pi-th-large',
+                to: '/analytics/overview',
+                // permission: ['analytics.view'],
+            },
+            {
+                label: 'Conversations',
+                icon: 'pi pi-comments',
+                to: '/analytics/conversations',
+                // permission: ['analytics.conversations'],
+            },
+            {
+                label: 'Customers',
+                icon: 'pi pi-users',
+                to: '/analytics/customers',
+                // permission: ['analytics.customers'],
+            },
+            {
+                label: 'Team Performance',
+                icon: 'pi pi-user-edit',
+                to: '/analytics/agents',
+                // permission: ['analytics.agents'],
+            },
+            {
+                label: 'Tickets',
+                icon: 'pi pi-ticket',
+                to: '/analytics/tickets',
+                // permission: ['analytics.tickets'],
+            },
+            {
+                label: 'AI Usage',
+                icon: 'pi pi-sparkles',
+                to: '/analytics/ai',
+                // permission: ['analytics.ai'],
+            },
+            {
+                label: 'Chat Widget',
+                icon: 'pi pi-comment',
+                to: '/analytics/widget',
+                // permission: ['analytics.widget'],
+            },
+            {
+                label: 'Knowledge Base',
+                icon: 'pi pi-book',
+                to: '/analytics/knowledge-base',
+                // permission: ['analytics.knowledge_base'],
+            },
+        ]
+    },
+    {
+        // label: 'Analytics & Reporting',
+        items: [
+            {
+                label: 'Analytics',
+                icon: 'pi pi-fw pi-home',
+                to: '/analytics'
+            }
+        ]
+    },
+    {
+        label: 'Main Module',
         items: [
             {
                 label: 'Workspace',

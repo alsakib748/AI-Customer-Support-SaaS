@@ -3,6 +3,14 @@
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
+use App\Http\Controllers\Api\V1\Analytics\AgentAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\AIAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\ConversationAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\CustomerAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\KnowledgeBaseAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\OverviewController;
+use App\Http\Controllers\Api\V1\Analytics\TicketAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\WidgetAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
 use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
@@ -289,6 +297,34 @@ Route::prefix('v1')->group(function () {
             Route::get('/logs', [AIUsageController::class, 'logs'])
                 ->middleware('ai.rate.limit:60,60');
         });
+
+        // todo; Analytics
+        Route::prefix('analytics')->group(function () {
+            Route::get('/overview', [OverviewController::class, 'index']);
+
+            Route::get('/conversations', [ConversationAnalyticsController::class, 'index']);
+            Route::get('/customers', [CustomerAnalyticsController::class, 'index']);
+            Route::get('/agents', [AgentAnalyticsController::class, 'index']);
+            Route::get('/tickets', [TicketAnalyticsController::class, 'index']);
+            Route::get('/ai', [AIAnalyticsController::class, 'index']);
+            Route::get('/widget', [WidgetAnalyticsController::class, 'index']);
+            Route::get('/knowledge-base', [KnowledgeBaseAnalyticsController::class, 'index']);
+        });
+
+        // todo; Exports
+        Route::prefix('exports')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'store']);
+            Route::get('/{export}/download', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'download'])
+                ->name('api.v1.analytics.exports.download');
+        });
+
+        // todo; admin analytics
+        Route::prefix('admin/analytics')->middleware(['jwt.auth'])->group(function () {
+            Route::get('/overview', [\App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController::class, 'overview']);
+            Route::get('/tenant-usage', [\App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController::class, 'tenantUsage']);
+        });
+
     });
 });
 

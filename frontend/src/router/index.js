@@ -70,6 +70,91 @@ const router = createRouter({
                     meta: { requiresAuth: true }
                 },
                 {
+                    path: '/analytics',
+                    name: 'Analytics',
+                    redirect: '/analytics/overview'
+                },
+                {
+                    path: '/analytics/overview',
+                    name: 'AnalyticsOverview',
+                    component: () => import('@/views/analytics/AnalyticsOverview.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Analytics'
+                        // permissions: ['analytics.view']
+                    }
+                },
+                {
+                    path: '/analytics/conversations',
+                    name: 'AnalyticsConversations',
+                    component: () => import('@/views/analytics/ConversationAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Conversation Analytics'
+                        // permissions: ['analytics.conversations']
+                    }
+                },
+                {
+                    path: '/analytics/customers',
+                    name: 'AnalyticsCustomers',
+                    component: () => import('@/views/analytics/CustomerAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Customer Analytics'
+                        // permissions: ['analytics.customers']
+                    }
+                },
+                {
+                    path: '/analytics/agents',
+                    name: 'AnalyticsAgents',
+                    component: () => import('@/views/analytics/AgentAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Team Analytics'
+                        // permissions: ['analytics.agents']
+                    }
+                },
+                {
+                    path: '/analytics/tickets',
+                    name: 'AnalyticsTickets',
+                    component: () => import('@/views/analytics/TicketAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Ticket Analytics'
+                        // permissions: ['analytics.tickets']
+                    }
+                },
+                {
+                    path: '/analytics/ai',
+                    name: 'AnalyticsAI',
+                    component: () => import('@/views/analytics/AIAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'AI Analytics'
+                        // permissions: ['analytics.ai']
+                    }
+                },
+                {
+                    path: '/analytics/widget',
+                    name: 'AnalyticsWidget',
+                    component: () => import('@/views/analytics/WidgetAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Widget Analytics'
+                        // permissions: ['analytics.widget']
+                    }
+                },
+                {
+                    path: '/analytics/knowledge-base',
+                    name: 'AnalyticsKnowledgeBase',
+                    component: () => import('@/views/analytics/KnowledgeBaseAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'KB Analytics'
+                        // permissions: ['analytics.knowledge_base']
+                    }
+                },
+                {
                     path: '/settings/workspace',
                     name: 'WorkspaceSettings',
                     component: () => import('@/views/settings/Workspace.vue'),
