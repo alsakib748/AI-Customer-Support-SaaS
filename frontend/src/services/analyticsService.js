@@ -48,6 +48,20 @@ class AnalyticsService {
     getKnowledgeBase(filters = {}) {
         return api.get('/analytics/knowledge-base', { params: this.buildParams(filters) });
     }
+
+    requestExport(data) {
+        return api.post('/analytics/exports', data);
+    }
+
+    getExports() {
+        return api.get('/analytics/exports');
+    }
+
+    downloadExport(exportId) {
+        return api.get(`/analytics/exports/${exportId}/download`, {
+            responseType: 'blob',
+        });
+    }
 }
 
 export default new AnalyticsService();

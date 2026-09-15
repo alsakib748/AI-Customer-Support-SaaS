@@ -61,12 +61,29 @@ class CustomerAnalyticsService extends BaseAnalyticsService
 
     protected function growthTrend(): array
     {
-        $format = $this->dateTruncFormat();
+        // $format = $this->dateTruncFormat();
+
+        // $rows = Customer::query()
+        //     ->whereBetween('created_at', [$this->period->from, $this->period->to])
+        //     ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as label")
+        //     ->selectRaw('DATE_TRUNC(?, created_at) as sort_key', [$this->interval])
+        //     ->selectRaw('COUNT(*) as count')
+        //     ->groupBy('label', 'sort_key')
+        //     ->orderBy('sort_key')
+        //     ->get();
+
+        // return [
+        //     'labels' => $rows->pluck('label')->toArray(),
+        //     'values' => $rows->pluck('count')->map(fn($v) => (int) $v)->toArray(),
+        // ];
+
+        $format = $this->getPostgresDateFormat();
+        $interval = $this->interval;
 
         $rows = Customer::query()
             ->whereBetween('created_at', [$this->period->from, $this->period->to])
-            ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as label")
-            ->selectRaw('DATE_TRUNC(?, created_at) as sort_key', [$this->interval])
+            ->selectRaw("TO_CHAR(DATE_TRUNC('{$interval}', created_at), '{$format}') as label")
+            ->selectRaw('DATE_TRUNC(?, created_at) as sort_key', [$interval])
             ->selectRaw('COUNT(*) as count')
             ->groupBy('label', 'sort_key')
             ->orderBy('sort_key')

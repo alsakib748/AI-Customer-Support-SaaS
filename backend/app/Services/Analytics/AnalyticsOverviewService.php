@@ -179,13 +179,24 @@ class AnalyticsOverviewService extends BaseAnalyticsService
      */
     protected function customerSummary(bool $previous = false): array
     {
-        $query = Customer::query();
-        $previous ? $this->applyPreviousPeriodRange($query) : $this->applyPeriodRange($query);
+        // $query = Customer::query();
+        // $previous ? $this->applyPreviousPeriodRange($query) : $this->applyPeriodRange($query);
 
-        $result = $query->selectRaw("
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) as new
-        ", [$this->period->from, $this->period->to])->first();
+        // $result = $query->selectRaw("
+        //     COUNT(*) as total,
+        //     COUNT(*) FILTER (WHERE created_at BETWEEN ? AND ?) as new
+        // ", [$this->period->from, $this->period->to])->first();
+
+        $query = Customer::query();
+        $previous
+            ? $this->applyPreviousPeriodRange($query)
+            : $this->applyPeriodRange($query);
+
+        $total = (clone $query)->count();
+        $new = (clone $query)->whereBetween('created_at', [
+            $this->period->from,
+            $this->period->to,
+        ])->count();
 
         return [
             'total' => (int) ($result->total ?? 0),
@@ -288,19 +299,36 @@ class AnalyticsOverviewService extends BaseAnalyticsService
      */
     protected function conversationTrend(): array
     {
-        $format = $this->dateTruncFormat();
+        // $format = $this->dateTruncFormat();
+
+        // $rows = Conversation::query()
+        //     ->whereBetween('created_at', [$this->period->from, $this->period->to])
+        //     ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as period_label")
+        //     ->selectRaw('DATE_TRUNC(?, created_at) as period_start', [$this->interval])
+        //     ->selectRaw('COUNT(*) as count')
+        //     ->groupBy('period_label', 'period_start')
+        //     ->orderBy('period_start')
+        //     ->get();
+
+        // return [
+        //     'labels' => $rows->pluck('period_label')->toArray(),
+        //     'values' => $rows->pluck('count')->map(fn($v) => (int) $v)->toArray(),
+        // ];
+
+        $format = $this->getPostgresDateFormat();
+        $interval = $this->interval;
 
         $rows = Conversation::query()
             ->whereBetween('created_at', [$this->period->from, $this->period->to])
-            ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as period_label")
-            ->selectRaw('DATE_TRUNC(?, created_at) as period_start', [$this->interval])
+            ->selectRaw("TO_CHAR(DATE_TRUNC('{$interval}', created_at), '{$format}') as label")
+            ->selectRaw('DATE_TRUNC(?, created_at) as sort_key', [$interval])
             ->selectRaw('COUNT(*) as count')
-            ->groupBy('period_label', 'period_start')
-            ->orderBy('period_start')
+            ->groupBy('label', 'sort_key')
+            ->orderBy('sort_key')
             ->get();
 
         return [
-            'labels' => $rows->pluck('period_label')->toArray(),
+            'labels' => $rows->pluck('label')->toArray(),
             'values' => $rows->pluck('count')->map(fn($v) => (int) $v)->toArray(),
         ];
     }
@@ -310,19 +338,36 @@ class AnalyticsOverviewService extends BaseAnalyticsService
      */
     protected function customerTrend(): array
     {
-        $format = $this->dateTruncFormat();
+        // $format = $this->dateTruncFormat();
+
+        // $rows = Customer::query()
+        //     ->whereBetween('created_at', [$this->period->from, $this->period->to])
+        //     ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as period_label")
+        //     ->selectRaw('DATE_TRUNC(?, created_at) as period_start', [$this->interval])
+        //     ->selectRaw('COUNT(*) as count')
+        //     ->groupBy('period_label', 'period_start')
+        //     ->orderBy('period_start')
+        //     ->get();
+
+        // return [
+        //     'labels' => $rows->pluck('period_label')->toArray(),
+        //     'values' => $rows->pluck('count')->map(fn($v) => (int) $v)->toArray(),
+        // ];
+
+        $format = $this->getPostgresDateFormat();
+        $interval = $this->interval;
 
         $rows = Customer::query()
             ->whereBetween('created_at', [$this->period->from, $this->period->to])
-            ->selectRaw("TO_CHAR(DATE_TRUNC('{$this->interval}', created_at), '{$format}') as period_label")
-            ->selectRaw('DATE_TRUNC(?, created_at) as period_start', [$this->interval])
+            ->selectRaw("TO_CHAR(DATE_TRUNC('{$interval}', created_at), '{$format}') as label")
+            ->selectRaw('DATE_TRUNC(?, created_at) as sort_key', [$interval])
             ->selectRaw('COUNT(*) as count')
-            ->groupBy('period_label', 'period_start')
-            ->orderBy('period_start')
+            ->groupBy('label', 'sort_key')
+            ->orderBy('sort_key')
             ->get();
 
         return [
-            'labels' => $rows->pluck('period_label')->toArray(),
+            'labels' => $rows->pluck('label')->toArray(),
             'values' => $rows->pluck('count')->map(fn($v) => (int) $v)->toArray(),
         ];
     }

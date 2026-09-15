@@ -207,11 +207,36 @@ class ConversationAnalyticsService extends BaseAnalyticsService
 
     protected function resolutionTimeStats(): array
     {
+        // $query = Conversation::query();
+        // $this->applyPeriodRange($query, 'resolved_at');
+
+        // $result = $query
+        //     ->whereNotNull('resolved_at')
+        //     ->whereNotNull('started_at')
+        //     ->selectRaw("
+        //         AVG(EXTRACT(EPOCH FROM (resolved_at - started_at))) as avg_seconds,
+        //         PERCENTILE_CONT(0.5) WITHIN GROUP (
+        //             ORDER BY EXTRACT(EPOCH FROM (resolved_at - started_at))
+        //         ) as median_seconds,
+        //         PERCENTILE_CONT(0.9) WITHIN GROUP (
+        //             ORDER BY EXTRACT(EPOCH FROM (resolved_at - started_at))
+        //         ) as p90_seconds
+        //     ")
+        //     ->first();
+
+        // $avg = (float) ($result->avg_seconds ?? 0);
+
+        // return [
+        //     'average_seconds' => round($avg, 2),
+        //     'average_formatted' => DurationFormatter::format((int) $avg),
+        //     'median_seconds' => round((float) ($result->median_seconds ?? 0), 2),
+        //     'p90_seconds' => round((float) ($result->p90_seconds ?? 0), 2),
+        // ];
+
         $query = Conversation::query();
         $this->applyPeriodRange($query, 'resolved_at');
 
-        $result = $query
-            ->whereNotNull('resolved_at')
+        $row = $query->whereNotNull('resolved_at')
             ->whereNotNull('started_at')
             ->selectRaw("
                 AVG(EXTRACT(EPOCH FROM (resolved_at - started_at))) as avg_seconds,
@@ -224,13 +249,13 @@ class ConversationAnalyticsService extends BaseAnalyticsService
             ")
             ->first();
 
-        $avg = (float) ($result->avg_seconds ?? 0);
+        $avg = (float) ($row->avg_seconds ?? 0);
 
         return [
             'average_seconds' => round($avg, 2),
             'average_formatted' => DurationFormatter::format((int) $avg),
-            'median_seconds' => round((float) ($result->median_seconds ?? 0), 2),
-            'p90_seconds' => round((float) ($result->p90_seconds ?? 0), 2),
+            'median_seconds' => round((float) ($row->median_seconds ?? 0), 2),
+            'p90_seconds' => round((float) ($row->p90_seconds ?? 0), 2),
         ];
     }
 

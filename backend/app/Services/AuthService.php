@@ -248,6 +248,10 @@ class AuthService
         // Get current tenant
         $currentTenant = $user->currentTenant ?? $user->tenants()->first();
 
+        if ($currentTenant && $user->current_tenant_id !== $currentTenant->id) {
+            $user->update(['current_tenant_id' => $currentTenant->id]);
+        }
+
         return [
             'user' => [
                 'id' => $user->id,

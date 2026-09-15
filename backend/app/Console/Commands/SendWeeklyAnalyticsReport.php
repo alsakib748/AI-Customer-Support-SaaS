@@ -2,12 +2,14 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\WeeklyAnalyticsReportMail;
 use App\Models\Tenant;
 use App\Services\Analytics\AnalyticsOverviewService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Stancl\Tenancy\Facades\Tenancy;
 
 #[Signature('app:send-weekly-analytics-report')]
@@ -34,6 +36,16 @@ class SendWeeklyAnalyticsReport extends Command
 
                 // TODO: Mail a Mailable view with $overview
                 // Mail::to($tenant->getOwner()?->email)->send(new WeeklyReportMail($tenant, $overview));
+                $owner = $tenant->getOwner();
+                if ($owner && $owner->email) {
+                    Mail::to($owner->email)->send(
+                        new WeeklyAnalyticsReportMail(
+                            overview: $overview,
+                            tenantName: $tenant->name,
+                            periodLabel: 'Last 7 Days'
+                        )
+                    );
+                }
 
                 Log::info('Weekly report sent', ['tenant_id' => $tenant->id]);
             } catch (\Throwable $e) {

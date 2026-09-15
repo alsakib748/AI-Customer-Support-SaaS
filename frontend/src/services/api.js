@@ -9,7 +9,7 @@ const api = axios.create({
         'Content-Type': 'application/json',
         Accept: 'application/json'
     },
-    timeout: 30000,
+    timeout: 60000,
     withCredentials: false
 });
 
@@ -221,5 +221,33 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+/**
+ * Download a file as blob.
+ */
+export async function downloadFile(url, fileName = 'download.csv') {
+    try {
+        const response = await api.get(url, { responseType: 'blob' });
+
+        // If the backend returned JSON as a blob (error case)
+        if (response.data.type === 'application/json') {
+            const text = await response.data.text();
+            const parsed = JSON.parse(text);
+            throw new Error(parsed.message || 'Download failed.');
+        }
+
+        const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        toast.error(error.message || 'Download failed.');
+        throw error;
+    }
+}
 
 export default api;

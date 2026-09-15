@@ -289,6 +289,36 @@ const router = createRouter({
                     }
                 },
                 {
+                    path: '/analytics/my',
+                    name: 'AnalyticsMy',
+                    component: () => import('@/views/analytics/MyAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'My Analytics'
+                        // permissions: ['analytics.view']
+                    }
+                },
+                {
+                    path: '/analytics/exports',
+                    name: 'AnalyticsExports',
+                    component: () => import('@/views/analytics/ExportHistory.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Export History'
+                        // permissions: ['analytics.export']
+                    }
+                },
+                {
+                    path: '/admin/analytics',
+                    name: 'AdminPlatformAnalytics',
+                    component: () => import('@/views/admin/PlatformAnalytics.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        requiresSuperAdmin: true,
+                        title: 'Platform Analytics'
+                    }
+                },
+                {
                     path: '/uikit/formlayout',
                     name: 'formlayout',
                     component: () => import('@/views/uikit/FormLayout.vue')
@@ -469,6 +499,12 @@ router.beforeEach(async (to, form, next) => {
                 toast.error('You do not have permission to access this page');
                 return next('/dashboard');
             }
+        }
+
+        // Super Admin check
+        if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+            toast.error('Super Admin access required.');
+            return next('/dashboard');
         }
 
         // Redirect authenticated users from guest pages

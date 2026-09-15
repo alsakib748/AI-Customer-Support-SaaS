@@ -13,17 +13,17 @@ class ConversationExportBuilder
 
         $rows = \App\Models\Tenant\Conversation::query()
             ->whereBetween('created_at', [$period->from, $period->to])
-            ->select([
-                'id',
-                'subject',
-                'channel',
-                'status',
-                'priority',
-                'assigned_user_id',
-                'created_at',
-                'resolved_at',
-                'closed_at',
-            ])
+            ->selectRaw("
+                id,
+                COALESCE(subject, '') as subject,
+                COALESCE(channel, '') as channel,
+                COALESCE(status, '') as status,
+                COALESCE(priority, '') as priority,
+                COALESCE(assigned_user_id::text, '') as assigned_user_id,
+                TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                COALESCE(TO_CHAR(resolved_at, 'YYYY-MM-DD HH24:MI:SS'), '') as resolved_at,
+                COALESCE(TO_CHAR(closed_at, 'YYYY-MM-DD HH24:MI:SS'), '') as closed_at
+            ")
             ->orderBy('created_at')
             ->cursor();
 

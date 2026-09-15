@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Analytics;
 
+use App\Support\Analytics\ExportType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

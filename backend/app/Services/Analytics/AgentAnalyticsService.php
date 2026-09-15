@@ -40,9 +40,15 @@ class AgentAnalyticsService extends BaseAnalyticsService
     protected function performanceTable(): array
     {
         // Aggregate per assigned user
-        $rows = Conversation::query()
+        $query = Conversation::query()
             ->whereBetween('conversations.created_at', [$this->period->from, $this->period->to])
-            ->whereNotNull('assigned_user_id')
+            ->whereNotNull('assigned_user_id');
+
+        if (!empty($this->filters['agent_id'])) {
+            $query->where('assigned_user_id', $this->filters['agent_id']);
+        }
+
+        $rows = $query
             ->selectRaw('assigned_user_id')
             ->selectRaw('COUNT(*) as assigned')
             ->selectRaw("COUNT(*) FILTER (WHERE status = 'resolved') as resolved")
@@ -122,4 +128,20 @@ class AgentAnalyticsService extends BaseAnalyticsService
             })
             ->toArray();
     }
+
+    // app/Services/Analytics/AgentAnalyticsService.php — add to constructor or withFilters
+
+    public function withFilters(array $filters): static
+    {
+        // If current user is only an agent (not owner/admin/manager),
+        // force scope to their own user ID.
+        $user = auth()->user();
+        if ($user && $user->hasRole('agent') && !$user->hasAnyRole(['owner', 'admin', 'manager'])) {
+            $filters['agent_id'] = $user->id;
+        }
+
+        parent::withFilters($filters);
+        return $this;
+    }
+
 }

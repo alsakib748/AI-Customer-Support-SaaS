@@ -160,6 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
             currentTenant.value = data.tenant;
             tenants.value = data.tenants || [];
 
+            if (currentTenant.value?.id) {
+                localStorage.setItem('current_tenant_id', currentTenant.value.id);
+            }
+
             return data;
         } catch (err) {
             if (err.response?.status === 401) {

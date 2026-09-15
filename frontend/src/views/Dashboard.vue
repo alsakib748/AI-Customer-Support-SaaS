@@ -4,9 +4,18 @@ import NotificationsWidget from '@/components/dashboard/NotificationsWidget.vue'
 import RecentSalesWidget from '@/components/dashboard/RecentSalesWidget.vue';
 import RevenueStreamWidget from '@/components/dashboard/RevenueStreamWidget.vue';
 import StatsWidget from '@/components/dashboard/StatsWidget.vue';
+import DashboardAnalyticsWidget from '@/components/analytics/DashboardAnalyticsWidget.vue';
 </script>
 
 <template>
+
+
+    <div class="">
+        <DashboardAnalyticsWidget />
+        <!-- rest of your existing dashboard -->
+    </div>
+
+
     <div class="grid grid-cols-12 gap-8">
         <StatsWidget />
 

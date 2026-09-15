@@ -49,6 +49,17 @@ const model = ref([
         ]
     },
     {
+        label: 'Platform',
+        items: [
+            {
+                label: 'Platform Analytics',
+                icon: 'pi pi-chart-line',
+                to: '/admin/analytics',
+                // superAdminOnly: true,
+            },
+        ],
+    },
+    {
         label: 'Analytics & Reporting',
         icon: 'pi pi-chart-bar',
         // permission: ['analytics.view'],
@@ -58,6 +69,18 @@ const model = ref([
                 icon: 'pi pi-th-large',
                 to: '/analytics/overview',
                 // permission: ['analytics.view'],
+            },
+            {
+                label: 'My Analytics',
+                icon: 'pi pi-user',
+                to: '/analytics/my',
+                // permission: ['analytics.view'],
+            },
+            {
+                label: 'Export History',
+                icon: 'pi pi-download',
+                to: '/analytics/exports',
+                // permission: ['analytics.export'],
             },
             {
                 label: 'Conversations',
@@ -444,6 +467,8 @@ const model = ref([
         ]
     }
 ]);
+
+
 </script>
 
 <template>

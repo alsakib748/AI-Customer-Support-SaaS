@@ -51,6 +51,7 @@ class TicketAnalyticsService extends BaseAnalyticsService
     protected function trend(): array
     {
         $format = $this->dateTruncFormat();
+        $interval = $this->interval;
 
         $created = Ticket::query()
             ->whereBetween('created_at', [$this->period->from, $this->period->to])

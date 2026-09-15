@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
 use App\Http\Controllers\Api\V1\Analytics\AgentAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\AIAnalyticsController;
+use App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController;
 use App\Http\Controllers\Api\V1\Analytics\ConversationAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\CustomerAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\KnowledgeBaseAnalyticsController;
@@ -309,20 +311,31 @@ Route::prefix('v1')->group(function () {
             Route::get('/ai', [AIAnalyticsController::class, 'index']);
             Route::get('/widget', [WidgetAnalyticsController::class, 'index']);
             Route::get('/knowledge-base', [KnowledgeBaseAnalyticsController::class, 'index']);
+
+            // todo; Exports
+            Route::prefix('exports')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'index']);
+                Route::post('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'store']);
+                Route::get('/{export}/download', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'download'])
+                    ->name('api.v1.analytics.exports.download');
+
+                Route::get('/download-now', [AnalyticsExportController::class, 'downloadNow']);
+            });
+
         });
 
-        // todo; Exports
-        Route::prefix('exports')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'store']);
-            Route::get('/{export}/download', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'download'])
-                ->name('api.v1.analytics.exports.download');
+        // todo; SUPER ADMIN (no tenant context)
+        Route::middleware(['jwt.auth'])->prefix('admin')->group(function () {
+            Route::prefix('analytics')->group(function () {
+                Route::get('/overview', [AdminAnalyticsController::class, 'overview']);
+                Route::get('/tenant-usage', [AdminAnalyticsController::class, 'tenantUsage']);
+            });
         });
 
-        // todo; admin analytics
-        Route::prefix('admin/analytics')->middleware(['jwt.auth'])->group(function () {
-            Route::get('/overview', [\App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController::class, 'overview']);
-            Route::get('/tenant-usage', [\App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController::class, 'tenantUsage']);
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\NotificationController::class, 'index']);
+            Route::post('/{id}/read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead']);
+            Route::post('/read-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
         });
 
     });
