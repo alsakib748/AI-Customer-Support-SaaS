@@ -14,6 +14,11 @@ use App\Http\Controllers\Api\V1\Analytics\OverviewController;
 use App\Http\Controllers\Api\V1\Analytics\TicketAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\WidgetAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Billing\InvoiceController;
+use App\Http\Controllers\Api\V1\Billing\PaymentController;
+use App\Http\Controllers\Api\V1\Billing\PlanController;
+use App\Http\Controllers\Api\V1\Billing\SubscriptionController;
+use App\Http\Controllers\Api\V1\Billing\WebhookController;
 use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
 use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
 use App\Http\Controllers\Api\V1\Conversation\ConversationController;
@@ -28,6 +33,7 @@ use App\Http\Controllers\Api\V1\Ticket\TicketCommentController;
 use App\Http\Controllers\Api\V1\Ticket\TicketController;
 use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
+use App\Models\Api\V1\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -43,12 +49,47 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class, 'accept']);
 
+// Route::prefix('v1/widget')->group(function () {
+//     Route::post('/bootstrap', [WidgetController::class, 'bootstrap']);
+//     Route::post('/session', [WidgetController::class, 'session']);
+//     Route::post('/messages', [WidgetController::class, 'sendMessage']);
+//     Route::get('/messages', [WidgetController::class, 'getMessages']);
+//     Route::get('/conversation', [WidgetController::class, 'getConversation']);
+// });
+
 Route::prefix('v1/widget')->group(function () {
-    Route::post('/bootstrap', [WidgetController::class, 'bootstrap']);
-    Route::post('/session', [WidgetController::class, 'session']);
-    Route::post('/messages', [WidgetController::class, 'sendMessage']);
-    Route::get('/messages', [WidgetController::class, 'getMessages']);
-    Route::get('/conversation', [WidgetController::class, 'getConversation']);
+    Route::post('/bootstrap', [WidgetController::class, 'bootstrap'])
+        ->middleware('widget.rate.limit:30,60');
+
+    Route::post('/session', [WidgetController::class, 'session'])
+        ->middleware('widget.rate.limit:20,60');
+
+    Route::post('/messages', [WidgetController::class, 'sendMessage'])
+        ->middleware('widget.rate.limit:20,60');
+
+    Route::get('/messages', [WidgetController::class, 'getMessages'])
+        ->middleware('widget.rate.limit:30,60');
+
+    Route::get('/conversation', [WidgetController::class, 'getConversation'])
+        ->middleware('widget.rate.limit:30,60');
+});
+
+// Public Plan Routes
+Route::prefix('v1/plans')->group(function () {
+    Route::get('/', [PlanController::class, 'index']);
+    Route::get('/compare', [PlanController::class, 'compare']);
+    Route::get('/{id}', [PlanController::class, 'show']);
+});
+
+
+// todo; Webhooks
+Route::prefix('webhooks')->group(function () {
+    // Route::post('/stripe', [WebhookController::class, 'stripe'])
+    //     ->withoutMiddleware(['jwt.auth', 'tenant.aware']);
+    // Route::post('/paypal', [WebhookController::class, 'paypal'])
+    //     ->withoutMiddleware(['jwt.auth', 'tenant.aware']);
+    Route::post('/stripe', [WebhookController::class, 'stripe']);
+    Route::post('/paypal', [WebhookController::class, 'paypal']);
 });
 
 Route::prefix('v1')->group(function () {
@@ -303,7 +344,6 @@ Route::prefix('v1')->group(function () {
         // todo; Analytics
         Route::prefix('analytics')->group(function () {
             Route::get('/overview', [OverviewController::class, 'index']);
-
             Route::get('/conversations', [ConversationAnalyticsController::class, 'index']);
             Route::get('/customers', [CustomerAnalyticsController::class, 'index']);
             Route::get('/agents', [AgentAnalyticsController::class, 'index']);
@@ -314,9 +354,9 @@ Route::prefix('v1')->group(function () {
 
             // todo; Exports
             Route::prefix('exports')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'index']);
-                Route::post('/', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'store']);
-                Route::get('/{export}/download', [\App\Http\Controllers\Api\V1\Analytics\AnalyticsExportController::class, 'download'])
+                Route::get('/', [AnalyticsExportController::class, 'index']);
+                Route::post('/', [AnalyticsExportController::class, 'store']);
+                Route::get('/{export}/download', [AnalyticsExportController::class, 'download'])
                     ->name('api.v1.analytics.exports.download');
 
                 Route::get('/download-now', [AnalyticsExportController::class, 'downloadNow']);
@@ -332,28 +372,51 @@ Route::prefix('v1')->group(function () {
             });
         });
 
+        // todo; Notification route
         Route::prefix('notifications')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\NotificationController::class, 'index']);
-            Route::post('/{id}/read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead']);
-            Route::post('/read-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+            Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         });
 
+        //todo; Subscription Routes
+        Route::prefix('subscription')->group(function () {
+            Route::get('/current', [SubscriptionController::class, 'current']);
+            Route::post('/', [SubscriptionController::class, 'store']);
+            Route::post('/upgrade', [SubscriptionController::class, 'upgrade']);
+            Route::post('/downgrade', [SubscriptionController::class, 'downgrade']);
+            Route::post('/cancel', [SubscriptionController::class, 'cancel']);
+            Route::post('/resume', [SubscriptionController::class, 'resume']);
+            Route::post('/validate-coupon', [SubscriptionController::class, 'validateCoupon']);
+
+            // Checkout
+            Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+        });
+
+        //todo; Invoice Routes
+        Route::prefix('invoices')->group(function () {
+            Route::get('/', [InvoiceController::class, 'index']);
+            Route::get('/statistics', [InvoiceController::class, 'statistics']);
+            Route::get('/{id}', [InvoiceController::class, 'show']);
+            Route::get('/{id}/download', [InvoiceController::class, 'download']);
+        });
+
+        //todo; Payment Routes
+        Route::prefix('payments')->group(function () {
+            Route::get('/', [PaymentController::class, 'index']);
+            Route::get('/statistics', [PaymentController::class, 'statistics']);
+        });
+
+        // Usage (for frontend)
+        Route::get('/billing/usage', function () {
+            $tracker = app(\App\Services\Billing\UsageTracker::class);
+            $tenant = app('current_tenant');
+
+            return response()->json([
+                'success' => true,
+                'data' => $tracker->getSummary($tenant->id),
+            ]);
+        })->middleware('check.subscription');
+
     });
-});
-
-Route::prefix('v1/widget')->group(function () {
-    Route::post('/bootstrap', [WidgetController::class, 'bootstrap'])
-        ->middleware('widget.rate.limit:30,60');
-
-    Route::post('/session', [WidgetController::class, 'session'])
-        ->middleware('widget.rate.limit:20,60');
-
-    Route::post('/messages', [WidgetController::class, 'sendMessage'])
-        ->middleware('widget.rate.limit:20,60');
-
-    Route::get('/messages', [WidgetController::class, 'getMessages'])
-        ->middleware('widget.rate.limit:30,60');
-
-    Route::get('/conversation', [WidgetController::class, 'getConversation'])
-        ->middleware('widget.rate.limit:30,60');
 });

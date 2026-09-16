@@ -33,17 +33,12 @@ class OverviewController extends Controller
                 ], 403);
             }
 
-            $data = $this->service
-                ->withFilters($request->validated())
-                ->overview();
+            $service = $this->service->withFilters($request->validated());
 
             return response()->json([
                 'success' => true,
-                'data' => $data,
-                'meta' => array_merge(
-                    $this->service->meta ?? [],
-                    []
-                ),
+                'data' => $service->overview(),
+                'meta' => $service->getMeta(),
             ]);
         } catch (\Exception $e) {
             Log::error('Analytics overview failed:', [

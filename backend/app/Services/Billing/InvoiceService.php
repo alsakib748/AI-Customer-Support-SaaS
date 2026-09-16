@@ -1,0 +1,184 @@
+<?php
+// app/Services/Billing/InvoiceService.php
+
+namespace App\Services\Billing;
+
+use App\Models\Invoice;
+use App\Models\Subscription;
+use App\Models\Tenant;
+use App\Models\Coupon;
+use Illuminate\Support\Facades\Log;
+
+class InvoiceService
+{
+    /**
+     * Get invoices for tenant
+     */
+    public function getInvoices(string $tenantId, array $filters = [])
+    {
+        $query = Invoice::forTenant($tenantId);
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->where('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('created_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('created_at', 'desc')
+            ->paginate($filters['per_page'] ?? 20);
+    }
+
+    /**
+     * Get invoice by ID
+     */
+    public function getInvoice(int $id): Invoice
+    {
+        return Invoice::with(['tenant', 'subscription', 'payments'])->findOrFail($id);
+    }
+
+    /**
+     * Create subscription invoice
+     */
+    public function createSubscriptionInvoice(Subscription $subscription): Invoice
+    {
+        $plan = $subscription->plan;
+        $amount = $plan->getPriceForCycle($subscription->billing_cycle);
+
+        $lineItems = [
+            [
+                'description' => $plan->name . ' - ' . ucfirst($subscription->billing_cycle),
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'total' => $amount,
+            ],
+        ];
+
+        // Apply coupon discounts
+        $discountAmount = 0;
+        foreach ($subscription->couponRedemptions as $redemption) {
+            $discountAmount += $redemption->discount_amount;
+        }
+
+        $subtotal = $amount;
+        $total = max(0, $subtotal - $discountAmount);
+
+        $invoice = Invoice::create([
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'invoice_number' => Invoice::generateInvoiceNumber(),
+            'subtotal' => $subtotal,
+            'tax_amount' => 0,
+            'discount_amount' => $discountAmount,
+            'total' => $total,
+            'currency' => $plan->currency,
+            'status' => 'open',
+            'due_at' => now()->addDays(7),
+            'period_starts_at' => $subscription->starts_at,
+            'period_ends_at' => $subscription->ends_at,
+            'line_items' => $lineItems,
+        ]);
+
+        Log::info('Subscription invoice created', [
+            'invoice_id' => $invoice->id,
+            'subscription_id' => $subscription->id,
+            'amount' => $total,
+        ]);
+
+        return $invoice;
+    }
+
+    /**
+     * Create renewal invoice
+     */
+    public function createRenewalInvoice(Subscription $subscription): Invoice
+    {
+        return $this->createSubscriptionInvoice($subscription);
+    }
+
+    /**
+     * Create proration invoice
+     */
+    public function createProrationInvoice(Subscription $subscription, float $amount): Invoice
+    {
+        $invoice = Invoice::create([
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'invoice_number' => Invoice::generateInvoiceNumber(),
+            'subtotal' => $amount,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total' => $amount,
+            'currency' => $subscription->plan->currency ?? 'USD',
+            'status' => 'open',
+            'due_at' => now()->addDays(7),
+            'line_items' => [
+                [
+                    'description' => 'Plan upgrade proration',
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'total' => $amount,
+                ],
+            ],
+        ]);
+
+        Log::info('Proration invoice created', [
+            'invoice_id' => $invoice->id,
+            'subscription_id' => $subscription->id,
+            'amount' => $amount,
+        ]);
+
+        return $invoice;
+    }
+
+    /**
+     * Mark invoice as paid
+     */
+    public function markAsPaid(Invoice $invoice, string $paymentMethod = null, string $transactionId = null): Invoice
+    {
+        $invoice->markAsPaid($paymentMethod, $transactionId);
+
+        Log::info('Invoice marked as paid', [
+            'invoice_id' => $invoice->id,
+            'amount' => $invoice->total,
+        ]);
+
+        return $invoice->fresh();
+    }
+
+    /**
+     * Void invoice
+     */
+    public function void(Invoice $invoice): Invoice
+    {
+        $invoice->markAsVoid();
+
+        Log::info('Invoice voided', [
+            'invoice_id' => $invoice->id,
+        ]);
+
+        return $invoice->fresh();
+    }
+
+    /**
+     * Get invoice statistics
+     */
+    public function getStatistics(string $tenantId): array
+    {
+        $query = Invoice::forTenant($tenantId);
+
+        return [
+            'total' => $query->count(),
+            'paid' => (clone $query)->where('status', 'paid')->count(),
+            'open' => (clone $query)->where('status', 'open')->count(),
+            'overdue' => (clone $query)->overdue()->count(),
+            'total_amount' => (clone $query)->where('status', 'paid')->sum('total'),
+            'outstanding_amount' => (clone $query)->where('status', 'open')->sum('total'),
+        ];
+    }
+}

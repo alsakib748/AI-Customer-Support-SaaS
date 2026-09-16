@@ -1,0 +1,392 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Billing;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Billing\SubscriptionResource;
+use App\Models\Coupon;
+use App\Services\Billing\PlanService;
+use App\Services\Billing\SubscriptionService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+
+class SubscriptionController extends Controller
+{
+    protected SubscriptionService $service;
+    protected PlanService $planService;
+
+    public function __construct(
+        SubscriptionService $service,
+        PlanService $planService
+    ) {
+        $this->service = $service;
+        $this->planService = $planService;
+    }
+
+    /**
+     * Get current subscription
+     */
+    public function current(Request $request)
+    {
+        try {
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getActiveSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'No active subscription.',
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => new SubscriptionResource($subscription),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve subscription.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Create a new subscription
+     */
+    public function store(Request $request)
+    {
+        try {
+            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to manage billing.',
+            //     ], 403);
+            // }
+
+            $validated = $request->validate([
+                'plan_id' => 'required|integer|exists:plans,id',
+                'billing_cycle' => 'nullable|in:monthly,yearly',
+                'coupon_code' => 'nullable|string',
+            ]);
+
+            $tenant = app('current_tenant');
+
+            // Check if already has subscription
+            $existing = $this->service->getActiveSubscription($tenant->id);
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant already has an active subscription.',
+                ], 400);
+            }
+
+            $plan = $this->planService->getPlan($validated['plan_id']);
+            $billingCycle = $validated['billing_cycle'] ?? 'monthly';
+
+            $coupon = null;
+            if (!empty($validated['coupon_code'])) {
+                $coupon = Coupon::byCode($validated['coupon_code'])->first();
+            }
+
+            $subscription = $this->service->createSubscription(
+                $tenant,
+                $plan,
+                $billingCycle,
+                $coupon
+            );
+
+            return (new SubscriptionResource($subscription))
+                ->additional([
+                    'message' => 'Subscription created successfully 🎉',
+                ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create subscription: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Upgrade subscription
+     */
+    public function upgrade(Request $request)
+    {
+        try {
+            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to manage billing.',
+            //     ], 403);
+            // }
+
+            $validated = $request->validate([
+                'plan_id' => 'required|integer|exists:plans,id',
+            ]);
+
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getActiveSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active subscription found.',
+                ], 404);
+            }
+
+            $newPlan = $this->planService->getPlan($validated['plan_id']);
+
+            // Verify it's an upgrade
+            if ($newPlan->price_monthly <= $subscription->plan->price_monthly) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New plan must be an upgrade. Use downgrade endpoint for downgrades.',
+                ], 400);
+            }
+
+            $subscription = $this->service->upgrade($subscription, $newPlan);
+
+            return (new SubscriptionResource($subscription))
+                ->additional([
+                    'message' => 'Subscription upgraded successfully 🚀',
+                ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to upgrade subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upgrade subscription: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Downgrade subscription
+     */
+    public function downgrade(Request $request)
+    {
+        try {
+            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to manage billing.',
+            //     ], 403);
+            // }
+
+            $validated = $request->validate([
+                'plan_id' => 'required|integer|exists:plans,id',
+            ]);
+
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getActiveSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active subscription found.',
+                ], 404);
+            }
+
+            $newPlan = $this->planService->getPlan($validated['plan_id']);
+
+            // Verify it's a downgrade
+            if ($newPlan->price_monthly >= $subscription->plan->price_monthly) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New plan must be a downgrade. Use upgrade endpoint for upgrades.',
+                ], 400);
+            }
+
+            $subscription = $this->service->downgrade($subscription, $newPlan);
+
+            return (new SubscriptionResource($subscription))
+                ->additional([
+                    'message' => 'Subscription downgrade scheduled for next billing cycle 📅',
+                ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to downgrade subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to downgrade subscription: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancel subscription
+     */
+    public function cancel(Request $request)
+    {
+        try {
+            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to manage billing.',
+            //     ], 403);
+            // }
+
+            $request->validate([
+                'immediately' => 'nullable|boolean',
+            ]);
+
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getActiveSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active subscription found.',
+                ], 404);
+            }
+
+            if (!$subscription->canCancel()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Subscription cannot be cancelled.',
+                ], 400);
+            }
+
+            $immediately = $request->boolean('immediately', false);
+            $subscription = $this->service->cancel($subscription, $immediately);
+
+            $message = $immediately
+                ? 'Subscription cancelled immediately.'
+                : 'Subscription will be cancelled at the end of the billing period.';
+
+            return (new SubscriptionResource($subscription))
+                ->additional([
+                    'message' => $message,
+                ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to cancel subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel subscription: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Resume cancelled subscription
+     */
+    public function resume(Request $request)
+    {
+        try {
+            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to manage billing.',
+            //     ], 403);
+            // }
+
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No subscription found.',
+                ], 404);
+            }
+
+            if (!$subscription->is_cancelled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Subscription is not cancelled.',
+                ], 400);
+            }
+
+            $subscription = $this->service->resume($subscription);
+
+            return (new SubscriptionResource($subscription))
+                ->additional([
+                    'message' => 'Subscription resumed successfully ✅',
+                ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to resume subscription:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to resume subscription: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate coupon
+     */
+    public function validateCoupon(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'code' => 'required|string',
+            ]);
+
+            $tenant = app('current_tenant');
+            $subscription = $this->service->getSubscription($tenant->id);
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No subscription found.',
+                ], 404);
+            }
+
+            $result = $this->service->validateCoupon($validated['code'], $subscription);
+
+            return response()->json([
+                'success' => $result['valid'],
+                'message' => $result['valid']
+                    ? 'Coupon is valid!'
+                    : ($result['message'] ?? 'Invalid coupon.'),
+                'data' => $result['valid'] ? [
+                    'discount' => $result['discount'],
+                ] : null,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to validate coupon:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to validate coupon.',
+            ], 500);
+        }
+    }
+}

@@ -4,15 +4,14 @@ namespace App\Http\Controllers\Api\V1\Analytics;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Analytics\AnalyticsFilterRequest;
-use App\Services\Analytics\ConversationAnalyticsService;
+use App\Services\Analytics\AgentAnalyticsService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AgentAnalyticsController extends Controller
 {
     public function __construct(
-        protected ConversationAnalyticsService $service
+        protected AgentAnalyticsService $service
     ) {
     }
 
@@ -29,10 +28,10 @@ class AgentAnalyticsController extends Controller
                 'meta' => $service->getMeta(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Conversation analytics failed:', ['error' => $e->getMessage()]);
+            Log::error('Agent analytics failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load conversation analytics.',
+                'message' => 'Failed to load agent analytics.',
             ], 500);
         }
     }

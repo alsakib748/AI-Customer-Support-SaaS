@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'widget.rate.limit' => \App\Http\Middleware\WidgetRateLimit::class,
             'ai.rate.limit' => \App\Http\Middleware\AIRateLimit::class,
+            'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
+            'track.usage' => \App\Http\Middleware\TrackUsage::class,
+            'billing.rate.limit' => \App\Http\Middleware\BillingRateLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

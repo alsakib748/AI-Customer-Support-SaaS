@@ -2,8 +2,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import analyticsService from '@/services/analyticsService';
+import { useAuthStore } from '@/stores/auth';
 
 const data = ref(null);
+const authStore = useAuthStore();
+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
 
 const kpis = computed(() => {
     const summary = data.value?.summary || {};
@@ -44,6 +47,8 @@ const kpis = computed(() => {
 });
 
 onMounted(async () => {
+    if (isSuperAdmin.value) return;
+
     try {
         const response = await analyticsService.getOverview({ period: '30d' });
         if (response.data.success) {
@@ -56,7 +61,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div v-if="!isSuperAdmin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <!-- <div class="grid grid-cols-1"> -->
         <Card v-for="kpi in kpis" :key="kpi.title" class="relative">
             <template #content>

@@ -318,6 +318,39 @@ const router = createRouter({
                         title: 'Platform Analytics'
                     }
                 },
+
+                // Billing Routes
+                {
+                    path: '/billing',
+                    name: 'BillingOverview',
+                    component: () => import('@/views/billing/BillingOverview.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Billing'
+                        // permissions: ['billing.view']
+                    }
+                },
+                {
+                    path: '/billing/invoices',
+                    name: 'BillingInvoices',
+                    component: () => import('@/views/billing/Invoices.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Invoices'
+                        // permissions: ['billing.view']
+                    }
+                },
+                {
+                    path: '/billing/payments',
+                    name: 'BillingPayments',
+                    component: () => import('@/views/billing/Payments.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        title: 'Payments'
+                        // permissions: ['billing.view']
+                    }
+                },
+
                 {
                     path: '/uikit/formlayout',
                     name: 'formlayout',

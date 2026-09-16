@@ -19,7 +19,14 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Getters
     const isAuthenticated = computed(() => !!token.value && !!user.value);
-    const isSuperAdmin = computed(() => user.value?.roles?.includes('super-admin'));
+    const isSuperAdmin = computed(() => {
+        const roles = user.value?.roles || [];
+
+        return roles.some((role) => {
+            const roleName = typeof role === 'string' ? role : role?.name;
+            return roleName?.toLowerCase().replace(/[_\s]+/g, '-') === 'super-admin';
+        });
+    });
     const currentTenantId = computed(() => currentTenant.value?.id);
     const userFullName = computed(() => user.value?.full_name || user.value?.email);
     const userPermissions = computed(() => user.value?.permissions || []);

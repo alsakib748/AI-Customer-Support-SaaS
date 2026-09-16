@@ -60,6 +60,29 @@ const model = ref([
         ],
     },
     {
+        label: 'Billing',
+        items: [
+            {
+                label: 'Overview',
+                icon: 'pi pi-credit-card',
+                to: '/billing',
+                // superAdminOnly: true,
+            },
+            {
+                label: 'Invoices',
+                icon: 'pi pi-file',
+                to: '/billing/invoices',
+                // superAdminOnly: true,
+            },
+            {
+                label: 'Payments',
+                icon: 'pi pi-wallet',
+                to: '/billing/payments',
+                // superAdminOnly: true,
+            },
+        ],
+    },
+    {
         label: 'Analytics & Reporting',
         icon: 'pi pi-chart-bar',
         // permission: ['analytics.view'],

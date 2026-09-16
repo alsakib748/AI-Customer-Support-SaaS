@@ -24,17 +24,17 @@ abstract class BaseAnalyticsService
     /**
      * Set filters and derive period/interval.
      */
-    // public function withFilters(array $filters): static
-    // {
-    //     $this->filters = $filters;
-    //     $this->period = AnalyticsPeriod::fromRequest($filters);
-    //     $this->interval = AnalyticsInterval::determine(
-    //         $this->period,
-    //         $filters['interval'] ?? null
-    //     );
+    public function withFilters(array $filters): static
+    {
+        $this->filters = $filters;
+        $this->period = AnalyticsPeriod::fromRequest($filters);
+        $this->interval = AnalyticsInterval::determine(
+            $this->period,
+            $filters['interval'] ?? null
+        );
 
-    //     return $this;
-    // }
+        return $this;
+    }
 
     /**
      * Get cache key for current filters.
@@ -115,16 +115,22 @@ abstract class BaseAnalyticsService
         ]);
     }
 
+    public function getMeta(): array
+    {
+        return $this->meta();
+    }
+
     /**
      * Get postgres date trunc format for current interval.
      */
-    // protected function dateTruncFormat(): string
-    // {
-    //     return AnalyticsInterval::getPostgresFormat($this->interval);
-    // }
+    protected function getPostgresDateFormat(): string
+    {
+        return AnalyticsInterval::getPostgresFormat($this->interval);
+    }
 
-    // public function getMeta(): array
-    // {
-    //     return $this->meta();
-    // }
+    protected function dateTruncFormat(): string
+    {
+        return $this->getPostgresDateFormat();
+    }
+
 }

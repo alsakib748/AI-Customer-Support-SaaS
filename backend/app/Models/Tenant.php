@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
@@ -12,7 +13,7 @@ use Stancl\Tenancy\Database\Concerns\HasDomains;
 
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
-    use HasDatabase, HasDomains, SoftDeletes;
+    use HasDatabase, HasDomains, SoftDeletes, HasFactory;
 
     // ⭐ IMPORTANT: Force this model to use central database
     protected $connection = 'central';

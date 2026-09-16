@@ -199,8 +199,8 @@ class AnalyticsOverviewService extends BaseAnalyticsService
         ])->count();
 
         return [
-            'total' => (int) ($result->total ?? 0),
-            'new' => (int) ($result->new ?? 0),
+            'total' => (int) $total,
+            'new' => (int) $new,
         ];
     }
 
