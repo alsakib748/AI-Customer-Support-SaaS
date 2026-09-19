@@ -3,18 +3,16 @@
 namespace App\Console\Commands\Billing;
 
 use App\Jobs\Billing\SyncStorageUsage;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
+use App\Services\Billing\UsageTracker;
 use Illuminate\Console\Command;
 
-#[Signature('app:sync-storage-usage-command')]
-#[Description('Command description')]
 class SyncStorageUsageCommand extends Command
 {
-    protected $signature = 'billing:sync-storage 
-                            {--sync : Run synchronously instead of queueing}';
+    protected $signature = 'billing:sync-storage
+                            {--sync : Run synchronously instead of queueing}
+                            {--tenant= : Sync a specific tenant ID only}';
 
-    protected $description = 'Sync storage usage for all tenants';
+    protected $description = 'Sync storage usage for tenants';
 
     /**
      * Execute the console command.
@@ -22,12 +20,11 @@ class SyncStorageUsageCommand extends Command
     public function handle()
     {
         $this->info('Starting storage usage sync...');
-
         $tenantId = $this->option('tenant');
 
         if ($this->option('sync')) {
             if ($tenantId) {
-                $tracker = app(\App\Services\Billing\UsageTracker::class);
+                $tracker = app(UsageTracker::class);
                 $tracker->syncStorageUsage($tenantId);
                 $this->info("✓ Storage usage synced for tenant: {$tenantId}");
             } else {
@@ -35,7 +32,7 @@ class SyncStorageUsageCommand extends Command
                 $this->info('✓ Storage usage synced synchronously');
             }
         } else {
-            SyncStorageUsage::dispatch();
+            SyncStorageUsage::dispatch($tenantId);
             $this->info('✓ Storage usage sync queued');
         }
 

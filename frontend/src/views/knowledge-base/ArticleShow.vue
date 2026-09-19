@@ -6,12 +6,16 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 import DOMPurify from 'dompurify';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const route = useRoute();
 const router = useRouter();
 const knowledgeBaseStore = useKnowledgeBaseStore();
 const authStore = useAuthStore();
 // const toast = useToast();
+
+const planLimit = usePlanLimit();
 
 // ============================================
 // STATE
@@ -35,6 +39,7 @@ const sanitizedContent = computed(() => {
 // METHODS
 // ============================================
 
+
 const loadArticle = async () => {
     loading.value = true;
     try {
@@ -42,6 +47,11 @@ const loadArticle = async () => {
         article.value = knowledgeBaseStore.currentArticle;
     } catch (error) {
         console.error('Failed to load article:', error);
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
         // toast.error('Failed to load article');
         router.push('/knowledge-base');
     } finally {

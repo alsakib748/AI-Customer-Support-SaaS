@@ -31,6 +31,26 @@ class PaymentController extends Controller
             // }
 
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             $filters = $request->only(['status', 'provider', 'per_page']);
 
             $payments = $this->service->getPayments($tenant->id, $filters);
@@ -70,6 +90,26 @@ class PaymentController extends Controller
             // }
 
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             $statistics = $this->service->getStatistics($tenant->id);
 
             return response()->json([

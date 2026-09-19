@@ -5,15 +5,11 @@ namespace App\Console\Commands\Billing;
 use App\Services\Billing\InvoiceService;
 use App\Services\Billing\PaymentService;
 use App\Services\Billing\SubscriptionService;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('app:billing-stats')]
-#[Description('Command description')]
 class BillingStats extends Command
 {
-    protected $signature = 'billing:stats 
+    protected $signature = 'billing:stats
                             {--tenant= : Filter by tenant}
                             {--detailed : Show detailed breakdown}';
 

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
+use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
+use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -35,7 +37,6 @@ use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use App\Models\Api\V1\NotificationController;
 use Illuminate\Support\Facades\Route;
-
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -80,7 +81,6 @@ Route::prefix('v1/plans')->group(function () {
     Route::get('/compare', [PlanController::class, 'compare']);
     Route::get('/{id}', [PlanController::class, 'show']);
 });
-
 
 // todo; Webhooks
 Route::prefix('webhooks')->group(function () {
@@ -155,14 +155,13 @@ Route::prefix('v1')->group(function () {
         // todo; ===================== TEAM MANAGEMENT ROUTES =====================
         Route::prefix('team')->group(function () {
 
-
             Route::prefix('members')->group(function () {
                 Route::get('/', [TeamMemberController::class, 'index']);
                 Route::get('/statistics', [TeamMemberController::class, 'statistics']);
                 Route::get('/departments', [TeamMemberController::class, 'departments']);
 
                 Route::get('/tenants', [TeamMemberController::class, 'tenants']); // Super Admin only
-                // Members
+                                                                                  // Members
 
                 Route::get('/{id}', [TeamMemberController::class, 'show']);
                 Route::put('/{id}', [TeamMemberController::class, 'update']);
@@ -408,15 +407,90 @@ Route::prefix('v1')->group(function () {
         });
 
         // Usage (for frontend)
+        // Route::get('/billing/usage', function () {
+        //     $tracker = app(\App\Services\Billing\UsageTracker::class);
+        //     $tenant = app('current_tenant');
+
+        //     return response()->json([
+        //         'success' => true,
+        //         'data' => $tracker->getSummary($tenant->id),
+        //     ]);
+        // });
+
+        // Usage (for frontend) — must never return 402
         Route::get('/billing/usage', function () {
-            $tracker = app(\App\Services\Billing\UsageTracker::class);
             $tenant = app('current_tenant');
+
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tenant context.',
+                ], 400);
+            }
+
+            // Check for an active subscription first
+            $subscription = app(\App\Services\Billing\SubscriptionService::class)
+                ->getActiveSubscription($tenant->id);
+
+            // No subscription → return zeroed-out usage, HTTP 200
+            if (! $subscription) {
+                $empty = ['used' => 0, 'limit' => 0, 'percentage' => 0, 'remaining' => 0];
+
+                return response()->json([
+                    'success'         => true,
+                    'no_subscription' => true,
+                    'data'            => [
+                        'ai'            => $empty,
+                        'agents'        => $empty,
+                        'customers'     => $empty,
+                        'widgets'       => $empty,
+                        'documents'     => $empty,
+                        'kb_articles'   => $empty,
+                        'conversations' => $empty,
+                        'storage'       => $empty,
+                    ],
+                ]);
+            }
+
+            $tracker = app(\App\Services\Billing\UsageTracker::class);
 
             return response()->json([
                 'success' => true,
-                'data' => $tracker->getSummary($tenant->id),
+                'data'    => $tracker->getSummary($tenant->id),
             ]);
-        })->middleware('check.subscription');
+        });
 
     });
 });
+
+Route::prefix('v1/admin/billing')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        // Plans
+        Route::get('/plans', [AdminBillingController::class, 'plans']);
+        Route::post('/plans', [AdminBillingController::class, 'storePlan']);
+        Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
+        Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
+
+        // Subscriptions
+        Route::get('/subscriptions', [AdminBillingController::class, 'subscriptions']);
+        Route::post('/subscriptions/{id}/cancel', [AdminBillingController::class, 'cancelSubscription']);
+        Route::post('/subscriptions/{id}/extend', [AdminBillingController::class, 'extendSubscription']);
+
+        // Invoices
+        Route::get('/invoices', [AdminBillingController::class, 'invoices']);
+
+        // Payments
+        Route::get('/payments', [AdminBillingController::class, 'payments']);
+
+        // Analytics
+        Route::get('/analytics', [AdminBillingController::class, 'analytics']);
+        Route::get('/tenants/{tenant}', [AdminBillingController::class, 'tenantSummary']);
+
+        // Coupons
+        Route::get('/coupons', [AdminCouponController::class, 'index']);
+        Route::post('/coupons', [AdminCouponController::class, 'store']);
+        Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show']);
+        Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
+        Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy']);
+    });

@@ -5,15 +5,11 @@ namespace App\Console\Commands;
 use App\Mail\WeeklyAnalyticsReportMail;
 use App\Models\Tenant;
 use App\Services\Analytics\AnalyticsOverviewService;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Stancl\Tenancy\Facades\Tenancy;
 
-#[Signature('app:send-weekly-analytics-report')]
-#[Description('Command description')]
 class SendWeeklyAnalyticsReport extends Command
 {
     protected $signature = 'analytics:weekly-report';

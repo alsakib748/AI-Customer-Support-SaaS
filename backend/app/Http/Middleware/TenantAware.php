@@ -23,13 +23,13 @@ class TenantAware
 
         // Check if user is Super Admin
         if ($user && $user->hasRole('super-admin')) {
-            Log::info('Super Admin accessing route without tenant', [
+            Log::info('Super Admin accessing route', [
                 'user_id' => $user->id,
                 'path' => $request->path(),
             ]);
 
             $request->attributes->set('is_super_admin', true);
-            return $next($request);
+            // Don't return here, allow tenant resolution to continue
         }
 
 
@@ -54,7 +54,7 @@ class TenantAware
                 ], 404);
             }
 
-            if (!$user->hasTenantAccess($tenant->id)) {
+            if (!$user->hasRole('super-admin') && !$user->hasTenantAccess($tenant->id)) {
                 Log::warning('Tenant access denied', [
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
@@ -90,12 +90,40 @@ class TenantAware
             }
         }
 
+        // 4. Super Admin fallback to first available tenant in system
+        if (!$tenant && $user && $user->hasRole('super-admin')) {
+            $tenant = Tenant::first();
+            if ($tenant) {
+                Log::info('Super Admin fallback to first system tenant', ['tenant_id' => $tenant->id]);
+            }
+        }
+
         if ($tenant) {
             $request->attributes->set('current_tenant', $tenant);
             app()->instance('current_tenant', $tenant);
-            tenancy()->initialize($tenant);
+            try {
+                tenancy()->initialize($tenant);
+            } catch (\Exception $e) {
+                Log::error('Tenancy initialization failed', [
+                    'tenant_id' => $tenant->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant initialization failed: ' . $e->getMessage(),
+                ], 500);
+            }
             Log::info('Tenant set in request', ['tenant_id' => $tenant->id]);
         } else {
+            // Allow Super Admin to proceed without a tenant context
+            if ($user && $user->hasRole('super-admin')) {
+                Log::info('Super Admin proceeding without tenant context', [
+                    'path' => $request->path(),
+                ]);
+                return $next($request);
+            }
+
             Log::warning('No tenant resolved for request', [
                 'path' => $request->path(),
                 'user_id' => $user?->id,

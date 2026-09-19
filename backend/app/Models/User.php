@@ -20,6 +20,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
     'email',
     'password',
     'phone',
+    'company_name',
     'avatar',
     'preferences',
     'timezone',

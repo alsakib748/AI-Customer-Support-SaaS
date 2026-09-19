@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1\KnowledgeBase;
 
+use App\Exceptions\PlanLimitExceededException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\KnowledgeBase\StoreArticleRequest;
 use App\Http\Requests\KnowledgeBase\UpdateArticleRequest;
 use App\Http\Resources\KnowledgeBase\ArticleCollection;
 use App\Http\Resources\KnowledgeBase\ArticleResource;
+use App\Services\Billing\BillingLimitService;
 use App\Services\KnowledgeBase\KnowledgeBaseArticleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class ArticleController extends Controller
 {
@@ -80,7 +83,7 @@ class ArticleController extends Controller
     /**
      * Create a new article
      */
-    public function store(StoreArticleRequest $request)
+    public function store(StoreArticleRequest $request, BillingLimitService $limits)
     {
         try {
             // if (!auth()->user()->hasPermissionTo('knowledge.create')) {
@@ -97,6 +100,10 @@ class ArticleController extends Controller
                 ], 400);
             }
 
+            $tenant = app('current_tenant');
+    $limits->enforce($tenant, 'kb.articles.max', 1);
+
+
             $article = $this->service->createArticle($request->validated());
 
             return (new ArticleResource($article))
@@ -104,7 +111,24 @@ class ArticleController extends Controller
                     'message' => 'Article created successfully 🎉',
                 ]);
 
-        } catch (\Exception $e) {
+        }catch (PlanLimitExceededException $e) {
+        //  Structured 403 — frontend shows "upgrade" prompt
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'code'    => $e->errorCode,
+            'data'    => $e->errorData,
+        ], 403);
+
+       } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors'  => $e->errors(),
+        ], 422);
+
+       }
+         catch (\Exception $e) {
             Log::error('Failed to create article:', ['error' => $e->getMessage()]);
 
             return response()->json([

@@ -3,6 +3,10 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTeamStore } from '@/stores/team';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+
+const planLimit = usePlanLimit();
 
 const authStore = useAuthStore();
 const teamStore = useTeamStore();
@@ -202,7 +206,11 @@ const handleSendInvitation = async () => {
         await teamStore.fetchInvitations();
 
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

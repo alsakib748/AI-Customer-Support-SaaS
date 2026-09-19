@@ -2,6 +2,8 @@
 // config/billing.php
 
 return [
+
+
     /*
     |--------------------------------------------------------------------------
     | Currency & Locale
@@ -9,6 +11,7 @@ return [
     */
     'currency' => env('BILLING_CURRENCY', 'USD'),
     'currency_symbol' => env('BILLING_CURRENCY_SYMBOL', '$'),
+    'default_gateway' => env('BILLING_DEFAULT_GATEWAY', 'stripe'),
 
     /*
     |--------------------------------------------------------------------------
@@ -55,9 +58,9 @@ return [
     |--------------------------------------------------------------------------
     */
     'grace_period' => [
-        'past_due_days' => 3, // Days after due before marking past_due
-        'suspend_days' => 7,  // Days after due before suspending
-        'cancel_days' => 30,  // Days after due before cancelling
+        'past_due_days' => env('BILLING_GRACE_PERIOD_DAYS', 3), // Days after due before marking past_due
+        'suspend_days' => env('BILLING_SUSPEND_DAYS', 7),  // Days after due before suspending
+        'cancel_days' => env('BILLING_CANCEL_DAYS', 30),  // Days after due before cancelling
     ],
 
     /*

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\Widget;
 
+use App\Exceptions\PlanLimitExceededException;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\ChatWidget;
+use App\Services\Billing\BillingLimitService;
 use App\Services\ChatWidget\ChatWidgetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -79,7 +81,7 @@ class WidgetController extends Controller
     /**
      * Create or get widget session
      */
-    public function session(Request $request)
+    public function session(Request $request, BillingLimitService $limits)
     {
         try {
             $request->validate([
@@ -87,6 +89,10 @@ class WidgetController extends Controller
                 'visitor_token' => ['nullable', 'string'],
                 'metadata' => ['nullable', 'array'],
             ]);
+
+
+            $tenant = app('current_tenant');
+    $limits->enforce($tenant, 'conversations.monthly', 1);
 
             // ✅ Find widget first
             $widget = $this->findWidgetByPublicKey($request->input('widget_id'));
@@ -126,14 +132,23 @@ class WidgetController extends Controller
                 ],
             ]);
 
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
+        } catch (PlanLimitExceededException $e) {
+        //  Structured 403 — frontend shows "upgrade" prompt
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'code'    => $e->errorCode,
+            'data'    => $e->errorData,
+        ], 403);
 
-        } catch (\Exception $e) {
+       } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors'  => $e->errors(),
+        ], 422);
+
+       } catch (\Exception $e) {
             Log::error('Widget session failed:', ['error' => $e->getMessage()]);
 
             return response()->json([

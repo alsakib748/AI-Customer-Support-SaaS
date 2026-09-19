@@ -6,15 +6,11 @@ use App\Models\Coupon;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Services\Billing\SubscriptionService;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('app:create-subscription')]
-#[Description('Command description')]
 class CreateSubscription extends Command
 {
-    protected $signature = 'billing:create-subscription 
+    protected $signature = 'billing:create-subscription
                             {tenant : Tenant ID}
                             {plan : Plan slug}
                             {--cycle=monthly : Billing cycle (monthly/yearly)}

@@ -6,6 +6,8 @@ import { useConversationStore } from '@/stores/conversation';
 import { useMessageStore } from '@/stores/message';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 // Import components
 import MessageBubble from '@/components/messages/MessageBubble.vue';
@@ -19,6 +21,7 @@ const router = useRouter();
 const conversationStore = useConversationStore();
 const messageStore = useMessageStore();
 const authStore = useAuthStore();
+const planLimit = usePlanLimit();
 
 // const toast = useToast();
 
@@ -63,6 +66,7 @@ const canReply = computed(() => {
 // ============================================
 // METHODS
 // ============================================
+
 
 const loadConversations = async () => {
     await conversationStore.fetchConversations({
@@ -151,6 +155,11 @@ const sendMessage = async (messageContent) => {
 
     } catch (error) {
         console.error('🟢 ConversationShow: Error sending message:', error);
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
         // toast.error('Failed to send message. Please try again.');
     }
 };

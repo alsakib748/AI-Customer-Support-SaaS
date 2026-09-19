@@ -6,11 +6,14 @@ import { useConversationStore } from '@/stores/conversation';
 import { useCustomerStore } from '@/stores/customer';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const router = useRouter();
 const conversationStore = useConversationStore();
 const customerStore = useCustomerStore();
 const authStore = useAuthStore();
+const planLimit = usePlanLimit();
 // const toast = useToast();
 
 // ============================================
@@ -89,6 +92,7 @@ const channelOptions = [
 // METHODS
 // ============================================
 
+
 const loadData = async () => {
     await Promise.all([
         conversationStore.fetchConversations({ ...filters }),
@@ -144,7 +148,11 @@ const handleCreate = async () => {
         resetCreateForm();
         await loadData();
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

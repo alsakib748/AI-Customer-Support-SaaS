@@ -14,30 +14,24 @@ class ReconcileSubscriptions implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public int $timeout = 900;
+    public int $tries = 1;
+
 
     /**
      * Execute the job.
      */
-    public function handle(PaymentGatewayManager $manager): void
+    public function handle(): void
     {
         Log::info('Starting subscription reconciliation');
 
-        // Only reconcile active subscriptions with gateway IDs
         $subscriptions = Subscription::where('status', 'active')
-            ->whereNotNull('stripe_subscription_id')
+            ->whereNotNull('provider_subscription_id')
             ->chunk(100, function ($subs) {
                 foreach ($subs as $sub) {
                     try {
-                        // Reconcile with Stripe
-                        $this->reconcileStripe($sub);
-                    } catch (\Exception $e) {
+                        $this->reconcile($sub);
+                    } catch (\Throwable $e) {
                         Log::error('Failed to reconcile subscription', [
                             'subscription_id' => $sub->id,
                             'error' => $e->getMessage(),
@@ -47,6 +41,18 @@ class ReconcileSubscriptions implements ShouldQueue
             });
 
         Log::info('Subscription reconciliation completed');
+    }
+
+    protected function reconcile(Subscription $subscription): void
+    {
+        // Gateway-specific reconciliation lives in the respective Gateway class.
+        // The gateway layer will implement a `reconcileSubscription()` method.
+        //
+        // $gateway = app(PaymentGatewayManager::class)->gateway($subscription->provider);
+        // $remote = $gateway->fetchSubscription($subscription->provider_subscription_id);
+        // ... map status back
+
+        Log::debug('Reconcile placeholder', ['subscription_id' => $subscription->id]);
     }
 
     protected function reconcileStripe(Subscription $subscription): void

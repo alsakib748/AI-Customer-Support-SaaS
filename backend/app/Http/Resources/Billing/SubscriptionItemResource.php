@@ -37,4 +37,11 @@ class SubscriptionItemResource extends JsonResource
         ];
     }
 
+    protected function getCurrencyAttribute(): string
+    {
+        return $this->subscription?->plan?->currency
+            ?? $this->subscription?->metadata['currency']
+            ?? 'USD';
+    }
+
 }

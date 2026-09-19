@@ -17,45 +17,49 @@ class UsageResource extends JsonResource
         return [
             'ai' => $this->formatUsage('ai'),
             'agents' => $this->formatUsage('agents'),
+            'customers' => $this->formatUsage('customers'),
+            'widgets' => $this->formatUsage('widgets'),
             'documents' => $this->formatUsage('documents'),
-            'storage' => $this->formatStorageUsage('storage'),
+            'kb_articles' => $this->formatUsage('kb_articles'),
             'conversations' => $this->formatUsage('conversations'),
+            'storage' => $this->formatStorageUsage('storage'),
         ];
     }
 
     protected function formatUsage(string $type): array
     {
         $data = $this[$type] ?? [];
-        $limit = $data['limit'] ?? 0;
+        $limit = (int) ($data['limit'] ?? 0);
+        $used = (int) ($data['used'] ?? 0);
+        $pct = (float) ($data['percentage'] ?? 0);
 
         return [
-            'used' => $data['used'] ?? 0,
+            'used' => $used,
             'limit' => $limit,
-            'remaining' => $data['remaining'] ?? 0,
-            'percentage' => $data['percentage'] ?? 0,
+            'remaining' => $data['remaining'] ?? max(0, $limit - $used),
+            'percentage' => $pct,
             'is_unlimited' => $limit <= 0,
-            'is_near_limit' => $limit > 0 && ($data['percentage'] ?? 0) >= 80,
-            'is_at_limit' => $limit > 0 && ($data['percentage'] ?? 0) >= 100,
+            'is_near_limit' => $limit > 0 && $pct >= 80,
+            'is_at_limit' => $limit > 0 && $pct >= 100,
         ];
     }
 
     protected function formatStorageUsage(string $type): array
     {
         $data = $this[$type] ?? [];
-        $limit = $data['limit'] ?? 0;
-        $used = $data['used'] ?? 0;
+        $limit = (int) ($data['limit'] ?? 0);
+        $used = (int) ($data['used'] ?? 0);
+        $remaining = (int) ($data['remaining'] ?? max(0, $limit - $used));
 
         return [
             'used' => $used,
             'limit' => $limit,
-            'remaining' => $data['remaining'] ?? 0,
-            'percentage' => $data['percentage'] ?? 0,
+            'remaining' => $remaining,
+            'percentage' => (float) ($data['percentage'] ?? 0),
             'is_unlimited' => $limit <= 0,
             'formatted_used' => $this->formatBytes($used),
             'formatted_limit' => $limit > 0 ? $this->formatBytes($limit) : 'Unlimited',
-            'formatted_remaining' => $limit > 0
-                ? $this->formatBytes($data['remaining'] ?? 0)
-                : 'Unlimited',
+            'formatted_remaining' => $limit > 0 ? $this->formatBytes($remaining) : 'Unlimited',
         ];
     }
 
@@ -64,9 +68,11 @@ class UsageResource extends JsonResource
     {
         if ($bytes === 0)
             return '0 B';
+
         $k = 1024;
         $sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $i = floor(log($bytes) / log($k));
+        $i = (int) floor(log($bytes, $k));
+
         return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
 }

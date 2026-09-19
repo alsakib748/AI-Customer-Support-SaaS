@@ -7,6 +7,11 @@ const router = createRouter({
     history: createWebHistory(),
     routes: [
         {
+            path: '/',
+            name: 'landing',
+            component: () => import('@/views/pages/Landing.vue')
+        },
+        {
             path: '/login',
             name: 'Login',
             component: () => import('@/views/pages/auth/Login.vue'),
@@ -52,17 +57,17 @@ const router = createRouter({
         //     }
         // },
         {
-            path: '/',
+            path: '/dashboard',
             component: AppLayout,
             meta: {
                 requiresAuth: true
             },
             children: [
                 // Protected routes
-                {
-                    path: '',
-                    redirect: '/dashboard'
-                },
+                // {
+                //     path: '',
+                //     redirect: '/dashboard'
+                // },
                 {
                     path: '/dashboard',
                     name: 'Dashboard',
@@ -320,35 +325,101 @@ const router = createRouter({
                 },
 
                 // Billing Routes
+                // ============================================
+                // BILLING ROUTES (Tenant)
+                // ============================================
                 {
                     path: '/billing',
                     name: 'BillingOverview',
                     component: () => import('@/views/billing/BillingOverview.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Billing'
-                        // permissions: ['billing.view']
-                    }
+                    meta: { requiresAuth: true, title: 'Billing' }
+                },
+                {
+                    path: '/billing/plans',
+                    name: 'BillingPlans',
+                    component: () => import('@/views/billing/Plans.vue'),
+                    meta: { requiresAuth: true, title: 'Plans' }
+                },
+                {
+                    path: '/billing/usage',
+                    name: 'BillingUsage',
+                    component: () => import('@/views/billing/Usage.vue'),
+                    meta: { requiresAuth: true, title: 'Usage' }
                 },
                 {
                     path: '/billing/invoices',
                     name: 'BillingInvoices',
                     component: () => import('@/views/billing/Invoices.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Invoices'
-                        // permissions: ['billing.view']
-                    }
+                    meta: { requiresAuth: true, title: 'Invoices' }
+                },
+                {
+                    path: '/billing/invoices/:id',
+                    name: 'BillingInvoiceShow',
+                    component: () => import('@/views/billing/InvoiceShow.vue'),
+                    meta: { requiresAuth: true, title: 'Invoice Details' }
                 },
                 {
                     path: '/billing/payments',
                     name: 'BillingPayments',
                     component: () => import('@/views/billing/Payments.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Payments'
-                        // permissions: ['billing.view']
-                    }
+                    meta: { requiresAuth: true, title: 'Payments' }
+                },
+                // ============================================
+                // BILLING ROUTES (Super Admin)
+                // ============================================
+                {
+                    path: '/admin/billing',
+                    name: 'AdminBillingDashboard',
+                    component: () => import('@/views/admin/billing/BillingDashboard.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Dashboard' }
+                },
+                {
+                    path: '/admin/billing/plans',
+                    name: 'AdminBillingPlans',
+                    component: () => import('@/views/admin/billing/Plans.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Manage Plans' }
+                },
+                {
+                    path: '/admin/billing/plans/create',
+                    name: 'AdminBillingPlanCreate',
+                    component: () => import('@/views/admin/billing/PlanCreate.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Create Plan' }
+                },
+                {
+                    path: '/admin/billing/plans/:id/edit',
+                    name: 'AdminBillingPlanEdit',
+                    component: () => import('@/views/admin/billing/PlanEdit.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Edit Plan' }
+                },
+                {
+                    path: '/admin/billing/subscriptions',
+                    name: 'AdminBillingSubscriptions',
+                    component: () => import('@/views/admin/billing/Subscriptions.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Subscriptions' }
+                },
+                {
+                    path: '/admin/billing/invoices',
+                    name: 'AdminBillingInvoices',
+                    component: () => import('@/views/admin/billing/Invoices.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Invoices' }
+                },
+                {
+                    path: '/admin/billing/payments',
+                    name: 'AdminBillingPayments',
+                    component: () => import('@/views/admin/billing/Payments.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Payments' }
+                },
+                {
+                    path: '/admin/billing/coupons',
+                    name: 'AdminBillingCoupons',
+                    component: () => import('@/views/admin/billing/Coupons.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Coupons' }
+                },
+                {
+                    path: '/admin/billing/analytics',
+                    name: 'AdminBillingAnalytics',
+                    component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Analytics' }
                 },
 
                 {
@@ -452,11 +523,11 @@ const router = createRouter({
                 }
             ]
         },
-        {
-            path: '/landing',
-            name: 'landing',
-            component: () => import('@/views/pages/Landing.vue')
-        },
+        // {
+        //     path: '/landing',
+        //     name: 'landing',
+        //     component: () => import('@/views/pages/Landing.vue')
+        // },
         {
             path: '/pages/notfound',
             name: 'notfound',

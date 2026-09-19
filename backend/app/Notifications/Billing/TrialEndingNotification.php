@@ -38,14 +38,18 @@ class TrialEndingNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $plan = $this->subscription->plan;
-        $price = $plan->getPriceForCycle($this->subscription->billing_cycle);
+        $price = $plan?->getPriceForCycle($this->subscription->billing_cycle) ?? 0;
 
         return (new MailMessage)
-            ->subject("Trial ending in {$this->daysRemaining} days")
-            ->greeting('Hello ' . $notifiable->first_name . '!')
-            ->line("Your free trial of {$plan->name} will end in {$this->daysRemaining} days.")
-            ->line('**Amount:** ' . $plan->currency . ' ' . number_format($price, 2) . ' / ' . $this->subscription->billing_cycle)
-            ->line('**Renewal Date:** ' . $this->subscription->trial_ends_at->format('M d, Y'))
+            ->subject("Trial ending in {$this->daysRemaining} day(s)")
+            ->greeting('Hello ' . ($notifiable->first_name ?? 'there') . '!')
+            ->line("Your free trial of {$plan?->name} will end in {$this->daysRemaining} day(s).")
+            ->line('**Amount:** '
+                . ($plan?->currency ?? 'USD') . ' '
+                . number_format($price, 2)
+                . ' / ' . $this->subscription->billing_cycle)
+            ->line('**Trial Ends:** '
+                . optional($this->subscription->trial_ends_at)->format('M d, Y'))
             ->action('Manage Subscription', url('/billing'))
             ->line('Add a payment method to continue using our service.');
     }

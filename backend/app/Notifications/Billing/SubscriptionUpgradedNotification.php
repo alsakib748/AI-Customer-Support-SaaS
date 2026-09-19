@@ -40,15 +40,16 @@ class SubscriptionUpgradedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Subscription Upgraded! 🚀')
-            ->greeting('Hello ' . $notifiable->first_name . '!')
+            ->subject('Subscription Upgraded')
+            ->greeting('Hello ' . ($notifiable->first_name ?? 'there') . '!')
             ->line('Your subscription has been upgraded successfully.')
             ->line('**Previous Plan:** ' . ($this->oldPlan?->name ?? 'None'))
             ->line('**New Plan:** ' . $this->newPlan->name)
             ->line('**New Limits:**')
-            ->line('• AI Messages: ' . $this->subscription->ai_limit)
-            ->line('• Team Members: ' . $this->subscription->agents_limit)
-            ->line('• Documents: ' . $this->subscription->documents_limit)
+            ->line('• AI Requests: ' . ($this->subscription->ai_requests_limit ?? 'Unlimited'))
+            ->line('• Agents: ' . ($this->subscription->agents_limit ?? 'Unlimited'))
+            ->line('• Customers: ' . ($this->subscription->customers_limit ?? 'Unlimited'))
+            ->line('• Widgets: ' . ($this->subscription->widgets_limit ?? 'Unlimited'))
             ->action('View Subscription', url('/billing'))
             ->line('Enjoy your new features!');
     }

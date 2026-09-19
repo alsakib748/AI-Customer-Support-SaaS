@@ -5,6 +5,11 @@ import AppFooter from './AppFooter.vue';
 import AppSidebar from './AppSidebar.vue';
 import AppTopbar from './AppTopbar.vue';
 
+import UpgradePromptDialog from '@/components/billing/UpgradePromptDialog.vue';
+import { usePlanLimit } from '@/utils/planLimit';
+
+const planLimit = usePlanLimit();
+
 const { layoutConfig, layoutState, hideMobileMenu } = useLayout();
 
 const containerClass = computed(() => {
@@ -30,5 +35,9 @@ const containerClass = computed(() => {
         </div>
         <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
     </div>
+
+    <UpgradePromptDialog v-model="planLimit.visible.value" :feature="planLimit.payload.value.feature"
+        :limit="planLimit.payload.value.limit" :current="planLimit.payload.value.current" />
+
     <Toast />
 </template>

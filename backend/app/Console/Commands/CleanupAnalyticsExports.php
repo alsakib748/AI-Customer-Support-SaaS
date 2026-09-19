@@ -5,14 +5,10 @@ namespace App\Console\Commands;
 use App\Models\Tenant;
 use App\Models\Tenant\AnalyticsExport;
 use App\Services\Analytics\AnalyticsExportService;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Stancl\Tenancy\Facades\Tenancy;
 
-#[Signature('app:cleanup-analytics-exports')]
-#[Description('Command description')]
 class CleanupAnalyticsExports extends Command
 {
 

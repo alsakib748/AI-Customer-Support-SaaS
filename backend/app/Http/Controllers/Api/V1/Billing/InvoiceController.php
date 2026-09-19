@@ -33,6 +33,26 @@ class InvoiceController extends Controller
             // }
 
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             $filters = $request->only(['status', 'date_from', 'date_to', 'per_page']);
 
             $invoices = $this->service->getInvoices($tenant->id, $filters);
@@ -75,6 +95,26 @@ class InvoiceController extends Controller
 
             // Verify invoice belongs to current tenant
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             if ($invoice->tenant_id !== $tenant->id) {
                 return response()->json([
                     'success' => false,
@@ -117,6 +157,26 @@ class InvoiceController extends Controller
             // }
 
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             $statistics = $this->service->getStatistics($tenant->id);
 
             return response()->json([
@@ -151,6 +211,26 @@ class InvoiceController extends Controller
 
             // Verify invoice belongs to current tenant
             $tenant = app('current_tenant');
+
+            if (!$tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [],
+                        'meta' => [
+                            'current_page' => 1,
+                            'per_page' => 15,
+                            'total' => 0,
+                            'last_page' => 1,
+                        ],
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required.',
+                ], 403);
+            }
             if ($invoice->tenant_id !== $tenant->id) {
                 return response()->json([
                     'success' => false,

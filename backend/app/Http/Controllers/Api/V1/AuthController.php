@@ -28,6 +28,54 @@ class AuthController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+    // public function register(Request $request)
+    // {
+
+    //     try {
+    //         $result = $this->authService->register($request->all());
+
+    //         // Log registration
+    //         $this->auditLogService->log(
+    //             'user_registered',
+    //             'user',
+    //             $result['user']['id'],
+    //             null,
+    //             [
+    //                 'email' => $result['user']['email'],
+    //                 'company' => $result['tenant']['name'],
+    //             ]
+    //         );
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Registration successful. Welcome to AI Support SaaS!',
+    //             'data' => $result,
+    //         ], 201);
+    //     } catch (ValidationException $e) {
+
+    //         // Log failed registration attempt
+    //         $this->auditLogService->log(
+    //             'user_registration_failed',
+    //             null,
+    //             null,
+    //             null,
+    //             ['email' => $request->email],
+    //             ['reason' => 'Validation failed']
+    //         );
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation failed',
+    //             'errors' => $e->errors(),
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Registration failed: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function register(Request $request)
     {
 

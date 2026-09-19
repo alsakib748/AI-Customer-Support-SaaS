@@ -1,17 +1,12 @@
-<!-- src/views/billing/Payments.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBillingStore } from '@/stores/billing';
 
 const router = useRouter();
 const billingStore = useBillingStore();
 
-const filters = reactive({
-    status: null,
-    provider: null,
-    per_page: 20,
-});
+const filters = reactive({ status: null, provider: null, per_page: 20 });
 
 const statusOptions = [
     { label: 'All', value: null },
@@ -31,10 +26,10 @@ const providerOptions = [
 const loading = computed(() => billingStore.loading);
 const payments = computed(() => billingStore.payments);
 const paymentStats = computed(() => billingStore.paymentStats);
-const totalPayments = computed(() => billingStore.pagination?.total || 0);
+const totalPayments = computed(() => billingStore.paymentsPagination?.total || 0);
 
 const loadData = async () => {
-    await Promise.all([
+    await Promise.allSettled([
         billingStore.fetchPayments({ ...filters }),
         billingStore.fetchPaymentStatistics(),
     ]);
@@ -53,7 +48,7 @@ const onPageChange = (event) => {
 };
 
 const viewInvoice = (invoiceId) => {
-    router.push(`/billing/invoices?highlight=${invoiceId}`);
+    router.push(`/billing/invoices/${invoiceId}`);
 };
 
 const formatDate = (date) => {
@@ -63,12 +58,12 @@ const formatDate = (date) => {
     });
 };
 
-const formatCurrency = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-};
+const formatCurrency = (amount, currency = 'USD') =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 
-onMounted(() => loadData());
+onMounted(loadData);
 </script>
+
 <template>
     <div class="p-6">
         <div class="mb-6 flex items-center justify-between">
@@ -77,50 +72,38 @@ onMounted(() => loadData());
                 <p class="text-surface-600 dark:text-surface-400">View all your payment transactions</p>
             </div>
             <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="$router.push('/billing')" />
+                @click="router.push('/billing')" />
         </div>
 
-        <!-- Stats -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-                <template #content>
+            <Card><template #content>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-primary">{{ paymentStats.total || 0 }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Total Payments</div>
+                        <div class="text-sm text-surface-600">Total Payments</div>
                     </div>
-                </template>
-            </Card>
-            <Card>
-                <template #content>
+                </template></Card>
+            <Card><template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-success">
-                            {{ formatCurrency(paymentStats.total_revenue || 0) }}
-                        </div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Total Revenue</div>
+                        <div class="text-2xl font-bold text-success">{{ formatCurrency(paymentStats.total_revenue || 0)
+                            }}</div>
+                        <div class="text-sm text-surface-600">Total Revenue</div>
                     </div>
-                </template>
-            </Card>
-            <Card>
-                <template #content>
+                </template></Card>
+            <Card><template #content>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-danger">{{ paymentStats.failed || 0 }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Failed</div>
+                        <div class="text-sm text-surface-600">Failed</div>
                     </div>
-                </template>
-            </Card>
-            <Card>
-                <template #content>
+                </template></Card>
+            <Card><template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-warning">
-                            {{ formatCurrency(paymentStats.total_refunded || 0) }}
-                        </div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Refunded</div>
+                        <div class="text-2xl font-bold text-warning">{{ formatCurrency(paymentStats.total_refunded || 0)
+                            }}</div>
+                        <div class="text-sm text-surface-600">Refunded</div>
                     </div>
-                </template>
-            </Card>
+                </template></Card>
         </div>
 
-        <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="w-48">
                 <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
@@ -133,7 +116,6 @@ onMounted(() => loadData());
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
-        <!-- Payments Table -->
         <DataTable :value="payments" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalPayments"
             :lazy="true" @page="onPageChange" class="w-full">
             <Column field="payment_id" header="Payment ID">
@@ -163,14 +145,12 @@ onMounted(() => loadData());
                 </template>
             </Column>
             <Column field="paid_at" header="Paid At">
-                <template #body="{ data }">
-                    {{ formatDate(data.paid_at) }}
-                </template>
+                <template #body="{ data }">{{ formatDate(data.paid_at) }}</template>
             </Column>
             <Column header="Actions" style="width: 100px">
                 <template #body="{ data }">
                     <Button v-if="data.invoice_id" icon="pi pi-eye" severity="info" text rounded
-                        @click="viewInvoice(data.invoice_id)" tooltip="View Invoice" />
+                        @click="viewInvoice(data.invoice_id)" />
                 </template>
             </Column>
         </DataTable>

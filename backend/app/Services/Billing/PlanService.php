@@ -62,15 +62,21 @@ class PlanService
      */
     public function createPlan(array $data): Plan
     {
+        $data['slug'] = $data['slug'] ?? \Illuminate\Support\Str::slug($data['name']);
+
         $plan = Plan::create($data);
 
-        Log::info('Plan created', [
-            'plan_id' => $plan->id,
-            'name' => $plan->name,
-            'user_id' => auth()->id(),
-        ]);
+        if (!empty($data['features'])) {
+            $this->syncPlanFeatures($plan, $data['features'], 'boolean');
+        }
 
-        return $plan;
+        if (!empty($data['limits'])) {
+            $this->syncPlanFeatures($plan, $data['limits'], 'limit');
+        }
+
+        Log::info('Plan created', ['plan_id' => $plan->id, 'user_id' => auth()->id()]);
+
+        return $plan->fresh('planFeatures');
     }
 
     /**
@@ -80,12 +86,31 @@ class PlanService
     {
         $plan->update($data);
 
-        Log::info('Plan updated', [
-            'plan_id' => $plan->id,
-            'user_id' => auth()->id(),
-        ]);
+        if (isset($data['features'])) {
+            $this->syncPlanFeatures($plan, $data['features'], 'boolean');
+        }
 
-        return $plan->fresh();
+        if (isset($data['limits'])) {
+            $this->syncPlanFeatures($plan, $data['limits'], 'limit');
+        }
+
+        Log::info('Plan updated', ['plan_id' => $plan->id, 'user_id' => auth()->id()]);
+
+        return $plan->fresh('planFeatures');
+    }
+
+    protected function syncPlanFeatures(Plan $plan, array $features, string $type): void
+    {
+        foreach ($features as $key => $value) {
+            $plan->planFeatures()->updateOrCreate(
+                ['feature_key' => $key],
+                [
+                    'feature_type' => $type,
+                    'value' => is_bool($value) ? ($value ? '1' : '0') : (string) $value,
+                    'is_enabled' => true,
+                ]
+            );
+        }
     }
 
     /**

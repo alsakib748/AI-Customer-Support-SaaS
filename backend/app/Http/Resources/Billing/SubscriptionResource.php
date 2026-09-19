@@ -75,4 +75,24 @@ class SubscriptionResource extends JsonResource
             'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
+
+    protected function formatUsage(string $key, string $fieldPrefix): array
+    {
+        $used = (int) ($this->{"{$fieldPrefix}_used"} ?? 0);
+        $limit = (int) ($this->{"{$fieldPrefix}_limit"} ?? 0);
+
+        return [
+            'used' => $used,
+            'limit' => $limit,
+            'remaining' => $limit > 0 ? max(0, $limit - $used) : null,
+            'percentage' => $limit > 0 ? round(($used / $limit) * 100, 1) : 0,
+            'unlimited' => $limit <= 0,
+        ];
+    }
+
+    protected function formatStorage(string $fieldPrefix): array
+    {
+        return $this->formatUsage($fieldPrefix, 'storage');
+    }
+
 }

@@ -72,44 +72,49 @@ class Plan extends Model
 
     public function getFormattedPriceMonthlyAttribute(): string
     {
-        if ($this->price_monthly == 0) {
+        if ((float) $this->price_monthly === 0.0) {
             return 'Free';
         }
-        return $this->currency . ' ' . number_format($this->price_monthly, 2);
+        return $this->currency . ' ' . number_format((float) $this->price_monthly, 2);
     }
 
     public function getFormattedPriceYearlyAttribute(): string
     {
-        if ($this->price_yearly == 0) {
+        if ((float) $this->price_yearly === 0.0) {
             return 'Free';
         }
-        return $this->currency . ' ' . number_format($this->price_yearly, 2);
+        return $this->currency . ' ' . number_format((float) $this->price_yearly, 2);
     }
 
     public function getYearlySavingsAttribute(): float
     {
-        $monthlyTotal = $this->price_monthly * 12;
-        return max(0, $monthlyTotal - $this->price_yearly);
+        $monthlyTotal = (float) $this->price_monthly * 12;
+        return max(0, $monthlyTotal - (float) $this->price_yearly);
     }
 
     public function getYearlySavingsPercentageAttribute(): float
     {
-        $monthlyTotal = $this->price_monthly * 12;
-        if ($monthlyTotal == 0) {
-            return 0;
+        $monthlyTotal = (float) $this->price_monthly * 12;
+        if ($monthlyTotal === 0.0) {
+            return 0.0;
         }
         return round(($this->yearly_savings / $monthlyTotal) * 100, 1);
     }
 
-    public function getLimit(string $key, $default = null)
+    public function getLimit(string $key, mixed $default = null): mixed
     {
+        $feature = $this->relationLoaded('planFeatures')
+            ? $this->planFeatures->firstWhere('feature_key', $key)
+            : $this->planFeatures()->where('feature_key', $key)->first();
+
+        if ($feature) {
+            return $feature->typed_value;
+        }
+
+        // Fallback to JSON limits (legacy compatibility)
         return data_get($this->limits, $key, $default);
     }
 
-    public function hasFeature(string $feature): bool
-    {
-        return (bool) data_get($this->features, $feature, false);
-    }
 
     // ============================================
     // SCOPES
@@ -141,7 +146,9 @@ class Plan extends Model
 
     public function getPriceForCycle(string $cycle): float
     {
-        return $cycle === 'yearly' ? $this->price_yearly : $this->price_monthly;
+        return $cycle === 'yearly'
+            ? (float) $this->price_yearly
+            : (float) $this->price_monthly;
     }
 
     public function isFree(): bool
@@ -164,4 +171,23 @@ class Plan extends Model
     {
         return static::active()->where('price_monthly', 0)->first();
     }
+
+    public function planFeatures(): HasMany
+    {
+        return $this->hasMany(PlanFeature::class);
+    }
+
+    public function hasFeature(string $feature): bool
+    {
+        $row = $this->relationLoaded('planFeatures')
+            ? $this->planFeatures->firstWhere('feature_key', $feature)
+            : $this->planFeatures()->where('feature_key', $feature)->first();
+
+        if ($row) {
+            return (bool) $row->typed_value && $row->is_enabled;
+        }
+
+        return (bool) data_get($this->features, $feature, false);
+    }
+
 }

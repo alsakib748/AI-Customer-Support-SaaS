@@ -3,7 +3,10 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useCustomerStore } from '@/stores/customer';
 import { useAuthStore } from '@/stores/auth';
-// import { toast } from 'vue3-toastify';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+
+const planLimit = usePlanLimit();
 
 const customerStore = useCustomerStore();
 const authStore = useAuthStore();
@@ -206,6 +209,11 @@ const handleSubmit = async () => {
     } catch (error) {
         // Error handled in store
         console.error('Form submission error:', error);
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

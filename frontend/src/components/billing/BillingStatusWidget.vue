@@ -1,8 +1,9 @@
-<!-- src/components/billing/BillingStatusWidget.vue -->
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useBillingStore } from '@/stores/billing';
 
+const router = useRouter();
 const billingStore = useBillingStore();
 
 const subscription = computed(() => billingStore.subscription);
@@ -25,30 +26,26 @@ const statusColor = computed(() => {
 });
 
 const warningText = computed(() => {
-    if (billingStore.isTrialing) {
-        return `Trial: ${billingStore.trialDaysRemaining}d left`;
-    }
-    if (billingStore.isCancelled) {
-        return 'Cancelled';
-    }
-    if (billingStore.isExpired) {
-        return 'Expired';
-    }
+    if (billingStore.isTrialing) return `Trial: ${billingStore.trialDaysRemaining}d left`;
+    if (billingStore.isCancelled) return 'Cancelled';
+    if (billingStore.isExpired) return 'Expired';
     if (billingStore.daysRemaining && billingStore.daysRemaining <= 7) {
         return `Renews in ${billingStore.daysRemaining}d`;
     }
     return null;
 });
+
+const goToBilling = () => router.push('/billing');
 </script>
 
 <template>
     <div v-if="subscription" class="billing-widget">
         <div class="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800"
-            @click="$router.push('/billing')">
+            @click="goToBilling">
             <i :class="statusIcon" :style="{ color: statusColor }"></i>
             <div class="flex flex-col">
                 <span class="text-xs font-medium">{{ planName }}</span>
-                <span class="text-xs text-surface-500" v-if="warningText">{{ warningText }}</span>
+                <span v-if="warningText" class="text-xs text-surface-500">{{ warningText }}</span>
             </div>
         </div>
     </div>

@@ -1,7 +1,7 @@
 <?php
-
 namespace App\Jobs\Billing;
 
+use App\Models\Subscription;
 use App\Services\Billing\SubscriptionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +15,7 @@ class ProcessExpiredSubscriptions implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300;
-    public $tries = 1;
+    public $tries   = 1;
 
     /**
      * Create a new job instance.
@@ -28,23 +28,31 @@ class ProcessExpiredSubscriptions implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(SubscriptionService $subscriptionService): void
+    public function handle(SubscriptionService $service): void
     {
-        Log::info('Starting expired subscription processing');
+        $graceDays = (int) config('billing.grace_period.past_due_days', 3);
+        $cutoff    = now()->subDays($graceDays);
 
-        try {
-            $count = $subscriptionService->checkExpiredSubscriptions();
+        // Expire "active" subscriptions whose period ended without renewal
+        $expired = Subscription::where('status', 'active')
+            ->where('ends_at', '<', now())
+            ->where('auto_renew', false)
+            ->get();
 
-            Log::info('Expired subscription processing completed', [
-                'expired_count' => $count,
-            ]);
+        foreach ($expired as $sub) {
+            $sub->expire();
+            Log::info('Subscription expired (period ended)', ['subscription_id' => $sub->id]);
+        }
 
-        } catch (\Exception $e) {
-            Log::error('Expired subscription processing failed', [
-                'error' => $e->getMessage(),
-            ]);
+        // Expire "past_due" subscriptions past the grace period
+        $pastDue = Subscription::where('status', 'past_due')
+            ->where('updated_at', '<', $cutoff)
+            ->get();
 
-            throw $e;
+        foreach ($pastDue as $sub) {
+            $sub->expire();
+            Log::info('Subscription expired (grace period ended)', ['subscription_id' => $sub->id]);
         }
     }
+
 }

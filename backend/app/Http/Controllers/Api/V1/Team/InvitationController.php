@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Team;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Team\InviteMemberRequest;
+use App\Services\Billing\BillingLimitService;
 use App\Services\Team\InvitationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -64,15 +65,19 @@ class InvitationController extends Controller
     /**
      * Create a new invitation
      */
-    public function store(InviteMemberRequest $request)
+    public function store(InviteMemberRequest $request, BillingLimitService $limits)
     {
         try {
-            if (!$this->service->canManageInvitations()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not have permission to send invitations.',
-                ], 403);
-            }
+            // if (!$this->service->canManageInvitations()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'You do not have permission to send invitations.',
+            //     ], 403);
+            // }
+
+            //  Enforce plan limit BEFORE creating the invitation
+        $tenant = app('current_tenant');
+        $limits->enforce($tenant, 'agents.max', 1);
 
             $invitation = $this->service->createInvitation($request->validated());
 

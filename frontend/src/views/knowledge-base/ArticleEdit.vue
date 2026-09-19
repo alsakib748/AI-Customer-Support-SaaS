@@ -5,11 +5,15 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const route = useRoute();
 const router = useRouter();
 const knowledgeBaseStore = useKnowledgeBaseStore();
 // const toast = useToast();
+
+const planLimit = usePlanLimit();
 
 // ============================================
 // STATE
@@ -43,6 +47,7 @@ const visibilityOptions = [
 // ============================================
 // METHODS
 // ============================================
+
 
 const loadData = async () => {
     loading.value = true;
@@ -84,7 +89,11 @@ const handleSubmit = async () => {
         // toast.success('Article updated successfully 🎉');
         router.push('/knowledge-base');
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

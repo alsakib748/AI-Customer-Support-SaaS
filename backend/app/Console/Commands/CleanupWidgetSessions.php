@@ -3,12 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Services\ChatWidget\WidgetSessionService;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('app:cleanup-widget-sessions')]
-#[Description('Command description')]
 class CleanupWidgetSessions extends Command
 {
     protected $signature = 'widget:cleanup-sessions

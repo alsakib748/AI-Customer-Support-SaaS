@@ -17,12 +17,12 @@ class SyncStorageUsage implements ShouldQueue
 
     public $timeout = 600;
     public $tries = 3;
-
+    public int $backoff = 60;
 
     /**
      * Create a new job instance.
      */
-    public function __construct()
+    public function __construct(public ?string $tenantId = null)
     {
         //
     }
@@ -32,20 +32,24 @@ class SyncStorageUsage implements ShouldQueue
      */
     public function handle(UsageTracker $tracker): void
     {
-        Log::info('Starting storage usage sync');
+        Log::info('Starting storage usage sync', ['tenant_id' => $this->tenantId]);
+
+        if ($this->tenantId) {
+            $tracker->syncStorageUsage($this->tenantId);
+            Log::info('Storage usage synced', ['tenant_id' => $this->tenantId]);
+            return;
+        }
 
         $count = 0;
 
         Tenant::query()
-            ->whereHas('subscriptions', function ($q) {
-                $q->whereIn('status', ['active', 'trialing']);
-            })
+            ->whereHas('subscriptions', fn($q) => $q->whereIn('status', ['active', 'trialing']))
             ->chunk(100, function ($tenants) use ($tracker, &$count) {
                 foreach ($tenants as $tenant) {
                     try {
                         $tracker->syncStorageUsage($tenant->id);
                         $count++;
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         Log::error('Failed to sync storage usage', [
                             'tenant_id' => $tenant->id,
                             'error' => $e->getMessage(),
@@ -54,9 +58,7 @@ class SyncStorageUsage implements ShouldQueue
                 }
             });
 
-        Log::info('Storage usage sync completed', [
-            'tenants_synced' => $count,
-        ]);
+        Log::info('Storage usage sync completed', ['tenants_synced' => $count]);
     }
 
 }

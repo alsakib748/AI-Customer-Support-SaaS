@@ -102,7 +102,15 @@ const onFormSubmit = async () => {
 
     try {
         await authStore.register(form);
-    } catch {
+    } catch (err) {
+        if (err.response?.status === 422 && err.response.data?.errors) {
+            const serverErrors = err.response.data.errors;
+            Object.keys(serverErrors).forEach(key => {
+                if (errors.hasOwnProperty(key)) {
+                    errors[key] = serverErrors[key][0];
+                }
+            });
+        }
         // Error toast is fired by the axios response interceptor in services/api.js
     }
 };

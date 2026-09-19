@@ -14,16 +14,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'jwt.auth' => \App\Http\Middleware\JWTAuthMiddleware::class,
-            'tenant.aware' => \App\Http\Middleware\TenantAware::class,
-            'permission' => \App\Http\Middleware\CheckPermission::class,
-            'widget.rate.limit' => \App\Http\Middleware\WidgetRateLimit::class,
-            'ai.rate.limit' => \App\Http\Middleware\AIRateLimit::class,
+            'jwt.auth'           => \App\Http\Middleware\JWTAuthMiddleware::class,
+            'tenant.aware'       => \App\Http\Middleware\TenantAware::class,
+            'permission'         => \App\Http\Middleware\CheckPermission::class,
+            'widget.rate.limit'  => \App\Http\Middleware\WidgetRateLimit::class,
+            'ai.rate.limit'      => \App\Http\Middleware\AIRateLimit::class,
             'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
-            'track.usage' => \App\Http\Middleware\TrackUsage::class,
+            'track.usage'        => \App\Http\Middleware\TrackUsage::class,
             'billing.rate.limit' => \App\Http\Middleware\BillingRateLimit::class,
+            'super.admin'        => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
+    ->withCommands([
+        \App\Console\Commands\Billing\BillingStatsCommand::class,
+    ])
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn(Request $request) => $request->is('api/*') || $request->expectsJson(),

@@ -1,8 +1,5 @@
-<!-- src/components/billing/SubscriptionCard.vue -->
 <script setup>
-const props = defineProps({
-    subscription: { type: Object, default: null },
-});
+defineProps({ subscription: { type: Object, default: null } });
 
 const formatDate = (date) => {
     if (!date) return '—';
@@ -45,14 +42,26 @@ const formatDate = (date) => {
                     </div>
                 </div>
 
-                <div v-if="subscription.is_trialing" class="p-3 bg-info-50 dark:bg-info-950 rounded-lg mb-4">
-                    <i class="pi pi-clock text-info mr-2"></i>
+                <div v-if="subscription.is_trialing" class="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg mb-4">
+                    <i class="pi pi-clock text-blue-500 mr-2"></i>
                     Trial ends in {{ subscription.trial_days_remaining }} days
                 </div>
 
-                <div v-if="subscription.is_cancelled" class="p-3 bg-warning-50 dark:bg-warning-950 rounded-lg mb-4">
-                    <i class="pi pi-exclamation-triangle text-warning mr-2"></i>
+                <div v-if="subscription.is_cancelled" class="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg mb-4">
+                    <i class="pi pi-exclamation-triangle text-yellow-600 mr-2"></i>
                     Cancelled. Access until {{ formatDate(subscription.ends_at) }}
+                </div>
+
+                <div v-if="subscription?.metadata?.pending_plan_id"
+                    class="p-3 bg-info-50 dark:bg-info-950 rounded-lg mb-4">
+                    <div class="flex items-center gap-2">
+                        <i class="pi pi-info-circle text-info"></i>
+                        <span class="font-medium">
+                            Downgrading to
+                            <strong>{{ subscription.metadata.pending_plan_name || 'next plan' }}</strong>
+                            on {{ formatDate(subscription.ends_at) }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="flex gap-2 flex-wrap">

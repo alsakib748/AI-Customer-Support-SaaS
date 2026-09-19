@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1\Customer;
 
+use App\Exceptions\PlanLimitExceededException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Http\Resources\Customer\CustomerCollection;
 use App\Http\Resources\Customer\CustomerResource;
+use App\Services\Billing\BillingLimitService;
 use App\Services\Customer\CustomerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
@@ -107,7 +110,7 @@ class CustomerController extends Controller
     /**
      * Create a new customer
      */
-    public function store(StoreCustomerRequest $request)
+    public function store(StoreCustomerRequest $request, BillingLimitService $limits)
     {
         try {
             // if (!auth()->user()->hasPermissionTo('customers.create')) {
@@ -117,6 +120,9 @@ class CustomerController extends Controller
             //     ], 403);
             // }
 
+            $tenant = app('current_tenant');
+            $limits->enforce($tenant, 'customers.max', 1);
+
             $customer = $this->service->createCustomer($request->validated());
 
             return (new CustomerResource($customer))
@@ -124,7 +130,24 @@ class CustomerController extends Controller
                     'message' => 'Customer created successfully.',
                 ]);
 
-        } catch (\Exception $e) {
+        }catch (PlanLimitExceededException $e) {
+        //  Structured 403 — frontend shows "upgrade" prompt
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'code'    => $e->errorCode,
+            'data'    => $e->errorData,
+        ], 403);
+
+       } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors'  => $e->errors(),
+        ], 422);
+
+       }
+         catch (\Exception $e) {
             Log::error('Failed to create customer:', ['error' => $e->getMessage()]);
 
             return response()->json([

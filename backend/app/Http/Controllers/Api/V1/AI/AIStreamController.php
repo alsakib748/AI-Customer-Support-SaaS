@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api\V1\AI;
 
 use App\Ai\Services\AIService;
 use App\Ai\Services\AIStreamingService;
+use App\Exceptions\PlanLimitExceededException;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\AIConfiguration;
 use App\Models\Tenant\Conversation;
 use App\Models\Tenant\Message;
+use App\Services\Billing\BillingLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class AIStreamController extends Controller
 {
@@ -27,9 +30,16 @@ class AIStreamController extends Controller
     /**
      * Stream AI response
      */
-    public function stream(Request $request, Conversation $conversation, Message $message)
+    public function stream(Request $request, Conversation $conversation, Message $message,BillingLimitService $limits,)
     {
         try {
+
+            // ============================================
+            // 1. ENFORCE BILLING LIMITS FIRST
+            // ============================================
+            $tenant = app('current_tenant');
+            $limits->enforce($tenant, 'ai.requests.monthly', 1);
+
             // Verify message belongs to conversation
             if ($message->conversation_id !== $conversation->id) {
                 return response()->json([
@@ -78,7 +88,24 @@ class AIStreamController extends Controller
 
             return $this->streamingService->streamResponse($conversation, $message);
 
-        } catch (\Exception $e) {
+        }catch (PlanLimitExceededException $e) {
+        //  Structured 403 — frontend shows "upgrade" prompt
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'code'    => $e->errorCode,
+            'data'    => $e->errorData,
+        ], 403);
+
+       } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors'  => $e->errors(),
+        ], 422);
+
+       }
+         catch (\Exception $e) {
             Log::error('Streaming error:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

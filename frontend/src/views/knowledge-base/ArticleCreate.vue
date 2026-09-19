@@ -1,13 +1,17 @@
 <!-- src/views/knowledge-base/ArticleCreate.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const router = useRouter();
 const knowledgeBaseStore = useKnowledgeBaseStore();
 // const toast = useToast();
+
+const planLimit = usePlanLimit();
 
 // ============================================
 // STATE
@@ -38,6 +42,7 @@ const visibilityOptions = [
 // METHODS
 // ============================================
 
+
 const loadCategories = async () => {
     await knowledgeBaseStore.fetchAllCategories();
 };
@@ -48,7 +53,11 @@ const handleSubmit = async () => {
         // toast.success('Article created successfully 🎉');
         router.push('/knowledge-base');
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

@@ -8,6 +8,7 @@ use App\Http\Requests\ChatWidget\UpdateChatWidgetRequest;
 use App\Http\Resources\ChatWidget\ChatWidgetCollection;
 use App\Http\Resources\ChatWidget\ChatWidgetResource;
 use App\Models\Tenant\ChatWidget;
+use App\Services\Billing\BillingLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -59,7 +60,7 @@ class ChatWidgetController extends Controller
     /**
      * Create a new chat widget
      */
-    public function store(StoreChatWidgetRequest $request)
+    public function store(StoreChatWidgetRequest $request, BillingLimitService $limits)
     {
         try {
             //  Check permission
@@ -78,6 +79,9 @@ class ChatWidgetController extends Controller
                     'code' => 'switch_to_tenant',
                 ], 400);
             }
+
+            $tenant = app('current_tenant');
+            $limits->enforce($tenant, 'widgets.max', 1);
 
             $widget = ChatWidget::create($request->validated());
 

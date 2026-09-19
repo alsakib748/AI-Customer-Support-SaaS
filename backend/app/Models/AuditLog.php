@@ -11,6 +11,9 @@ class AuditLog extends Model
 {
     protected $table = 'audit_logs';
 
+    // audit_logs only exists on the central database; never write to tenant DBs
+    protected $connection = 'central';
+
     protected $fillable = [
         'tenant_id',
         'user_id',

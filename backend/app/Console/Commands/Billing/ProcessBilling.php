@@ -7,15 +7,11 @@ use App\Jobs\Billing\ProcessSubscriptionRenewals;
 use App\Jobs\Billing\ResetMonthlyUsage;
 use App\Jobs\Billing\SendRenewalReminders;
 use App\Jobs\Billing\SendTrialEndingReminder;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('app:process-billing')]
-#[Description('Command description')]
 class ProcessBilling extends Command
 {
-    protected $signature = 'billing:process 
+    protected $signature = 'billing:process
                             {--renew : Process renewals}
                             {--expire : Process expirations}
                             {--reminders : Send renewal reminders}

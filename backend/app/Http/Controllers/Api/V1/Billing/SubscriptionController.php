@@ -1,8 +1,9 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1\Billing;
 
+use App\Events\Billing\SubscriptionCreated;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Billing\CancelSubscriptionRequest;
 use App\Http\Resources\Billing\SubscriptionResource;
 use App\Models\Coupon;
 use App\Services\Billing\PlanService;
@@ -20,7 +21,7 @@ class SubscriptionController extends Controller
         SubscriptionService $service,
         PlanService $planService
     ) {
-        $this->service = $service;
+        $this->service     = $service;
         $this->planService = $planService;
     }
 
@@ -31,27 +32,45 @@ class SubscriptionController extends Controller
     {
         try {
             $tenant = app('current_tenant');
+
+            if (! $tenant) {
+                if (auth()->user()?->hasRole('super-admin')) {
+                    return response()->json([
+                        'success' => true,
+                        'data'    => null,
+                        'message' => 'No tenant context provided.',
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to access billing.',
+                ], 403);
+            }
+
             $subscription = $this->service->getActiveSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => true,
-                    'data' => null,
+                    'data'    => null,
                     'message' => 'No active subscription.',
                 ]);
             }
 
             return response()->json([
                 'success' => true,
-                'data' => new SubscriptionResource($subscription),
+                'data'    => new SubscriptionResource($subscription),
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Failed to get subscription:', ['error' => $e->getMessage()]);
+            Log::error('Failed to get subscription:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve subscription.',
+                'message' => 'Failed to retrieve subscription: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -62,20 +81,20 @@ class SubscriptionController extends Controller
     public function store(Request $request)
     {
         try {
-            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to manage billing.',
-            //     ], 403);
-            // }
-
             $validated = $request->validate([
-                'plan_id' => 'required|integer|exists:plans,id',
+                'plan_id'       => 'required|integer|exists:plans,id',
                 'billing_cycle' => 'nullable|in:monthly,yearly',
-                'coupon_code' => 'nullable|string',
+                'coupon_code'   => 'nullable|string',
             ]);
 
             $tenant = app('current_tenant');
+
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to create a subscription.',
+                ], 403);
+            }
 
             // Check if already has subscription
             $existing = $this->service->getActiveSubscription($tenant->id);
@@ -86,11 +105,11 @@ class SubscriptionController extends Controller
                 ], 400);
             }
 
-            $plan = $this->planService->getPlan($validated['plan_id']);
+            $plan         = $this->planService->getPlan($validated['plan_id']);
             $billingCycle = $validated['billing_cycle'] ?? 'monthly';
 
             $coupon = null;
-            if (!empty($validated['coupon_code'])) {
+            if (! empty($validated['coupon_code'])) {
                 $coupon = Coupon::byCode($validated['coupon_code'])->first();
             }
 
@@ -101,6 +120,8 @@ class SubscriptionController extends Controller
                 $coupon
             );
 
+            event(new SubscriptionCreated($subscription));
+
             return (new SubscriptionResource($subscription))
                 ->additional([
                     'message' => 'Subscription created successfully 🎉',
@@ -110,7 +131,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -129,21 +150,21 @@ class SubscriptionController extends Controller
     public function upgrade(Request $request)
     {
         try {
-            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to manage billing.',
-            //     ], 403);
-            // }
-
             $validated = $request->validate([
                 'plan_id' => 'required|integer|exists:plans,id',
             ]);
 
             $tenant = app('current_tenant');
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to upgrade subscription.',
+                ], 403);
+            }
+
             $subscription = $this->service->getActiveSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No active subscription found.',
@@ -171,7 +192,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -190,21 +211,21 @@ class SubscriptionController extends Controller
     public function downgrade(Request $request)
     {
         try {
-            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to manage billing.',
-            //     ], 403);
-            // }
-
             $validated = $request->validate([
                 'plan_id' => 'required|integer|exists:plans,id',
             ]);
 
             $tenant = app('current_tenant');
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to downgrade subscription.',
+                ], 403);
+            }
+
             $subscription = $this->service->getActiveSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No active subscription found.',
@@ -232,7 +253,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -248,55 +269,86 @@ class SubscriptionController extends Controller
     /**
      * Cancel subscription
      */
-    public function cancel(Request $request)
+    // public function cancel(Request $request)
+    // {
+    //     try {
+    //         $request->validate([
+    //             'immediately' => 'nullable|boolean',
+    //         ]);
+
+    //         $tenant = app('current_tenant');
+    //         if (!$tenant) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Tenant context is required to cancel subscription.',
+    //             ], 403);
+    //         }
+
+    //         $subscription = $this->service->getActiveSubscription($tenant->id);
+
+    //         if (!$subscription) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'No active subscription found.',
+    //             ], 404);
+    //         }
+
+    //         if (!$subscription->canCancel()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Subscription cannot be cancelled.',
+    //             ], 400);
+    //         }
+
+    //         $immediately = $request->boolean('immediately', false);
+    //         $subscription = $this->service->cancel($subscription, $immediately);
+
+    //         $message = $immediately
+    //             ? 'Subscription cancelled immediately.'
+    //             : 'Subscription will be cancelled at the end of the billing period.';
+
+    //         return (new SubscriptionResource($subscription))
+    //             ->additional([
+    //                 'message' => $message,
+    //             ]);
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Failed to cancel subscription:', ['error' => $e->getMessage()]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to cancel subscription: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    public function cancel(CancelSubscriptionRequest $request)
     {
         try {
-            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to manage billing.',
-            //     ], 403);
-            // }
-
-            $request->validate([
-                'immediately' => 'nullable|boolean',
-            ]);
-
-            $tenant = app('current_tenant');
+            $tenant       = app('current_tenant');
             $subscription = $this->service->getActiveSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No active subscription found.',
                 ], 404);
             }
 
-            if (!$subscription->canCancel()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Subscription cannot be cancelled.',
-                ], 400);
-            }
-
-            $immediately = $request->boolean('immediately', false);
-            $subscription = $this->service->cancel($subscription, $immediately);
-
-            $message = $immediately
-                ? 'Subscription cancelled immediately.'
-                : 'Subscription will be cancelled at the end of the billing period.';
+            $subscription = $this->service->cancel(
+                $subscription,
+                $request->boolean('immediately', false),
+                $request->input('reason'),
+            );
 
             return (new SubscriptionResource($subscription))
-                ->additional([
-                    'message' => $message,
-                ]);
+                ->additional(['message' => 'Subscription cancelled.']);
 
         } catch (\Exception $e) {
-            Log::error('Failed to cancel subscription:', ['error' => $e->getMessage()]);
-
+            Log::error('Failed to cancel subscription', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to cancel subscription: ' . $e->getMessage(),
+                'message' => 'Failed to cancel subscription.',
             ], 500);
         }
     }
@@ -307,24 +359,24 @@ class SubscriptionController extends Controller
     public function resume(Request $request)
     {
         try {
-            // if (!auth()->user()->hasPermissionTo('billing.manage')) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to manage billing.',
-            //     ], 403);
-            // }
-
             $tenant = app('current_tenant');
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to resume subscription.',
+                ], 403);
+            }
+
             $subscription = $this->service->getSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No subscription found.',
                 ], 404);
             }
 
-            if (!$subscription->is_cancelled) {
+            if (! $subscription->is_cancelled) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Subscription is not cancelled.',
@@ -359,9 +411,16 @@ class SubscriptionController extends Controller
             ]);
 
             $tenant = app('current_tenant');
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to validate coupon.',
+                ], 403);
+            }
+
             $subscription = $this->service->getSubscription($tenant->id);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No subscription found.',
@@ -375,7 +434,7 @@ class SubscriptionController extends Controller
                 'message' => $result['valid']
                     ? 'Coupon is valid!'
                     : ($result['message'] ?? 'Invalid coupon.'),
-                'data' => $result['valid'] ? [
+                'data'    => $result['valid'] ? [
                     'discount' => $result['discount'],
                 ] : null,
             ]);

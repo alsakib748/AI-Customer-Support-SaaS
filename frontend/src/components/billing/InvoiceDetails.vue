@@ -1,8 +1,5 @@
-<!-- src/components/billing/InvoiceDetails.vue -->
 <script setup>
-const props = defineProps({
-    invoice: { type: Object, required: true },
-});
+defineProps({ invoice: { type: Object, required: true } });
 
 const formatDate = (date) => {
     if (!date) return '—';
@@ -12,7 +9,7 @@ const formatDate = (date) => {
 };
 
 const formatCurrency = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 };
 </script>
 
@@ -24,7 +21,9 @@ const formatCurrency = (amount, currency = 'USD') => {
                 <Tag :value="invoice.status_label" :severity="invoice.status_color" class="mt-1" />
             </div>
             <div class="text-right">
-                <div class="text-2xl font-bold">{{ invoice.formatted_total }}</div>
+                <div class="text-2xl font-bold">
+                    {{ invoice.formatted_total || formatCurrency(invoice.total, invoice.currency) }}
+                </div>
             </div>
         </div>
 
@@ -34,7 +33,7 @@ const formatCurrency = (amount, currency = 'USD') => {
             <div>
                 <label class="text-sm text-surface-500">Billing Period</label>
                 <div class="font-medium">
-                    {{ formatDate(invoice.period_starts_at) }} - {{ formatDate(invoice.period_ends_at) }}
+                    {{ formatDate(invoice.period_starts_at) }} — {{ formatDate(invoice.period_ends_at) }}
                 </div>
             </div>
             <div>
@@ -53,9 +52,9 @@ const formatCurrency = (amount, currency = 'USD') => {
             </div>
         </div>
 
-        <Divider />
+        <Divider v-if="invoice.line_items?.length" />
 
-        <div>
+        <div v-if="invoice.line_items?.length">
             <h4 class="font-semibold mb-2">Line Items</h4>
             <div v-for="(item, index) in invoice.line_items" :key="index"
                 class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">

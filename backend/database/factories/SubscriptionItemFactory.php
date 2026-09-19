@@ -21,11 +21,12 @@ class SubscriptionItemFactory extends Factory
     {
         $quantity = $this->faker->numberBetween(1, 10);
         $unitPrice = $this->faker->randomFloat(2, 5, 50);
+        $name = $this->faker->words(2, true);
 
         return [
             'subscription_id' => Subscription::factory(),
             'type' => $this->faker->randomElement(['addon', 'seat', 'usage']),
-            'name' => $this->faker->words(2, true),
+            'name' => $name,
             'slug' => $this->faker->slug(),
             'description' => $this->faker->sentence(),
             'quantity' => $quantity,

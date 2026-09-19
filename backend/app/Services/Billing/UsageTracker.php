@@ -144,23 +144,62 @@ class UsageTracker
         });
     }
 
+    public function currentUsage(string $tenantId, string $metric): int
+    {
+        $subscription = $this->getSubscription($tenantId);
+
+        if (!$subscription) {
+            return 0;
+        }
+
+        $field = "{$metric}_used";
+
+        return (int) ($subscription->{$field} ?? 0);
+    }
+
     /**
      * Sync storage usage
      */
     public function syncStorageUsage(string $tenantId): void
     {
         $subscription = $this->getSubscription($tenantId);
-        if (!$subscription)
+
+        if (!$subscription) {
             return;
+        }
 
-        $totalBytes = \App\Models\Tenant\KnowledgeDocument::sum('file_size') ?? 0;
+        try {
+            $bytes = $this->calculateStorageBytes($tenantId);
 
-        $subscription->update(['storage_used' => $totalBytes]);
+            $subscription->update(['storage_used' => $bytes]);
 
-        Log::info('Storage usage synced', [
-            'tenant_id' => $tenantId,
-            'bytes' => $totalBytes,
-        ]);
+            Cache::forget("subscription_usage:{$tenantId}");
+
+            Log::info('Storage usage synced', [
+                'tenant_id' => $tenantId,
+                'bytes' => $bytes,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Storage usage sync failed', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function calculateStorageBytes(string $tenantId): int
+    {
+        // Wire this to actual storage metrics (S3, local disk, DB size, etc.)
+        // Example placeholder — replace with real calculation.
+        $total = 0;
+
+        // Documents
+        $total += (int) \DB::connection('tenant')
+            ->table('knowledge_base_articles')
+            ->where('tenant_id', $tenantId)
+            ->sum('file_size');
+
+        return $total;
     }
 
     /**

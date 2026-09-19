@@ -25,7 +25,7 @@ class StoreSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'plan_id' => ['required', 'integer', 'exists:plans,id'],
+            'plan_id' => ['required', 'integer', 'exists:central.plans,id'],
             'billing_cycle' => ['nullable', Rule::in(['monthly', 'yearly'])],
             'coupon_code' => ['nullable', 'string', 'max:50'],
             'gateway' => ['nullable', Rule::in(['stripe', 'paypal'])],

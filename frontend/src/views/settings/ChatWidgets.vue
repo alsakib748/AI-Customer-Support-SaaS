@@ -6,6 +6,10 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useWidgetStore } from '@/stores/widget';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+
+const planLimit = usePlanLimit();
 
 const widgetStore = useWidgetStore();
 const authStore = useAuthStore();
@@ -187,7 +191,11 @@ const handleSubmit = async () => {
         await loadData();
 
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

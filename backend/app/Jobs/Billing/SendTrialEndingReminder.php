@@ -3,6 +3,7 @@
 namespace App\Jobs\Billing;
 
 use App\Models\Subscription;
+use App\Notifications\Billing\TrialEndingNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;

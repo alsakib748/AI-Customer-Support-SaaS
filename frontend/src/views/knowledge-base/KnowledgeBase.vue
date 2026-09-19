@@ -5,11 +5,15 @@ import { useRouter } from 'vue-router';
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
+import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const router = useRouter();
 const knowledgeBaseStore = useKnowledgeBaseStore();
 const authStore = useAuthStore();
 // const toast = useToast();
+
+const planLimit = usePlanLimit();
 
 // ============================================
 // STATE
@@ -77,6 +81,7 @@ const categoryStatusOptions = [
 // ============================================
 // METHODS
 // ============================================
+
 
 const loadData = async () => {
     await Promise.all([
@@ -219,7 +224,11 @@ const handleCategorySubmit = async () => {
         resetCategoryForm();
         await loadCategories();
     } catch (error) {
-        // Error handled in store
+        if (isPlanLimitError(error)) {
+            planLimit.showPlanLimit(error);
+            return;
+        }
+        toast.error(error.response?.data?.message || 'Failed');
     }
 };
 

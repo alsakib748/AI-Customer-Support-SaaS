@@ -218,6 +218,8 @@ class CustomerService
 
         $tenantId = $this->getTenantId();
 
+        // $limits->enforce($tenantId, 'customers.max', 1);
+
         // dd($data);
 
         $customerData = [

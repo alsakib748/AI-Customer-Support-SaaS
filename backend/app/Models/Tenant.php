@@ -1,15 +1,14 @@
 <?php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
+use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
@@ -66,14 +65,14 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     ];
 
     protected $casts = [
-        'business_hours' => 'json',
-        'settings' => 'json',
-        'metadata' => 'json',
-        'data' => 'json',
-        'trial_ends_at' => 'datetime',
+        'business_hours'       => 'json',
+        'settings'             => 'json',
+        'metadata'             => 'json',
+        'data'                 => 'json',
+        'trial_ends_at'        => 'datetime',
         'subscription_ends_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'created_at'           => 'datetime',
+        'updated_at'           => 'datetime',
     ];
 
     protected static function boot()
@@ -141,7 +140,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function isTrialExpired(): bool
     {
-        if (!$this->trial_ends_at) {
+        if (! $this->trial_ends_at) {
             return false;
         }
         return $this->trial_ends_at->isPast();
@@ -151,8 +150,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return $this->tenantUsers()
             ->where('role', 'owner')
-            ->first()
-                ?->user;
+            ->first()?->user;
     }
 
     public function getSetting($key, $default = null)
@@ -183,5 +181,20 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return 'tenant';
     }
+
+    // Billing & Subscriptions
+
+    public function subscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Subscription::class, 'tenant_id');
+    }
+
+public function activeSubscription(): \Illuminate\Database\Eloquent\Relations\HasOne
+{
+    return $this->hasOne(\App\Models\Subscription::class, 'tenant_id')
+        ->whereIn('status', ['trialing', 'active'])
+        ->latestOfMany();
+}
+
 
 }
