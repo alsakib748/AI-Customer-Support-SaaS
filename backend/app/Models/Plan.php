@@ -1,7 +1,7 @@
 <?php
-
 namespace App\Models;
 
+use App\Models\PlanProviderPrice;
 use App\Models\Subscription;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,16 +38,16 @@ class Plan extends Model
     ];
 
     protected $casts = [
-        'features' => 'array',
-        'limits' => 'array',
-        'metadata' => 'array',
+        'features'      => 'array',
+        'limits'        => 'array',
+        'metadata'      => 'array',
         'price_monthly' => 'decimal:2',
-        'price_yearly' => 'decimal:2',
-        'trial_days' => 'integer',
-        'is_active' => 'boolean',
-        'is_default' => 'boolean',
-        'is_public' => 'boolean',
-        'sort_order' => 'integer',
+        'price_yearly'  => 'decimal:2',
+        'trial_days'    => 'integer',
+        'is_active'     => 'boolean',
+        'is_default'    => 'boolean',
+        'is_public'     => 'boolean',
+        'sort_order'    => 'integer',
     ];
 
     protected $appends = [
@@ -115,7 +115,6 @@ class Plan extends Model
         return data_get($this->limits, $key, $default);
     }
 
-
     // ============================================
     // SCOPES
     // ============================================
@@ -163,8 +162,7 @@ class Plan extends Model
 
     public static function getDefaultPlan(): ?self
     {
-        return static::default()->active()->first()
-            ?? static::active()->orderBy('price_monthly')->first();
+        return static::default()->active()->first() ?? static::active()->orderBy('price_monthly')->first();
     }
 
     public static function getFreePlan(): ?self
@@ -188,6 +186,21 @@ class Plan extends Model
         }
 
         return (bool) data_get($this->features, $feature, false);
+    }
+
+    public function providerPrices(): HasMany
+    {
+        return $this->hasMany(PlanProviderPrice::class);
+    }
+
+    public function providerPrice(string $provider, string $cycle, string $currency = 'USD'): ?PlanProviderPrice
+    {
+        return $this->providerPrices()
+            ->where('provider', $provider)
+            ->where('billing_cycle', $cycle)
+            ->where('currency', $currency)
+            ->where('is_active', true)
+            ->first();
     }
 
 }

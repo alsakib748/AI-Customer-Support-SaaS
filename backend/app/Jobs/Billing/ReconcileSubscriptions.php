@@ -14,33 +14,20 @@ class ReconcileSubscriptions implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 900;
-    public int $tries = 1;
-
-
     /**
      * Execute the job.
      */
     public function handle(): void
     {
-        Log::info('Starting subscription reconciliation');
-
-        $subscriptions = Subscription::where('status', 'active')
-            ->whereNotNull('provider_subscription_id')
+        Subscription::whereNotNull('provider_subscription_id')
+            ->whereIn('status', ['active', 'trialing', 'past_due'])
             ->chunk(100, function ($subs) {
                 foreach ($subs as $sub) {
-                    try {
-                        $this->reconcile($sub);
-                    } catch (\Throwable $e) {
-                        Log::error('Failed to reconcile subscription', [
-                            'subscription_id' => $sub->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
+                    SyncSubscriptionFromProviderJob::dispatch($sub->id)->onQueue('billing');
                 }
             });
 
-        Log::info('Subscription reconciliation completed');
+        Log::info('Subscription reconciliation queued');
     }
 
     protected function reconcile(Subscription $subscription): void

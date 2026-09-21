@@ -20,7 +20,7 @@ class PaymentFailed
      */
     public function __construct(
         public Payment $payment,
-        public string $reason
+        public string $reason = 'Provider reported failure'
     ) {
         //
     }

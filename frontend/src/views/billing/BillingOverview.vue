@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBillingStore } from '@/stores/billing';
 import SubscriptionCard from '@/components/billing/SubscriptionCard.vue';
+import PaymentProviderSelector from '@/components/billing/PaymentProviderSelector.vue';
+import billingService from '@/services/billingService';
 
 const router = useRouter();
 const billingStore = useBillingStore();
@@ -10,6 +12,9 @@ const billingStore = useBillingStore();
 const showPlansDialog = ref(false);
 const showCancelDialog = ref(false);
 const cancelImmediately = ref(false);
+
+const selectedProvider = ref(null);
+const availableProviders = ref([]);
 
 const loading = computed(() => billingStore.loading);
 const saving = computed(() => billingStore.saving);
@@ -41,36 +46,54 @@ const loadData = async () => {
     ]);
 };
 
+// todo; Old Code
+// const handleSelectPlan = async (plan) => {
+//     try {
+//         if (subscription.value) {
+//             const currentPrice = Number(currentPlan.value?.price_monthly || 0);
+//             const newPrice = Number(plan.price_monthly || 0);
+
+//             if (newPrice > currentPrice) {
+//                 await billingStore.upgradeSubscription(plan.id);
+//             } else {
+//                 await billingStore.downgradeSubscription(plan.id);
+//             }
+//         } else {
+//             await billingStore.createSubscription({
+//                 plan_id: plan.id,
+//                 billing_cycle: 'monthly',
+//             });
+//         }
+//         showPlansDialog.value = false;
+//         await loadData();
+//     } catch (e) {
+//         // toast already shown by store
+//     }
+// };
+
 const handleSelectPlan = async (plan) => {
     try {
-        if (subscription.value) {
-            const currentPrice = Number(currentPlan.value?.price_monthly || 0);
-            const newPrice = Number(plan.price_monthly || 0);
+        const data = await billingStore.createCheckout(
+            plan.id,
+            'monthly',
+            selectedProvider.value,
+        );
 
-            if (newPrice > currentPrice) {
-                await billingStore.upgradeSubscription(plan.id);
-            } else {
-                await billingStore.downgradeSubscription(plan.id);
-            }
-        } else {
-            await billingStore.createSubscription({
-                plan_id: plan.id,
-                billing_cycle: 'monthly',
-            });
-        }
-        showPlansDialog.value = false;
-        await loadData();
+        // Redirect to provider checkout
+        window.location.href = data.checkout_url;
     } catch (e) {
-        // toast already shown by store
+        // error handled by store
     }
-};
+}
 
 const handleCancel = async () => {
     try {
         await billingStore.cancelSubscription(cancelImmediately.value);
         showCancelDialog.value = false;
         await loadData();
-    } catch (e) { }
+    } catch (e) {
+        console.error(e);
+    }
 };
 
 const handleResume = async () => {
@@ -110,7 +133,15 @@ const formatDate = (date) => {
 const formatCurrency = (amount, currency = 'USD') =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 
-onMounted(loadData);
+
+
+// onMounted(loadData);
+onMounted(async () => {
+    loadData();
+    const r = await billingService.getProviders();
+    availableProviders.value = r.data.data;
+    selectedProvider.value = availableProviders.value.find(p => p.available)?.key || null;
+});
 </script>
 
 <template>
@@ -261,6 +292,8 @@ onMounted(loadData);
                         @click="handleSelectPlan(plan)" />
                 </div>
             </div>
+            <Divider />
+            <PaymentProviderSelector v-model="selectedProvider" :providers="availableProviders" />
         </Dialog>
 
         <Dialog v-model:visible="showCancelDialog" header="Cancel Subscription" :style="{ width: '450px' }" modal>

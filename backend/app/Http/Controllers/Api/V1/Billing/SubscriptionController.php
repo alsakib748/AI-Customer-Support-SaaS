@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1\Billing;
 use App\Events\Billing\SubscriptionCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Billing\CancelSubscriptionRequest;
+use App\Http\Requests\Billing\CheckoutRequest;
 use App\Http\Resources\Billing\SubscriptionResource;
 use App\Models\Coupon;
+use App\Services\Billing\BillingService;
 use App\Services\Billing\PlanService;
 use App\Services\Billing\SubscriptionService;
 use Illuminate\Http\Request;
@@ -448,4 +450,56 @@ class SubscriptionController extends Controller
             ], 500);
         }
     }
+
+    public function checkout(CheckoutRequest $request, BillingService $billing)
+    {
+
+        \Log::info('Checkout request received', [
+            'tenant_id' => optional(app('current_tenant'))->id,
+            'payload'   => $request->all(),
+        ]);
+
+        $tenant   = app('current_tenant');
+        $plan     = \App\Models\Plan::on('central')->findOrFail($request->integer('plan_id'));
+        $cycle    = $request->input('billing_cycle', 'monthly');
+        $provider = $request->input('provider', config('payment.default'));
+
+        try {
+            $result = $billing->createCheckout($tenant, $plan, $cycle, $provider);
+
+            $subscription = $this->service->createPendingSubscription(
+                $tenant,
+                $plan,
+                $cycle,
+                $provider,
+                $result['provider_subscription_id'] ?? null,
+                $result['session_id'] ?? null,
+            );
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'subscription_id' => $subscription->id,
+                    'checkout_url'    => $result['checkout_url'],
+                    'session_id'      => $result['session_id'] ?? null,
+                    'provider'        => $provider,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Checkout failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function providers()
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => app(\App\Payments\PaymentGatewayManager::class)->availableProviders(),
+        ]);
+    }
+
 }

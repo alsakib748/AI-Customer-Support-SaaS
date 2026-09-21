@@ -322,6 +322,28 @@ class BillingService {
     getAdminTenantSummary(tenantId) {
         return api.get(`/admin/billing/tenants/${tenantId}`);
     }
+
+    getProviders() {
+        return api.get('/subscription/providers');
+    }
+
+    // Admin refund
+    refundPayment(paymentId, data) {
+        return api.post(`/admin/billing/payments/${paymentId}/refund`, data);
+    }
+
+    // Admin plan provider prices
+    getPlanProviderPrices(planId) {
+        return api.get(`/admin/billing/plans/${planId}/prices`);
+    }
+
+    createPlanProviderPrice(planId, data) {
+        return api.post(`/admin/billing/plans/${planId}/prices`, data);
+    }
+
+    deletePlanProviderPrice(priceId) {
+        return api.delete(`/admin/billing/prices/${priceId}`);
+    }
 }
 
 export default new BillingService();

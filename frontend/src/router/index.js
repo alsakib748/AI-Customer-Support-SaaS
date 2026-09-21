@@ -421,6 +421,24 @@ const router = createRouter({
                     component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Analytics' }
                 },
+                {
+                    path: '/billing/checkout/:planId',
+                    name: 'BillingCheckout',
+                    component: () => import('@/views/billing/Checkout.vue'),
+                    meta: { requiresAuth: true, title: 'Checkout' }
+                },
+                {
+                    path: '/billing/success',
+                    name: 'BillingSuccess',
+                    component: () => import('@/views/billing/CheckoutSuccess.vue'),
+                    meta: { requiresAuth: true, title: 'Payment Successful' }
+                },
+                {
+                    path: '/admin/billing/plans/:id/prices',
+                    name: 'AdminBillingPlanPrices',
+                    component: () => import('@/views/admin/billing/PlanProviderPrices.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true }
+                },
 
                 {
                     path: '/uikit/formlayout',

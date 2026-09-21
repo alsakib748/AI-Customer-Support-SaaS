@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use App\Models\CouponRedemption;
@@ -62,20 +61,30 @@ class Subscription extends Model
         'stripe_customer_id',
         'paypal_subscription_id',
         'metadata',
+        'provider',
+        'provider_customer_id',
+        'provider_subscription_id',
+        'provider_price_id',
+        'current_period_starts_at',
+        'current_period_ends_at',
+        'cancel_at_period_end',
     ];
 
     protected $casts = [
-        'trial_starts_at' => 'datetime',
-        'trial_ends_at' => 'datetime',
-        'starts_at' => 'datetime',
-        'ends_at' => 'datetime',
-        'cancelled_at' => 'datetime',
-        'paused_at' => 'datetime',
-        'resumed_at' => 'datetime',
-        'next_billing_at' => 'datetime',
-        'last_billing_at' => 'datetime',
-        'auto_renew' => 'boolean',
-        'metadata' => 'array',
+        'trial_starts_at'          => 'datetime',
+        'trial_ends_at'            => 'datetime',
+        'starts_at'                => 'datetime',
+        'ends_at'                  => 'datetime',
+        'cancelled_at'             => 'datetime',
+        'paused_at'                => 'datetime',
+        'resumed_at'               => 'datetime',
+        'next_billing_at'          => 'datetime',
+        'last_billing_at'          => 'datetime',
+        'auto_renew'               => 'boolean',
+        'metadata'                 => 'array',
+        'current_period_starts_at' => 'datetime',
+        'current_period_ends_at'   => 'datetime',
+        'cancel_at_period_end'     => 'boolean',
     ];
 
     protected $appends = [
@@ -166,12 +175,12 @@ class Subscription extends Model
     public function getStatusLabelAttribute(): string
     {
         $labels = [
-            'trialing' => 'Trial',
-            'active' => 'Active',
-            'past_due' => 'Past Due',
+            'trialing'  => 'Trial',
+            'active'    => 'Active',
+            'past_due'  => 'Past Due',
             'cancelled' => 'Cancelled',
-            'expired' => 'Expired',
-            'paused' => 'Paused',
+            'expired'   => 'Expired',
+            'paused'    => 'Paused',
         ];
         return $labels[$this->status] ?? ucfirst($this->status);
     }
@@ -179,12 +188,12 @@ class Subscription extends Model
     public function getStatusColorAttribute(): string
     {
         $colors = [
-            'trialing' => 'info',
-            'active' => 'success',
-            'past_due' => 'warning',
+            'trialing'  => 'info',
+            'active'    => 'success',
+            'past_due'  => 'warning',
             'cancelled' => 'danger',
-            'expired' => 'danger',
-            'paused' => 'secondary',
+            'expired'   => 'danger',
+            'paused'    => 'secondary',
         ];
         return $colors[$this->status] ?? 'secondary';
     }
@@ -213,13 +222,13 @@ class Subscription extends Model
     public function getIsOnTrialAttribute(): bool
     {
         return $this->is_trialing
-            && $this->trial_ends_at
-            && $this->trial_ends_at->isFuture();
+        && $this->trial_ends_at
+        && $this->trial_ends_at->isFuture();
     }
 
     public function getDaysRemainingAttribute(): ?int
     {
-        if (!$this->ends_at) {
+        if (! $this->ends_at) {
             return null;
         }
         return max(0, now()->diffInDays($this->ends_at, false));
@@ -227,7 +236,7 @@ class Subscription extends Model
 
     public function getTrialDaysRemainingAttribute(): ?int
     {
-        if (!$this->trial_ends_at) {
+        if (! $this->trial_ends_at) {
             return null;
         }
         return max(0, now()->diffInDays($this->trial_ends_at, false));
@@ -236,10 +245,10 @@ class Subscription extends Model
     public function getUsagePercentageAttribute(): array
     {
         return [
-            'ai' => $this->ai_limit > 0 ? round(($this->ai_used / $this->ai_limit) * 100, 1) : 0,
-            'agents' => $this->agents_limit > 0 ? round(($this->agents_used / $this->agents_limit) * 100, 1) : 0,
-            'documents' => $this->documents_limit > 0 ? round(($this->documents_used / $this->documents_limit) * 100, 1) : 0,
-            'storage' => $this->storage_limit > 0 ? round(($this->storage_used / $this->storage_limit) * 100, 1) : 0,
+            'ai'            => $this->ai_limit > 0 ? round(($this->ai_used / $this->ai_limit) * 100, 1) : 0,
+            'agents'        => $this->agents_limit > 0 ? round(($this->agents_used / $this->agents_limit) * 100, 1) : 0,
+            'documents'     => $this->documents_limit > 0 ? round(($this->documents_used / $this->documents_limit) * 100, 1) : 0,
+            'storage'       => $this->storage_limit > 0 ? round(($this->storage_used / $this->storage_limit) * 100, 1) : 0,
             'conversations' => $this->conversations_limit > 0 ? round(($this->conversations_used / $this->conversations_limit) * 100, 1) : 0,
         ];
     }
@@ -326,16 +335,16 @@ class Subscription extends Model
 
     public function canCancel(): bool
     {
-        return !$this->is_cancelled && $this->status !== 'expired';
+        return ! $this->is_cancelled && $this->status !== 'expired';
     }
 
     public function cancel(bool $immediately = false): self
     {
         $this->update([
-            'status' => $immediately ? 'cancelled' : $this->status,
+            'status'       => $immediately ? 'cancelled' : $this->status,
             'cancelled_at' => now(),
-            'auto_renew' => false,
-            'ends_at' => $immediately ? now() : $this->ends_at,
+            'auto_renew'   => false,
+            'ends_at'      => $immediately ? now() : $this->ends_at,
         ]);
 
         return $this;
@@ -344,10 +353,10 @@ class Subscription extends Model
     public function resume(): self
     {
         $this->update([
-            'status' => 'active',
+            'status'       => 'active',
             'cancelled_at' => null,
-            'auto_renew' => true,
-            'resumed_at' => now(),
+            'auto_renew'   => true,
+            'resumed_at'   => now(),
         ]);
 
         return $this;
@@ -356,8 +365,8 @@ class Subscription extends Model
     public function pause(): self
     {
         $this->update([
-            'status' => 'paused',
-            'paused_at' => now(),
+            'status'     => 'paused',
+            'paused_at'  => now(),
             'auto_renew' => false,
         ]);
 
@@ -367,7 +376,7 @@ class Subscription extends Model
     public function expire(): self
     {
         $this->update([
-            'status' => 'expired',
+            'status'  => 'expired',
             'ends_at' => now(),
         ]);
 
@@ -377,7 +386,7 @@ class Subscription extends Model
     public function activate(): self
     {
         $this->update([
-            'status' => 'active',
+            'status'    => 'active',
             'starts_at' => $this->starts_at ?? now(),
         ]);
 
@@ -393,12 +402,12 @@ class Subscription extends Model
     public function renew(): self
     {
         $this->update([
-            'status' => 'active',
+            'status'          => 'active',
             'last_billing_at' => now(),
             'next_billing_at' => $this->billing_cycle === 'yearly'
                 ? now()->addYear()
                 : now()->addMonth(),
-            'ends_at' => $this->billing_cycle === 'yearly'
+            'ends_at'         => $this->billing_cycle === 'yearly'
                 ? now()->addYear()
                 : now()->addMonth(),
         ]);
@@ -408,10 +417,10 @@ class Subscription extends Model
 
     public function hasReachedLimit(string $type): bool
     {
-        $usedField = "{$type}_used";
+        $usedField  = "{$type}_used";
         $limitField = "{$type}_limit";
 
-        if (!isset($this->$limitField) || $this->$limitField <= 0) {
+        if (! isset($this->$limitField) || $this->$limitField <= 0) {
             return false; // Unlimited
         }
 
@@ -443,7 +452,7 @@ class Subscription extends Model
     public function resetUsage(): self
     {
         $this->update([
-            'ai_used' => 0,
+            'ai_used'            => 0,
             'conversations_used' => 0,
         ]);
 
@@ -455,14 +464,14 @@ class Subscription extends Model
         $cycle = $cycle ?? $this->billing_cycle;
 
         $this->update([
-            'plan_id' => $plan->id,
-            'billing_cycle' => $cycle,
-            'ai_limit' => $plan->getLimit('ai_messages', 1000),
-            'agents_limit' => $plan->getLimit('agents', 5),
-            'documents_limit' => $plan->getLimit('documents', 100),
-            'storage_limit' => $plan->getLimit('storage_bytes', 1073741824),
+            'plan_id'             => $plan->id,
+            'billing_cycle'       => $cycle,
+            'ai_limit'            => $plan->getLimit('ai_messages', 1000),
+            'agents_limit'        => $plan->getLimit('agents', 5),
+            'documents_limit'     => $plan->getLimit('documents', 100),
+            'storage_limit'       => $plan->getLimit('storage_bytes', 1073741824),
             'conversations_limit' => $plan->getLimit('conversations', 500),
-            'next_billing_at' => $cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
+            'next_billing_at'     => $cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
         ]);
 
         return $this;

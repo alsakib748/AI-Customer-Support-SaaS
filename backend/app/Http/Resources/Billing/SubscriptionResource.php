@@ -15,84 +15,88 @@ class SubscriptionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'uuid' => $this->uuid,
-            'tenant_id' => $this->tenant_id,
-            'plan_id' => $this->plan_id,
-            'plan' => $this->plan ? new PlanResource($this->plan) : null,
-            'status' => $this->status,
-            'status_label' => $this->status_label,
-            'status_color' => $this->status_color,
-            'billing_cycle' => $this->billing_cycle,
-            'trial_starts_at' => $this->trial_starts_at?->toISOString(),
-            'trial_ends_at' => $this->trial_ends_at?->toISOString(),
-            'starts_at' => $this->starts_at?->toISOString(),
-            'ends_at' => $this->ends_at?->toISOString(),
-            'cancelled_at' => $this->cancelled_at?->toISOString(),
-            'paused_at' => $this->paused_at?->toISOString(),
-            'auto_renew' => $this->auto_renew,
-            'next_billing_at' => $this->next_billing_at?->toISOString(),
-            'last_billing_at' => $this->last_billing_at?->toISOString(),
-            'is_active' => $this->is_active,
-            'is_trialing' => $this->is_trialing,
-            'is_cancelled' => $this->is_cancelled,
-            'is_expired' => $this->is_expired,
-            'is_on_trial' => $this->is_on_trial,
-            'days_remaining' => $this->days_remaining,
-            'trial_days_remaining' => $this->trial_days_remaining,
-            'items' => SubscriptionItemResource::collection($this->whenLoaded('items')),
-            'additional_charges' => $this->additional_charges,
-            'grand_total' => $this->grand_total,
-            'usage' => [
-                'ai' => [
-                    'used' => $this->ai_used,
-                    'limit' => $this->ai_limit,
-                    'percentage' => $this->usage_percentage['ai'],
-                ],
-                'agents' => [
-                    'used' => $this->agents_used,
-                    'limit' => $this->agents_limit,
-                    'percentage' => $this->usage_percentage['agents'],
-                ],
-                'documents' => [
-                    'used' => $this->documents_used,
-                    'limit' => $this->documents_limit,
-                    'percentage' => $this->usage_percentage['documents'],
-                ],
-                'storage' => [
-                    'used' => $this->storage_used,
-                    'limit' => $this->storage_limit,
-                    'percentage' => $this->usage_percentage['storage'],
-                ],
-                'conversations' => [
-                    'used' => $this->conversations_used,
-                    'limit' => $this->conversations_limit,
-                    'percentage' => $this->usage_percentage['conversations'],
-                ],
-            ],
-            'metadata' => $this->metadata,
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'id'                        => $this->id,
+            'uuid'                      => $this->uuid,
+            'tenant_id'                 => $this->tenant_id,
+            'plan_id'                   => $this->plan_id,
+            'status'                    => $this->status,
+            'status_label'              => $this->status_label,
+            'status_color'              => $this->status_color,
+            'billing_cycle'             => $this->billing_cycle,
+            'provider'                  => $this->provider,
+            'provider_customer_id'      => $this->provider_customer_id,
+            'provider_subscription_id'  => $this->provider_subscription_id,
+            'provider_price_id'         => $this->provider_price_id,
+            'trial_starts_at'           => optional($this->trial_starts_at)->toISOString(),
+            'trial_ends_at'             => optional($this->trial_ends_at)->toISOString(),
+            'starts_at'                 => optional($this->starts_at)->toISOString(),
+            'ends_at'                   => optional($this->ends_at)->toISOString(),
+            'current_period_starts_at'  => optional($this->current_period_starts_at)->toISOString(),
+            'current_period_ends_at'    => optional($this->current_period_ends_at)->toISOString(),
+            'next_billing_at'           => optional($this->next_billing_at)->toISOString(),
+            'cancelled_at'              => optional($this->cancelled_at)->toISOString(),
+            'auto_renew'                => (bool) $this->auto_renew,
+            'cancel_at_period_end'      => (bool) $this->cancel_at_period_end,
+            'is_active'                 => $this->is_active,
+            'is_trialing'               => $this->is_trialing,
+            'is_cancelled'              => $this->is_cancelled,
+            'is_expired'                => $this->is_expired,
+            'is_on_trial'               => $this->is_on_trial,
+            'days_remaining'            => $this->days_remaining,
+            'trial_days_remaining'      => $this->trial_days_remaining,
+            'usage'                     => $this->formatUsage(),
+            'plan'                      => new PlanResource($this->whenLoaded('plan')),
+            'metadata'                  => $this->metadata,
+            'created_at'                => optional($this->created_at)->toISOString(),
+            'updated_at'                => optional($this->updated_at)->toISOString(),
         ];
     }
 
-    protected function formatUsage(string $key, string $fieldPrefix): array
+    protected function formatUsage(): array
     {
-        $used = (int) ($this->{"{$fieldPrefix}_used"} ?? 0);
-        $limit = (int) ($this->{"{$fieldPrefix}_limit"} ?? 0);
+        $pct = fn ($used, $limit) => $limit > 0 ? round((($used ?? 0) / $limit) * 100, 1) : 0;
 
         return [
-            'used' => $used,
-            'limit' => $limit,
-            'remaining' => $limit > 0 ? max(0, $limit - $used) : null,
-            'percentage' => $limit > 0 ? round(($used / $limit) * 100, 1) : 0,
-            'unlimited' => $limit <= 0,
+            'ai'            => $this->usageBlock('ai_requests', $pct),
+            'ai_tokens'     => $this->usageBlock('ai_tokens', $pct),
+            'agents'        => $this->usageBlock('agents', $pct),
+            'customers'     => $this->usageBlock('customers', $pct),
+            'widgets'       => $this->usageBlock('widgets', $pct),
+            'documents'     => $this->usageBlock('documents', $pct),
+            'kb_articles'   => $this->usageBlock('kb_articles', $pct),
+            'conversations' => $this->usageBlock('conversations', $pct),
+            'storage'       => [
+                'used'          => (int) $this->storage_used,
+                'limit'         => (int) $this->storage_limit,
+                'percentage'    => $pct($this->storage_used, $this->storage_limit),
+                'formatted_used'=> $this->formatBytes((int) $this->storage_used),
+                'formatted_limit'=> $this->storage_limit > 0
+                    ? $this->formatBytes((int) $this->storage_limit) : 'Unlimited',
+            ],
         ];
     }
 
-    protected function formatStorage(string $fieldPrefix): array
+    protected function usageBlock(string $prefix, callable $pct): array
     {
-        return $this->formatUsage($fieldPrefix, 'storage');
+        $used = (int) ($this->{"{$prefix}_used"} ?? 0);
+        $limit = (int) ($this->{"{$prefix}_limit"} ?? 0);
+
+        return [
+            'used'       => $used,
+            'limit'      => $limit,
+            'remaining'  => $limit > 0 ? max(0, $limit - $used) : null,
+            'percentage' => $pct($used, $limit),
+            'unlimited'  => $limit <= 0,
+        ];
+    }
+
+    protected function formatBytes(int $bytes): string
+    {
+        if ($bytes <= 0) return '0 B';
+        $k = 1024;
+        $sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = (int) floor(log($bytes, $k));
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
 
 }

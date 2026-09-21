@@ -1,12 +1,40 @@
 <script setup>
-import { reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useBillingStore } from '@/stores/billing';
+import billingService from '@/services/billingService';
+import { toast } from 'vue3-toastify';
 
 const router = useRouter();
 const billingStore = useBillingStore();
 
+const showRefundDialog = ref(false);
+const refunding = ref(false);
+const selectedPayment = ref(null);
+const refundForm = reactive({ amount: null, reason: '' });
+
 const filters = reactive({ status: null, provider: null, per_page: 20 });
+
+const openRefund = (payment) => {
+    selectedPayment.value = payment;
+    refundForm.amount = Number(payment.amount) - Number(payment.refunded_amount || 0);
+    refundForm.reason = '';
+    showRefundDialog.value = true;
+};
+
+const submitRefund = async () => {
+    refunding.value = true;
+    try {
+        await billingService.refundPayment(selectedPayment.value.id, refundForm);
+        toast.success('Refund processed');
+        showRefundDialog.value = false;
+        load();
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Refund failed');
+    } finally {
+        refunding.value = false;
+    }
+};
 
 const statusOptions = [
     { label: 'All', value: null },
@@ -53,6 +81,7 @@ onMounted(load);
             </div>
             <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
                 @click="router.push('/admin/billing')" />
+            <Button icon="pi pi-undo" severity="warning" text rounded @click="openRefund(data)" tooltip="Refund" />
         </div>
 
         <div class="mb-4 flex flex-wrap gap-3 items-center">
@@ -83,5 +112,27 @@ onMounted(load);
                 <template #body="{ data }">{{ formatDate(data.paid_at) }}</template>
             </Column>
         </DataTable>
+
+        <Dialog v-model:visible="showRefundDialog" header="Refund Payment" :style="{ width: '450px' }" modal>
+            <div class="space-y-4">
+                <p>Refund the full or partial amount for this payment?</p>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium">Amount</label>
+                    <InputNumber v-model="refundForm.amount" mode="currency" currency="USD" />
+                    <small class="text-surface-500">
+                        Refundable: {{ formatCurrency(selectedPayment?.amount - selectedPayment?.refunded_amount) }}
+                    </small>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium">Reason (optional)</label>
+                    <Textarea v-model="refundForm.reason" rows="2" />
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Cancel" severity="secondary" outlined @click="showRefundDialog = false" />
+                <Button label="Refund" severity="warning" :loading="refunding" @click="submitRefund" />
+            </template>
+        </Dialog>
+
     </div>
 </template>

@@ -842,6 +842,7 @@ export const useBillingStore = defineStore('billing', () => {
     const currentPlan = ref(null);
     const subscription = ref(null);
     const usageSummary = ref(null);
+    const providers = ref([]);
 
     const invoices = ref([]);
     const payments = ref([]);
@@ -1468,6 +1469,19 @@ export const useBillingStore = defineStore('billing', () => {
             throw error;
         } finally {
             loading.value = false;
+        }
+    };
+
+    const fetchProviders = async () => {
+        try {
+            const res = await billingService.getProviders();
+            if (res.data.success) {
+                providers.value = res.data.data;
+                return providers.value;
+            }
+        } catch (error) {
+            console.error('Failed to fetch providers:', error);
+            return [];
         }
     };
 

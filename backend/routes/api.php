@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
+use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
+use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Billing\InvoiceController;
 use App\Http\Controllers\Api\V1\Billing\PaymentController;
 use App\Http\Controllers\Api\V1\Billing\PlanController;
+use App\Http\Controllers\Api\V1\Billing\ProviderController;
 use App\Http\Controllers\Api\V1\Billing\SubscriptionController;
 use App\Http\Controllers\Api\V1\Billing\WebhookController;
 use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
@@ -83,13 +86,11 @@ Route::prefix('v1/plans')->group(function () {
 });
 
 // todo; Webhooks
-Route::prefix('webhooks')->group(function () {
-    // Route::post('/stripe', [WebhookController::class, 'stripe'])
-    //     ->withoutMiddleware(['jwt.auth', 'tenant.aware']);
-    // Route::post('/paypal', [WebhookController::class, 'paypal'])
-    //     ->withoutMiddleware(['jwt.auth', 'tenant.aware']);
-    Route::post('/stripe', [WebhookController::class, 'stripe']);
-    Route::post('/paypal', [WebhookController::class, 'paypal']);
+Route::prefix('v1/billing/webhooks')->group(function () {
+    Route::post('/stripe', [WebhookController::class, 'handle'])
+        ->defaults('provider', 'stripe');
+    Route::post('/paypal', [WebhookController::class, 'handle'])
+        ->defaults('provider', 'paypal');
 });
 
 Route::prefix('v1')->group(function () {
@@ -390,6 +391,7 @@ Route::prefix('v1')->group(function () {
 
             // Checkout
             Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+            Route::get('/providers', [ProviderController::class, 'index']);
         });
 
         //todo; Invoice Routes
@@ -467,10 +469,13 @@ Route::prefix('v1/admin/billing')
     ->middleware(['jwt.auth', 'super.admin'])
     ->group(function () {
         // Plans
-        Route::get('/plans', [AdminBillingController::class, 'plans']);
-        Route::post('/plans', [AdminBillingController::class, 'storePlan']);
-        Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
-        Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
+        // Route::get('/plans', [AdminBillingController::class, 'plans']);
+        // Route::post('/plans', [AdminBillingController::class, 'storePlan']);
+        // Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
+        // Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
+        Route::get   ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'index']);
+        Route::post  ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'store']);
+        Route::delete('/prices/{price}',[PlanProviderPriceController::class, 'destroy']);
 
         // Subscriptions
         Route::get('/subscriptions', [AdminBillingController::class, 'subscriptions']);
@@ -482,6 +487,7 @@ Route::prefix('v1/admin/billing')
 
         // Payments
         Route::get('/payments', [AdminBillingController::class, 'payments']);
+        Route::post('/payments/{payment}/refund', [PaymentRefundController::class, 'refund']);
 
         // Analytics
         Route::get('/analytics', [AdminBillingController::class, 'analytics']);

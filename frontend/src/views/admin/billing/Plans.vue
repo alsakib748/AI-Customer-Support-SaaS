@@ -35,6 +35,8 @@ const formatCurrency = (amount, currency = 'USD') =>
                 <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
                     @click="router.push('/admin/billing')" />
                 <Button label="Create Plan" icon="pi pi-plus" @click="router.push('/admin/billing/plans/create')" />
+                <Button icon="pi pi-dollar" severity="success" text rounded
+                    @click="$router.push(`/admin/billing/plans/${data.id}/prices`)" />
             </div>
         </div>
 

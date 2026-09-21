@@ -40,7 +40,9 @@
     36 => 'App\\Providers\\AppServiceProvider',
     37 => 'App\\Providers\\BillingServiceProvider',
     38 => 'App\\Providers\\EventServiceProvider',
-    39 => 'App\\Providers\\TenancyServiceProvider',
+    39 => 'App\\Providers\\PaymentServiceProvider',
+    40 => 'App\\Providers\\TenancyServiceProvider',
+    41 => 'App\\Providers\\PaymentServiceProvider',
   ),
   'eager' => 
   array (
@@ -67,7 +69,9 @@
     20 => 'App\\Providers\\AppServiceProvider',
     21 => 'App\\Providers\\BillingServiceProvider',
     22 => 'App\\Providers\\EventServiceProvider',
-    23 => 'App\\Providers\\TenancyServiceProvider',
+    23 => 'App\\Providers\\PaymentServiceProvider',
+    24 => 'App\\Providers\\TenancyServiceProvider',
+    25 => 'App\\Providers\\PaymentServiceProvider',
   ),
   'deferred' => 
   array (

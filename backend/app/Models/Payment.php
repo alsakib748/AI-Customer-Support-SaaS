@@ -34,6 +34,9 @@ class Payment extends Model
         'metadata',
         'failure_reason',
         'paid_at',
+        'provider_payment_id',
+'provider_invoice_id',
+'provider_subscription_id',
     ];
 
     protected $casts = [

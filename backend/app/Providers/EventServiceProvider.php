@@ -33,6 +33,9 @@ class EventServiceProvider extends ServiceProvider
         \App\Events\Billing\PaymentCompleted::class => [
             \App\Listeners\Billing\SendPaymentCompletedNotification::class,
         ],
+        \App\Events\Billing\PaymentSucceeded::class => [
+    \App\Listeners\Billing\SendPaymentSucceededNotification::class,
+],
         \App\Events\Billing\PaymentFailed::class => [
             \App\Listeners\Billing\SendPaymentFailedNotification::class,
         ],

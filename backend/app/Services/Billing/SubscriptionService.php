@@ -536,4 +536,50 @@ class SubscriptionService
         ]);
     }
 
+    public function createPendingSubscription(
+        Tenant $tenant,
+        Plan $plan,
+        string $billingCycle,
+        string $provider,
+        ?string $providerSubscriptionId = null,
+        ?string $sessionId = null,
+    ): Subscription {
+        return DB::connection('central')->transaction(function () use (
+            $tenant, $plan, $billingCycle, $provider, $providerSubscriptionId, $sessionId
+        ) {
+            return Subscription::create([
+                'uuid'                     => (string) \Illuminate\Support\Str::uuid(),
+                'tenant_id'                => $tenant->id,
+                'plan_id'                  => $plan->id,
+                'provider'                 => $provider,
+                'provider_subscription_id' => $providerSubscriptionId,
+                'status'                   => 'pending',
+                'billing_cycle'            => $billingCycle,
+                'starts_at'                => now(),
+                'auto_renew'               => true,
+                'metadata'                 => [
+                    'checkout_session_id' => $sessionId,
+                    'checkout_started_at' => now()->toISOString(),
+                ],
+            ]);
+        });
+    }
+
+    public function activate(int $subscriptionId): ?Subscription
+    {
+        $sub = Subscription::find($subscriptionId);
+
+        if (! $sub) {
+            return null;
+        }
+
+        $sub->update([
+            'status'                   => 'active',
+            'current_period_starts_at' => now(),
+            'current_period_ends_at'   => $sub->billing_cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
+        ]);
+
+        return $sub->fresh();
+    }
+
 }

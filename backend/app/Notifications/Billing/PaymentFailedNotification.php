@@ -40,7 +40,7 @@ class PaymentFailedNotification extends Notification
         return (new MailMessage)
             ->subject('Payment Failed - Action Required')
             ->greeting('Hello ' . $notifiable->first_name . '!')
-            ->line('We were unable to process your payment.')
+            ->line('We could not process your payment.')
             ->line('**Invoice:** ' . $this->invoice->invoice_number)
             ->line('**Amount:** ' . $this->invoice->formatted_total)
             ->line('**Reason:** ' . $this->reason)

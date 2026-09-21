@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\Billing\ProcessBillingWebhookJob;
 use App\Jobs\Billing\ProcessPaymentWebhook;
-use App\Services\Billing\PaymentGatewayManager;
+use App\Models\PaymentWebhookEvent;
+use App\Payments\PaymentGatewayManager;
 use App\Services\Billing\StripeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -20,45 +22,45 @@ class WebhookController extends Controller
 
     public function handle(Request $request, string $provider)
     {
+        if (!$this->gateways->has($provider)) {
+            return response()->json(['error' => 'Unsupported provider'], 404);
+        }
+
         $payload = $request->getContent();
-        $signature = $this->extractSignature($request, $provider);
+        $headers = $request->headers->all();
+        $gateway = $this->gateways->driver($provider);
 
-        try {
-            $gateway = $this->gateways->gateway($provider);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => 'Unknown provider.'], 404);
-        }
-
-        if (!$gateway->verifyWebhook($payload, $signature)) {
+        if (!$gateway->verifyWebhook($payload, $headers)) {
             Log::warning('Webhook signature verification failed', ['provider' => $provider]);
-            return response()->json(['success' => false, 'message' => 'Invalid signature.'], 400);
+            return response()->json(['error' => 'Invalid signature'], 400);
         }
 
-        $event = json_decode($payload, true) ?: [];
-        $eventId = $this->extractEventId($event, $provider);
-        $eventType = $this->extractEventType($event, $provider);
+        $event = $gateway->parseWebhook($payload, $headers);
 
-        // IDEMPOTENCY: unique (provider, event_id)
+        // Idempotency
         $record = PaymentWebhookEvent::firstOrCreate(
-            ['provider' => $provider, 'event_id' => $eventId],
             [
-                'event_type' => $eventType,
-                'status' => 'received',
-                'payload' => $event,
+                'provider'          => $provider,
+                'provider_event_id' => $event['provider_event_id'],
+            ],
+            [
+                'event_type'         => $event['type'],
+                'status'             => 'received',
+                'payload'            => $event['raw'],
+                'normalized_payload' => $event,
             ]
         );
 
-        if (!$record->wasRecentlyCreated && $record->processed_at) {
-            Log::info('Webhook already processed — ignoring', [
+        if ($record->wasRecentlyCreated || $record->status === 'received') {
+            ProcessBillingWebhookJob::dispatch($record->id);
+        } else {
+            Log::info('Duplicate webhook ignored', [
                 'provider' => $provider,
-                'event_id' => $eventId,
+                'event_id' => $event['provider_event_id'],
             ]);
-            return response()->json(['received' => true, 'duplicate' => true]);
         }
 
-        // Dispatch for async processing
-        \App\Jobs\Billing\ProcessPaymentWebhook::dispatch($provider, $event, $record->id);
-
+        // Acknowledge quickly
         return response()->json(['received' => true]);
     }
 
