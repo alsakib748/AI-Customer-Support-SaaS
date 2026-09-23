@@ -31,7 +31,7 @@ const filters = reactive({
     visibility: null,
     sort: 'created_at',
     direction: 'desc',
-    per_page: 20,
+    per_page: 20
 });
 
 const categoryForm = reactive({
@@ -39,7 +39,7 @@ const categoryForm = reactive({
     name: '',
     description: '',
     status: 'active',
-    sort_order: 0,
+    sort_order: 0
 });
 
 // ============================================
@@ -63,32 +63,27 @@ const statusOptions = [
     { label: 'All', value: null },
     { label: 'Draft', value: 'draft' },
     { label: 'Published', value: 'published' },
-    { label: 'Archived', value: 'archived' },
+    { label: 'Archived', value: 'archived' }
 ];
 
 const visibilityOptions = [
     { label: 'All', value: null },
     { label: 'AI Only', value: 'ai' },
     { label: 'Public', value: 'public' },
-    { label: 'Internal', value: 'internal' },
+    { label: 'Internal', value: 'internal' }
 ];
 
 const categoryStatusOptions = [
     { label: 'Active', value: 'active' },
-    { label: 'Inactive', value: 'inactive' },
+    { label: 'Inactive', value: 'inactive' }
 ];
 
 // ============================================
 // METHODS
 // ============================================
 
-
 const loadData = async () => {
-    await Promise.all([
-        knowledgeBaseStore.fetchArticles({ ...filters }),
-        knowledgeBaseStore.fetchCategories({ search: categorySearch.value }),
-        knowledgeBaseStore.fetchStatistics(),
-    ]);
+    await Promise.all([knowledgeBaseStore.fetchArticles({ ...filters }), knowledgeBaseStore.fetchCategories({ search: categorySearch.value }), knowledgeBaseStore.fetchStatistics()]);
 };
 
 const refreshData = () => {
@@ -107,7 +102,7 @@ const clearFilters = () => {
         visibility: null,
         sort: 'created_at',
         direction: 'desc',
-        per_page: 20,
+        per_page: 20
     });
     selectedCategoryId.value = null;
     applyFilters();
@@ -209,7 +204,7 @@ const handleCategorySubmit = async () => {
             name: categoryForm.name,
             description: categoryForm.description,
             status: categoryForm.status,
-            sort_order: categoryForm.sort_order,
+            sort_order: categoryForm.sort_order
         };
 
         if (categoryFormMode.value === 'create') {
@@ -243,7 +238,7 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
+        day: 'numeric'
     });
 };
 
@@ -259,9 +254,12 @@ onMounted(() => {
     loadData();
 });
 
-watch(() => filters.search, () => {
-    applyFilters();
-});
+watch(
+    () => filters.search,
+    () => {
+        applyFilters();
+    }
+);
 </script>
 <template>
     <div class="p-6">
@@ -272,10 +270,8 @@ watch(() => filters.search, () => {
                 <p class="text-surface-600 dark:text-surface-400">Manage support articles and documentation</p>
             </div>
             <div class="flex gap-3">
-                <Button v-if="canCreateKnowledge" label="New Article" icon="pi pi-plus" severity="primary"
-                    @click="router.push('/knowledge-base/articles/create')" />
-                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
-                    :loading="loading" />
+                <Button v-if="canCreateKnowledge" label="New Article" icon="pi pi-plus" severity="primary" @click="router.push('/knowledge-base/articles/create')" />
+                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
 
@@ -321,36 +317,33 @@ watch(() => filters.search, () => {
                 <div class="bg-surface-0 dark:bg-surface-900 rounded-lg shadow p-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-surface-900 dark:text-surface-0">Categories</h3>
-                        <Button v-if="canCreateKnowledge" icon="pi pi-plus" severity="primary" text rounded size="small"
-                            @click="showCategoryDialog = true" tooltip="New Category" />
+                        <Button v-if="canCreateKnowledge" icon="pi pi-plus" severity="primary" text rounded size="small" @click="showCategoryDialog = true" tooltip="New Category" />
                     </div>
 
                     <div class="mb-3">
-                        <InputText v-model="categorySearch" placeholder="Search categories..." class="w-full"
-                            size="small" @input="loadCategories" />
+                        <InputText v-model="categorySearch" placeholder="Search categories..." class="w-full" size="small" @input="loadCategories" />
                     </div>
 
                     <div class="space-y-1 max-h-[400px] overflow-y-auto">
-                        <div v-for="category in categories" :key="category.id"
+                        <div
+                            v-for="category in categories"
+                            :key="category.id"
                             class="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                             :class="{ 'bg-primary-50 dark:bg-primary-950': selectedCategoryId === category.id }"
-                            @click="filterByCategory(category.id)">
+                            @click="filterByCategory(category.id)"
+                        >
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium">{{ category.name }}</span>
                                 <span class="text-xs text-surface-400">({{ category.articles_count }})</span>
                             </div>
                             <div class="flex items-center gap-1">
                                 <Tag :value="category.status_label" :severity="category.status_color" size="small" />
-                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="secondary" text rounded
-                                    size="small" @click.stop="editCategory(category)" />
-                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded
-                                    size="small" @click.stop="confirmDeleteCategory(category)" />
+                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="secondary" text rounded size="small" @click.stop="editCategory(category)" />
+                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded size="small" @click.stop="confirmDeleteCategory(category)" />
                             </div>
                         </div>
 
-                        <div v-if="!categories.length" class="text-center text-surface-400 text-sm py-4">
-                            No categories found
-                        </div>
+                        <div v-if="!categories.length" class="text-center text-surface-400 text-sm py-4">No categories found</div>
                     </div>
                 </div>
             </div>
@@ -360,25 +353,31 @@ watch(() => filters.search, () => {
                 <!-- Filters -->
                 <div class="mb-4 flex flex-wrap gap-3 items-center">
                     <div class="flex-1 min-w-[200px]">
-                        <InputText v-model="filters.search" placeholder="Search articles..." class="w-full"
-                            @input="applyFilters" />
+                        <InputText v-model="filters.search" placeholder="Search articles..." class="w-full" @input="applyFilters" />
                     </div>
                     <div class="w-40">
-                        <Select v-model="filters.status" :options="statusOptions" optionLabel="label"
-                            optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                        <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
                     </div>
                     <div class="w-40">
-                        <Select v-model="filters.visibility" :options="visibilityOptions" optionLabel="label"
-                            optionValue="value" placeholder="Visibility" class="w-full" @change="applyFilters"
-                            clearable />
+                        <Select v-model="filters.visibility" :options="visibilityOptions" optionLabel="label" optionValue="value" placeholder="Visibility" class="w-full" @change="applyFilters" clearable />
                     </div>
                     <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
                 </div>
 
                 <!-- Articles Table -->
-                <DataTable :value="articles" :loading="loading" paginator :rows="filters.per_page"
-                    :totalRecords="totalArticles" :lazy="true" @page="onPageChange" @sort="onSortChange" class="w-full"
-                    v-model:sortField="filters.sort" v-model:sortOrder="sortOrder">
+                <DataTable
+                    :value="articles"
+                    :loading="loading"
+                    paginator
+                    :rows="filters.per_page"
+                    :totalRecords="totalArticles"
+                    :lazy="true"
+                    @page="onPageChange"
+                    @sort="onSortChange"
+                    class="w-full"
+                    v-model:sortField="filters.sort"
+                    v-model:sortOrder="sortOrder"
+                >
                     <Column field="title" header="Title" sortable>
                         <template #body="{ data }">
                             <div>
@@ -421,19 +420,12 @@ watch(() => filters.search, () => {
                     <Column header="Actions" style="width: 250px">
                         <template #body="{ data }">
                             <div class="flex gap-1 flex-wrap">
-                                <Button icon="pi pi-eye" severity="info" text rounded @click="viewArticle(data)"
-                                    tooltip="View" />
-                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="warning" text rounded
-                                    @click="editArticle(data)" tooltip="Edit" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'published'" icon="pi pi-check"
-                                    severity="success" text rounded @click="publishArticle(data)" tooltip="Publish" />
-                                <Button v-if="canUpdateKnowledge && data.status === 'published'" icon="pi pi-times"
-                                    severity="secondary" text rounded @click="unpublishArticle(data)"
-                                    tooltip="Unpublish" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'archived'" icon="pi pi-folder"
-                                    severity="secondary" text rounded @click="archiveArticle(data)" tooltip="Archive" />
-                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded
-                                    @click="confirmDeleteArticle(data)" tooltip="Delete" />
+                                <Button icon="pi pi-eye" severity="info" text rounded @click="viewArticle(data)" tooltip="View" />
+                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="warning" text rounded @click="editArticle(data)" tooltip="Edit" />
+                                <Button v-if="canUpdateKnowledge && data.status !== 'published'" icon="pi pi-check" severity="success" text rounded @click="publishArticle(data)" tooltip="Publish" />
+                                <Button v-if="canUpdateKnowledge && data.status === 'published'" icon="pi pi-times" severity="secondary" text rounded @click="unpublishArticle(data)" tooltip="Unpublish" />
+                                <Button v-if="canUpdateKnowledge && data.status !== 'archived'" icon="pi pi-folder" severity="secondary" text rounded @click="archiveArticle(data)" tooltip="Archive" />
+                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded @click="confirmDeleteArticle(data)" tooltip="Delete" />
                             </div>
                         </template>
                     </Column>
@@ -442,14 +434,11 @@ watch(() => filters.search, () => {
         </div>
 
         <!-- Category Dialog -->
-        <Dialog v-model:visible="showCategoryDialog"
-            :header="categoryFormMode === 'create' ? 'New Category' : 'Edit Category'" :style="{ width: '500px' }"
-            modal>
+        <Dialog v-model:visible="showCategoryDialog" :header="categoryFormMode === 'create' ? 'New Category' : 'Edit Category'" :style="{ width: '500px' }" modal>
             <form @submit.prevent="handleCategorySubmit" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Name *</label>
-                    <InputText v-model="categoryForm.name" class="w-full"
-                        :class="{ 'p-invalid': getFieldError('name') }" placeholder="Category name" />
+                    <InputText v-model="categoryForm.name" class="w-full" :class="{ 'p-invalid': getFieldError('name') }" placeholder="Category name" />
                     <small v-if="getFieldError('name')" class="text-red-500">
                         {{ getFieldError('name') }}
                     </small>
@@ -457,14 +446,12 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Description</label>
-                    <Textarea v-model="categoryForm.description" class="w-full" rows="2"
-                        placeholder="Category description" />
+                    <Textarea v-model="categoryForm.description" class="w-full" rows="2" placeholder="Category description" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Status</label>
-                    <Select v-model="categoryForm.status" :options="categoryStatusOptions" optionLabel="label"
-                        optionValue="value" class="w-full" />
+                    <Select v-model="categoryForm.status" :options="categoryStatusOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div>
@@ -475,8 +462,7 @@ watch(() => filters.search, () => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showCategoryDialog = false" />
-                <Button :label="categoryFormMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary"
-                    :loading="saving" @click="handleCategorySubmit" />
+                <Button :label="categoryFormMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary" :loading="saving" @click="handleCategorySubmit" />
             </template>
         </Dialog>
 

@@ -35,7 +35,6 @@ onMounted(() => {
 });
 </script>
 
-
 <template>
     <div v-if="loading" class="flex justify-center py-12">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
@@ -46,8 +45,7 @@ onMounted(() => {
                 <h1 class="text-2xl font-bold">Customer Details</h1>
                 <p class="text-surface-600">View customer information and history</p>
             </div>
-            <Button icon="pi pi-arrow-left" label="Back" severity="secondary" outlined
-                @click="router.push('/customers')" />
+            <Button icon="pi pi-arrow-left" label="Back" severity="secondary" outlined @click="router.push('/customers')" />
         </div>
 
         <div class="bg-white dark:bg-surface-900 rounded-lg shadow">

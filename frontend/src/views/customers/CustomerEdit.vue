@@ -43,7 +43,6 @@ onMounted(() => {
 });
 </script>
 
-
 <template>
     <div v-if="loading" class="flex justify-center py-12">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>

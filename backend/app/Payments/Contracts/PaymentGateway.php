@@ -47,6 +47,16 @@ interface PaymentGateway
     public function getSubscription(string $providerSubscriptionId): array;
 
     /**
+     * Create a provider-side price/plan for a billing cycle (auto-provisioning).
+     */
+    public function createPlanPrice(array $data): array;
+
+    /**
+     * Fetch a checkout session's current state from the provider.
+     */
+    public function retrieveCheckoutSession(string $sessionId): array;
+
+    /**
      * Create a billing portal URL for the customer.
      */
     public function createBillingPortal(string $providerCustomerId, array $options = []): array;

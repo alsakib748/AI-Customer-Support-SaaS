@@ -13,12 +13,14 @@ const data = computed(() => store.agents);
 
 const workloadData = computed(() => ({
     labels: data.value?.workload?.labels || [],
-    datasets: [{
-        label: 'Open Conversations',
-        data: data.value?.workload?.values || [],
-        backgroundColor: '#4F46E5',
-        borderRadius: 6,
-    }],
+    datasets: [
+        {
+            label: 'Open Conversations',
+            data: data.value?.workload?.values || [],
+            backgroundColor: '#4F46E5',
+            borderRadius: 6
+        }
+    ]
 }));
 
 const barOptions = {
@@ -26,7 +28,7 @@ const barOptions = {
     maintainAspectRatio: false,
     indexAxis: 'y',
     plugins: { legend: { display: false } },
-    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
 };
 
 const load = async () => {
@@ -74,7 +76,7 @@ watch(() => [filters.period, filters.from, filters.to], load);
             <Card>
                 <template #title>Agent Workload (Current Open)</template>
                 <template #content>
-                    <div style="height: 320px;">
+                    <div style="height: 320px">
                         <Chart type="bar" :data="workloadData" :options="barOptions" />
                     </div>
                 </template>

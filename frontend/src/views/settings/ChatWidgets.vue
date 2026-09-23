@@ -1,6 +1,5 @@
 <!-- src/views/settings/ChatWidgets.vue -->
 
-
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useWidgetStore } from '@/stores/widget';
@@ -31,7 +30,7 @@ const sortOrder = ref(1);
 const filters = reactive({
     search: '',
     status: null,
-    per_page: 20,
+    per_page: 20
 });
 
 const form = reactive({
@@ -46,7 +45,7 @@ const form = reactive({
     require_name: false,
     require_email: false,
     require_phone: false,
-    allowed_origins: [],
+    allowed_origins: []
 });
 
 // ============================================
@@ -70,14 +69,14 @@ const statusOptions = [
     { label: 'All', value: null },
     { label: 'Active', value: 'active' },
     { label: 'Disabled', value: 'disabled' },
-    { label: 'Inactive', value: 'inactive' },
+    { label: 'Inactive', value: 'inactive' }
 ];
 
 const positionOptions = [
     { label: 'Bottom Right', value: 'bottom-right' },
     { label: 'Bottom Left', value: 'bottom-left' },
     { label: 'Top Right', value: 'top-right' },
-    { label: 'Top Left', value: 'top-left' },
+    { label: 'Top Left', value: 'top-left' }
 ];
 
 // ============================================
@@ -97,7 +96,7 @@ const clearFilters = () => {
     Object.assign(filters, {
         search: '',
         status: null,
-        per_page: 20,
+        per_page: 20
     });
     applyFilters();
 };
@@ -161,7 +160,7 @@ const addOrigin = () => {
 };
 
 const removeOrigin = (origin) => {
-    form.allowed_origins = form.allowed_origins.filter(o => o !== origin);
+    form.allowed_origins = form.allowed_origins.filter((o) => o !== origin);
 };
 
 const handleSubmit = async () => {
@@ -177,7 +176,7 @@ const handleSubmit = async () => {
             require_name: form.require_name,
             require_email: form.require_email,
             require_phone: form.require_phone,
-            allowed_origins: form.allowed_origins,
+            allowed_origins: form.allowed_origins
         };
 
         if (formMode.value === 'create') {
@@ -189,7 +188,6 @@ const handleSubmit = async () => {
         showFormDialog.value = false;
         resetForm();
         await loadData();
-
     } catch (error) {
         if (isPlanLimitError(error)) {
             planLimit.showPlanLimit(error);
@@ -263,7 +261,7 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
+        day: 'numeric'
     });
 };
 
@@ -288,10 +286,8 @@ onMounted(() => {
                 <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0">Chat Widgets</h1>
                 <p class="text-surface-600 dark:text-surface-400">Manage chat widgets for your website</p>
             </div>
-            <Button v-if="canCreateWidgets" label="Create Widget" icon="pi pi-plus" severity="primary"
-                @click="openCreateDialog" />
-            <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="loadData"
-                :loading="loading" />
+            <Button v-if="canCreateWidgets" label="Create Widget" icon="pi pi-plus" severity="primary" @click="openCreateDialog" />
+            <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="loadData" :loading="loading" />
         </div>
 
         <!-- Statistics -->
@@ -323,8 +319,7 @@ onMounted(() => {
             <Card>
                 <template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-warning">{{ totalWidgets - activeWidgets - disabledWidgets
-                            }}</div>
+                        <div class="text-2xl font-bold text-warning">{{ totalWidgets - activeWidgets - disabledWidgets }}</div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Inactive</div>
                     </div>
                 </template>
@@ -334,19 +329,16 @@ onMounted(() => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search widgets..." class="w-full"
-                    @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search widgets..." class="w-full" @input="applyFilters" />
             </div>
             <div class="w-48">
-                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
             </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
         <!-- Widgets Table -->
-        <DataTable :value="widgets" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalWidgets"
-            :lazy="true" @page="onPageChange" class="w-full">
+        <DataTable :value="widgets" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalWidgets" :lazy="true" @page="onPageChange" class="w-full">
             <Column field="name" header="Name" sortable>
                 <template #body="{ data }">
                     <div>
@@ -389,34 +381,25 @@ onMounted(() => {
             <Column header="Actions" style="width: 320px">
                 <template #body="{ data }">
                     <div class="flex gap-1 flex-wrap">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewWidget(data)"
-                            tooltip="View Details" />
-                        <Button v-if="canUpdateWidgets && data.status === 'disabled'" icon="pi pi-check"
-                            severity="success" text rounded @click="enableWidget(data)" tooltip="Enable" />
-                        <Button v-if="canUpdateWidgets && data.status === 'active'" icon="pi pi-times" severity="danger"
-                            text rounded @click="disableWidget(data)" tooltip="Disable" />
-                        <Button v-if="canUpdateWidgets" icon="pi pi-pencil" severity="warning" text rounded
-                            @click="openEditDialog(data)" tooltip="Edit" />
-                        <Button v-if="canUpdateWidgets" icon="pi pi-key" severity="secondary" text rounded
-                            @click="regenerateKey(data)" tooltip="Regenerate Key" />
-                        <Button v-if="canDeleteWidgets" icon="pi pi-trash" severity="danger" text rounded
-                            @click="confirmDelete(data)" tooltip="Delete" />
-                        <Button icon="pi pi-code" severity="secondary" text rounded @click="showInstallationCode(data)"
-                            tooltip="Installation Code" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewWidget(data)" tooltip="View Details" />
+                        <Button v-if="canUpdateWidgets && data.status === 'disabled'" icon="pi pi-check" severity="success" text rounded @click="enableWidget(data)" tooltip="Enable" />
+                        <Button v-if="canUpdateWidgets && data.status === 'active'" icon="pi pi-times" severity="danger" text rounded @click="disableWidget(data)" tooltip="Disable" />
+                        <Button v-if="canUpdateWidgets" icon="pi pi-pencil" severity="warning" text rounded @click="openEditDialog(data)" tooltip="Edit" />
+                        <Button v-if="canUpdateWidgets" icon="pi pi-key" severity="secondary" text rounded @click="regenerateKey(data)" tooltip="Regenerate Key" />
+                        <Button v-if="canDeleteWidgets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
+                        <Button icon="pi pi-code" severity="secondary" text rounded @click="showInstallationCode(data)" tooltip="Installation Code" />
                     </div>
                 </template>
             </Column>
         </DataTable>
 
         <!-- Create/Edit Dialog -->
-        <Dialog v-model:visible="showFormDialog" :header="formMode === 'create' ? 'Create Widget' : 'Edit Widget'"
-            :style="{ width: '600px' }" modal>
+        <Dialog v-model:visible="showFormDialog" :header="formMode === 'create' ? 'Create Widget' : 'Edit Widget'" :style="{ width: '600px' }" modal>
             <form @submit.prevent="handleSubmit" class="space-y-4">
                 <!-- Basic Info -->
                 <div>
                     <label class="block text-sm font-medium mb-1">Widget Name *</label>
-                    <InputText v-model="form.name" class="w-full" :class="{ 'p-invalid': getFieldError('name') }"
-                        placeholder="Main Website" />
+                    <InputText v-model="form.name" class="w-full" :class="{ 'p-invalid': getFieldError('name') }" placeholder="Main Website" />
                     <small v-if="getFieldError('name')" class="text-red-500">
                         {{ getFieldError('name') }}
                     </small>
@@ -429,29 +412,25 @@ onMounted(() => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Welcome Message</label>
-                    <Textarea v-model="form.welcome_message" class="w-full" rows="2"
-                        placeholder="Hi! How can we help you today?" />
+                    <Textarea v-model="form.welcome_message" class="w-full" rows="2" placeholder="Hi! How can we help you today?" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Offline Message</label>
-                    <Textarea v-model="form.offline_message" class="w-full" rows="2"
-                        placeholder="We're offline. Leave a message and we'll get back to you." />
+                    <Textarea v-model="form.offline_message" class="w-full" rows="2" placeholder="We're offline. Leave a message and we'll get back to you." />
                 </div>
 
                 <!-- Appearance -->
                 <div>
                     <label class="block text-sm font-medium mb-1">Position</label>
-                    <Select v-model="form.position" :options="positionOptions" optionLabel="label" optionValue="value"
-                        class="w-full" />
+                    <Select v-model="form.position" :options="positionOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Primary Color</label>
                     <div class="flex gap-3">
                         <InputText v-model="form.primary_color" class="flex-1" placeholder="#4F46E5" />
-                        <input type="color" v-model="form.primary_color"
-                            class="w-12 h-10 rounded border cursor-pointer" />
+                        <input type="color" v-model="form.primary_color" class="w-12 h-10 rounded border cursor-pointer" />
                     </div>
                 </div>
 
@@ -475,13 +454,11 @@ onMounted(() => {
                 <div>
                     <label class="block text-sm font-medium mb-1">Allowed Origins</label>
                     <div class="flex gap-2 mb-2">
-                        <InputText v-model="originInput" placeholder="https://example.com" class="flex-1"
-                            @keydown.enter.prevent="addOrigin" />
+                        <InputText v-model="originInput" placeholder="https://example.com" class="flex-1" @keydown.enter.prevent="addOrigin" />
                         <Button icon="pi pi-plus" severity="secondary" @click="addOrigin" />
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Chip v-for="origin in form.allowed_origins" :key="origin" :label="origin" removable
-                            @remove="removeOrigin(origin)" />
+                        <Chip v-for="origin in form.allowed_origins" :key="origin" :label="origin" removable @remove="removeOrigin(origin)" />
                     </div>
                     <small class="text-surface-500">Leave empty to allow all origins</small>
                 </div>
@@ -498,8 +475,7 @@ onMounted(() => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showFormDialog = false" />
-                <Button :label="formMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary"
-                    :loading="saving" @click="handleSubmit" />
+                <Button :label="formMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary" :loading="saving" @click="handleSubmit" />
             </template>
         </Dialog>
 
@@ -515,10 +491,8 @@ onMounted(() => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'disabled'" icon="pi pi-check"
-                            label="Enable" severity="success" size="small" @click="enableWidget(selectedWidget)" />
-                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'active'" icon="pi pi-times"
-                            label="Disable" severity="danger" size="small" @click="disableWidget(selectedWidget)" />
+                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'disabled'" icon="pi pi-check" label="Enable" severity="success" size="small" @click="enableWidget(selectedWidget)" />
+                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'active'" icon="pi pi-times" label="Disable" severity="danger" size="small" @click="disableWidget(selectedWidget)" />
                     </div>
                 </div>
 
@@ -537,8 +511,7 @@ onMounted(() => {
                         <label class="text-sm text-surface-500">Primary Color</label>
                         <div class="flex items-center gap-2">
                             <span class="font-medium">{{ selectedWidget.primary_color || '—' }}</span>
-                            <span v-if="selectedWidget.primary_color" class="w-6 h-6 rounded border"
-                                :style="{ backgroundColor: selectedWidget.primary_color }" />
+                            <span v-if="selectedWidget.primary_color" class="w-6 h-6 rounded border" :style="{ backgroundColor: selectedWidget.primary_color }" />
                         </div>
                     </div>
                     <div>
@@ -566,8 +539,7 @@ onMounted(() => {
                 <div v-if="selectedWidget.allowed_origins?.length">
                     <label class="text-sm text-surface-500">Allowed Origins</label>
                     <div class="flex flex-wrap gap-2 mt-1">
-                        <Tag v-for="origin in selectedWidget.allowed_origins" :key="origin" :value="origin"
-                            severity="info" />
+                        <Tag v-for="origin in selectedWidget.allowed_origins" :key="origin" :value="origin" severity="info" />
                     </div>
                 </div>
 
@@ -587,10 +559,8 @@ onMounted(() => {
             </div>
 
             <template #footer>
-                <Button v-if="canUpdateWidgets && selectedWidget" icon="pi pi-pencil" label="Edit" severity="warning"
-                    @click="openEditDialog(selectedWidget)" />
-                <Button icon="pi pi-code" label="Installation Code" severity="secondary"
-                    @click="showInstallationCode(selectedWidget)" />
+                <Button v-if="canUpdateWidgets && selectedWidget" icon="pi pi-pencil" label="Edit" severity="warning" @click="openEditDialog(selectedWidget)" />
+                <Button icon="pi pi-code" label="Installation Code" severity="secondary" @click="showInstallationCode(selectedWidget)" />
                 <Button label="Close" icon="pi pi-times" severity="secondary" @click="showDetailsDialog = false" />
             </template>
         </Dialog>
@@ -598,15 +568,12 @@ onMounted(() => {
         <!-- Installation Code Dialog -->
         <Dialog v-model:visible="showInstallDialog" header="Installation Code" :style="{ width: '600px' }" modal>
             <div class="space-y-4">
-                <p class="text-sm text-surface-600">
-                    Copy and paste this code into your website's HTML before the closing <code>&lt;/body&gt;</code> tag.
-                </p>
+                <p class="text-sm text-surface-600">Copy and paste this code into your website's HTML before the closing <code>&lt;/body&gt;</code> tag.</p>
                 <div class="relative">
                     <pre class="bg-surface-100 dark:bg-surface-800 p-4 rounded-lg text-sm overflow-x-auto">
                 <code>{{ installationCode }}</code>
             </pre>
-                    <Button icon="pi pi-copy" severity="secondary" text class="absolute top-2 right-2" @click="copyCode"
-                        tooltip="Copy" />
+                    <Button icon="pi pi-copy" severity="secondary" text class="absolute top-2 right-2" @click="copyCode" tooltip="Copy" />
                 </div>
                 <div class="text-sm text-surface-500">
                     <i class="pi pi-info-circle mr-1"></i>
@@ -622,7 +589,6 @@ onMounted(() => {
         <Toast />
     </div>
 </template>
-
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {

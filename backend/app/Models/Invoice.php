@@ -198,20 +198,22 @@ class Invoice extends Model
     public static function generateInvoiceNumber(): string
     {
         $prefix = 'INV-';
-        $year = date('Y');
-        $month = date('m');
+        $period = date('Ym');
 
-        $lastInvoice = static::where('invoice_number', 'LIKE', "{$prefix}{$year}{$month}%")
-            ->orderBy('id', 'desc')
-            ->first();
+        // Include soft-deleted rows so a deleted number is never reused
+        // (invoice_number is unique).
+        $max = static::withTrashed()
+            ->where('invoice_number', 'LIKE', "{$prefix}{$period}%")
+            ->get(['invoice_number'])
+            ->reduce(function (?int $carry, $invoice) {
+                if (preg_match('/-(\d{6})$/', (string) $invoice->invoice_number, $m)) {
+                    return max($carry ?? 0, (int) $m[1]);
+                }
+                return $carry;
+            });
 
-        if ($lastInvoice) {
-            $lastNumber = (int) substr($lastInvoice->invoice_number, -6);
-            $newNumber = str_pad($lastNumber + 1, 6, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '000001';
-        }
+        $newNumber = str_pad(($max ?? 0) + 1, 6, '0', STR_PAD_LEFT);
 
-        return $prefix . $year . $month . '-' . $newNumber;
+        return $prefix . $period . '-' . $newNumber;
     }
 }

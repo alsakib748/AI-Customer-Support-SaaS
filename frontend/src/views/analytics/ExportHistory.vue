@@ -41,14 +41,15 @@ const download = async (item) => {
     }
 };
 
-const statusColor = (status) => ({
-    pending: 'warning',
-    processing: 'info',
-    completed: 'success',
-    failed: 'danger',
-}[status] || 'secondary');
+const statusColor = (status) =>
+    ({
+        pending: 'warning',
+        processing: 'info',
+        completed: 'success',
+        failed: 'danger'
+    })[status] || 'secondary';
 
-const formatDate = (d) => d ? new Date(d).toLocaleString() : '—';
+const formatDate = (d) => (d ? new Date(d).toLocaleString() : '—');
 
 onMounted(loadExports);
 </script>
@@ -58,16 +59,12 @@ onMounted(loadExports);
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold">Export History</h1>
-                <p class="text-surface-600 dark:text-surface-400">
-                    Download previously generated reports
-                </p>
+                <p class="text-surface-600 dark:text-surface-400">Download previously generated reports</p>
             </div>
             <Button label="New Export" icon="pi pi-plus" severity="primary" @click="showExportDialog = true" />
         </div>
 
-        <DataTable :value="exports" :loading="loading" paginator :rows="15" :rowsPerPageOptions="[15, 30, 50]"
-            responsiveLayout="scroll">
-
+        <DataTable :value="exports" :loading="loading" paginator :rows="15" :rowsPerPageOptions="[15, 30, 50]" responsiveLayout="scroll">
             <Column field="type" header="Type">
                 <template #body="{ data }">
                     <span class="font-medium capitalize">{{ data.type }}</span>
@@ -96,8 +93,7 @@ onMounted(loadExports);
 
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
-                    <Button v-if="data.is_ready" icon="pi pi-download" severity="primary" text rounded
-                        @click="download(data)" tooltip="Download" />
+                    <Button v-if="data.is_ready" icon="pi pi-download" severity="primary" text rounded @click="download(data)" tooltip="Download" />
                     <span v-else-if="data.status === 'failed'" class="text-danger text-xs">
                         {{ data.error_message || 'Failed' }}
                     </span>
@@ -124,6 +120,5 @@ onMounted(loadExports);
                 <Button label="Close" severity="secondary" @click="showErrorDialog = false" />
             </template>
         </Dialog>
-
     </div>
 </template>

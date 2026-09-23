@@ -42,16 +42,13 @@ watch(() => [filters.period, filters.from, filters.to], load);
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div class="lg:col-span-2">
-                    <TrendChart title="Created vs Resolved" :labels="data.trend.labels"
-                        :datasets="data.trend.datasets" />
+                    <TrendChart title="Created vs Resolved" :labels="data.trend.labels" :datasets="data.trend.datasets" />
                 </div>
-                <StatusChart title="Priority" :labels="data.priority_breakdown.labels"
-                    :values="data.priority_breakdown.values" />
+                <StatusChart title="Priority" :labels="data.priority_breakdown.labels" :values="data.priority_breakdown.values" />
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <StatusChart title="Channel" :labels="data.channel_breakdown.labels"
-                    :values="data.channel_breakdown.values" />
+                <StatusChart title="Channel" :labels="data.channel_breakdown.labels" :values="data.channel_breakdown.values" />
                 <Card>
                     <template #title>Response Time</template>
                     <template #content>

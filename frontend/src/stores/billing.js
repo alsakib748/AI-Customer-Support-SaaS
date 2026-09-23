@@ -1141,13 +1141,34 @@ export const useBillingStore = defineStore('billing', () => {
             const response = await billingService.checkout({
                 plan_id: planId,
                 billing_cycle: billingCycle,
-                gateway
+                provider: gateway
             });
             if (response.data.success) {
                 return response.data.data;
             }
         } catch (error) {
             toast.error(_extractError(error));
+            throw error;
+        } finally {
+            saving.value = false;
+        }
+    };
+
+    const verifyCheckout = async (sessionId, provider = null) => {
+        saving.value = true;
+        errors.value = {};
+        try {
+            const response = await billingService.verifyCheckout(sessionId, provider);
+            if (response.data.success) {
+                const data = response.data.data;
+                if (data?.plan) {
+                    subscription.value = data;
+                    currentPlan.value = data.plan;
+                }
+                return response.data.data;
+            }
+        } catch (error) {
+            console.error('verifyCheckout:', error);
             throw error;
         } finally {
             saving.value = false;
@@ -1595,6 +1616,7 @@ export const useBillingStore = defineStore('billing', () => {
         resumeSubscription,
         validateCoupon,
         createCheckout,
+        verifyCheckout,
         confirmCheckout,
         fetchUsage,
         fetchInvoices,

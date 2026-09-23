@@ -41,11 +41,9 @@ watch(() => [filters.period, filters.from, filters.to], load);
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div class="lg:col-span-2">
-                    <TrendChart title="Customer Growth" :labels="data.growth_trend.labels"
-                        :values="data.growth_trend.values" color="#10B981" />
+                    <TrendChart title="Customer Growth" :labels="data.growth_trend.labels" :values="data.growth_trend.values" color="#10B981" />
                 </div>
-                <StatusChart title="Customer Status" :labels="data.status_breakdown.labels"
-                    :values="data.status_breakdown.values" />
+                <StatusChart title="Customer Status" :labels="data.status_breakdown.labels" :values="data.status_breakdown.values" />
             </div>
 
             <Card>

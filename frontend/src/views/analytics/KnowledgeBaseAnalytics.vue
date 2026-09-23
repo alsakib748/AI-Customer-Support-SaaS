@@ -40,10 +40,8 @@ watch(() => [filters.period, filters.from, filters.to], load);
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <StatusChart title="Article Status" :labels="data.status_breakdown.labels"
-                    :values="data.status_breakdown.values" />
-                <StatusChart title="Articles per Category" :labels="data.category_breakdown.labels"
-                    :values="data.category_breakdown.values" />
+                <StatusChart title="Article Status" :labels="data.status_breakdown.labels" :values="data.status_breakdown.values" />
+                <StatusChart title="Articles per Category" :labels="data.category_breakdown.labels" :values="data.category_breakdown.values" />
             </div>
         </template>
     </div>

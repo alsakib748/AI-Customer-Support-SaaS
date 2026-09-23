@@ -42,10 +42,8 @@ onMounted(loadInvoice);
                 <p class="text-surface-600">View invoice information</p>
             </div>
             <div class="flex gap-2">
-                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                    @click="router.push('/billing/invoices')" />
-                <Button v-if="invoice?.invoice_pdf_url" label="Download PDF" icon="pi pi-download"
-                    @click="downloadInvoice" />
+                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/billing/invoices')" />
+                <Button v-if="invoice?.invoice_pdf_url" label="Download PDF" icon="pi pi-download" @click="downloadInvoice" />
             </div>
         </div>
 

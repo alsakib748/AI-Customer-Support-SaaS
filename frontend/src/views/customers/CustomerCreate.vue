@@ -20,7 +20,6 @@ const cancel = () => {
 };
 </script>
 
-
 <!-- src/views/customers/CustomerCreate.vue -->
 <template>
     <div class="p-6 max-w-2xl mx-auto">

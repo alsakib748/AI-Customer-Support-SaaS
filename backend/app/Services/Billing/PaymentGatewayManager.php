@@ -2,21 +2,21 @@
 
 namespace App\Services\Billing;
 
-use App\Contracts\PaymentGatewayInterface;
+use App\Payments\Contracts\PaymentGateway;
 use InvalidArgumentException;
 
 class PaymentGatewayManager
 {
-    /** @var array<string, PaymentGatewayInterface> */
+    /** @var array<string, PaymentGateway> */
     protected array $gateways = [];
 
-    public function register(string $name, PaymentGatewayInterface $gateway): self
+    public function register(string $name, PaymentGateway $gateway): self
     {
         $this->gateways[$name] = $gateway;
         return $this;
     }
 
-    public function gateway(?string $name = null): PaymentGatewayInterface
+    public function gateway(?string $name = null): PaymentGateway
     {
         $name = $name ?: config('billing.default_gateway', 'stripe');
 
@@ -25,6 +25,11 @@ class PaymentGatewayManager
         }
 
         return $this->gateways[$name];
+    }
+
+    public function driver(?string $name = null): PaymentGateway
+    {
+        return $this->gateway($name);
     }
 
     public function hasGateway(string $name): bool

@@ -587,7 +587,6 @@ const model = ref([
 
 <style lang="scss" scoped></style> -->
 
-
 <script setup>
 import { ref, computed } from 'vue';
 import AppMenuItem from './AppMenuItem.vue';
@@ -616,9 +615,7 @@ const canViewBilling = computed(() => {
 const model = ref([
     {
         label: 'Home',
-        items: [
-            { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' },
-        ],
+        items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
     },
     {
         label: 'Main Module',
@@ -629,16 +626,16 @@ const model = ref([
             { label: 'Conversation', icon: 'pi pi-fw pi-send', to: '/conversations' },
             { label: 'Tickets', icon: 'pi pi-fw pi-ticket', to: '/tickets' },
             { label: 'Chat Widget', icon: 'pi pi-fw pi-comments', to: '/settings/chat-widgets' },
-            { label: 'KnowledgeBase', icon: 'pi pi-fw pi-book', to: '/knowledge-base' },
-        ],
+            { label: 'KnowledgeBase', icon: 'pi pi-fw pi-book', to: '/knowledge-base' }
+        ]
     },
     {
         label: 'AI',
         icon: 'pi pi-fw pi-user',
         items: [
             { label: 'AI Settings', icon: 'pi pi-cog', to: '/settings/ai' },
-            { label: 'AI Analytics', icon: 'pi pi-chart-bar', to: '/ai/analytics' },
-        ],
+            { label: 'AI Analytics', icon: 'pi pi-chart-bar', to: '/ai/analytics' }
+        ]
     },
     {
         label: 'Analytics & Reporting',
@@ -653,8 +650,8 @@ const model = ref([
             { label: 'Tickets', icon: 'pi pi-ticket', to: '/analytics/tickets' },
             { label: 'AI Usage', icon: 'pi pi-sparkles', to: '/analytics/ai' },
             { label: 'Chat Widget', icon: 'pi pi-comment', to: '/analytics/widget' },
-            { label: 'Knowledge Base', icon: 'pi pi-book', to: '/analytics/knowledge-base' },
-        ],
+            { label: 'Knowledge Base', icon: 'pi pi-book', to: '/analytics/knowledge-base' }
+        ]
     },
     {
         label: 'Billing',
@@ -664,15 +661,13 @@ const model = ref([
             { label: 'Plans', icon: 'pi pi-list', to: '/billing/plans' },
             { label: 'Usage', icon: 'pi pi-chart-bar', to: '/billing/usage' },
             { label: 'Invoices', icon: 'pi pi-file', to: '/billing/invoices' },
-            { label: 'Payments', icon: 'pi pi-wallet', to: '/billing/payments' },
-        ],
+            { label: 'Payments', icon: 'pi pi-wallet', to: '/billing/payments' }
+        ]
     },
     {
         label: 'Platform',
         visible: isSuperAdmin.value,
-        items: [
-            { label: 'Platform Analytics', icon: 'pi pi-chart-line', to: '/admin/analytics' },
-        ],
+        items: [{ label: 'Platform Analytics', icon: 'pi pi-chart-line', to: '/admin/analytics' }]
     },
     {
         label: 'Platform Billing',
@@ -684,8 +679,8 @@ const model = ref([
             { label: 'All Invoices', icon: 'pi pi-file-edit', to: '/admin/billing/invoices' },
             { label: 'All Payments', icon: 'pi pi-money-bill', to: '/admin/billing/payments' },
             { label: 'Coupons', icon: 'pi pi-ticket', to: '/admin/billing/coupons' },
-            { label: 'Billing Analytics', icon: 'pi pi-chart-pie', to: '/admin/billing/analytics' },
-        ],
+            { label: 'Billing Analytics', icon: 'pi pi-chart-pie', to: '/admin/billing/analytics' }
+        ]
     },
     {
         label: 'UI Components',
@@ -705,8 +700,8 @@ const model = ref([
             { label: 'File', icon: 'pi pi-fw pi-file', to: '/uikit/file' },
             { label: 'Chart', icon: 'pi pi-fw pi-chart-bar', to: '/uikit/charts' },
             { label: 'Timeline', icon: 'pi pi-fw pi-calendar', to: '/uikit/timeline' },
-            { label: 'Misc', icon: 'pi pi-fw pi-circle', to: '/uikit/misc' },
-        ],
+            { label: 'Misc', icon: 'pi pi-fw pi-circle', to: '/uikit/misc' }
+        ]
     },
     {
         label: 'Pages',
@@ -720,14 +715,14 @@ const model = ref([
                 items: [
                     { label: 'Login', icon: 'pi pi-fw pi-sign-in', to: '/login' },
                     { label: 'Error', icon: 'pi pi-fw pi-times-circle', to: '/auth/error' },
-                    { label: 'Access Denied', icon: 'pi pi-fw pi-lock', to: '/auth/access' },
-                ],
+                    { label: 'Access Denied', icon: 'pi pi-fw pi-lock', to: '/auth/access' }
+                ]
             },
             { label: 'Crud', icon: 'pi pi-fw pi-pencil', to: '/pages/crud' },
             { label: 'Not Found', icon: 'pi pi-fw pi-exclamation-circle', to: '/pages/notfound' },
-            { label: 'Empty', icon: 'pi pi-fw pi-circle-off', to: '/pages/empty' },
-        ],
-    },
+            { label: 'Empty', icon: 'pi pi-fw pi-circle-off', to: '/pages/empty' }
+        ]
+    }
 ]);
 </script>
 

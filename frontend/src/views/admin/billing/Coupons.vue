@@ -26,20 +26,20 @@ const emptyForm = () => ({
     duration: 'once',
     max_redemptions: 100,
     max_redemptions_per_tenant: 1,
-    is_active: true,
+    is_active: true
 });
 
 const form = reactive(emptyForm());
 
 const typeOptions = [
     { label: 'Percentage', value: 'percentage' },
-    { label: 'Fixed Amount', value: 'fixed_amount' },
+    { label: 'Fixed Amount', value: 'fixed_amount' }
 ];
 
 const durationOptions = [
     { label: 'Once', value: 'once' },
     { label: 'Repeating', value: 'repeating' },
-    { label: 'Forever', value: 'forever' },
+    { label: 'Forever', value: 'forever' }
 ];
 
 const load = () => billingStore.fetchAdminCoupons({ ...filters });
@@ -100,14 +100,12 @@ onMounted(load);
                 <p class="text-surface-600">Manage discount coupons</p>
             </div>
             <div class="flex gap-2">
-                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                    @click="router.push('/admin/billing')" />
+                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing')" />
                 <Button label="Create Coupon" icon="pi pi-plus" @click="openCreate" />
             </div>
         </div>
 
-        <DataTable :value="coupons" :loading="loading" paginator :rows="filters.per_page" :totalRecords="total"
-            :lazy="true" @page="onPageChange" class="w-full">
+        <DataTable :value="coupons" :loading="loading" paginator :rows="filters.per_page" :totalRecords="total" :lazy="true" @page="onPageChange" class="w-full">
             <Column field="code" header="Code" />
             <Column field="name" header="Name" />
             <Column field="type" header="Type">
@@ -135,8 +133,7 @@ onMounted(load);
             </Column>
         </DataTable>
 
-        <Dialog v-model:visible="showDialog" :header="editing ? 'Edit Coupon' : 'Create Coupon'"
-            :style="{ width: '600px' }" modal>
+        <Dialog v-model:visible="showDialog" :header="editing ? 'Edit Coupon' : 'Create Coupon'" :style="{ width: '600px' }" modal>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Code *</label>
@@ -160,8 +157,7 @@ onMounted(load);
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Duration</label>
-                    <Select v-model="form.duration" :options="durationOptions" optionLabel="label"
-                        optionValue="value" />
+                    <Select v-model="form.duration" :options="durationOptions" optionLabel="label" optionValue="value" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Max Redemptions</label>

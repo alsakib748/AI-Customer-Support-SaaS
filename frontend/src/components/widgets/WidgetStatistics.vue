@@ -6,8 +6,8 @@ const props = defineProps({
     stats: {
         type: Object,
         required: true,
-        default: () => ({}),
-    },
+        default: () => ({})
+    }
 });
 </script>
 

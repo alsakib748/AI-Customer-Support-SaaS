@@ -36,8 +36,7 @@ const containerClass = computed(() => {
         <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
     </div>
 
-    <UpgradePromptDialog v-model="planLimit.visible.value" :feature="planLimit.payload.value.feature"
-        :limit="planLimit.payload.value.limit" :current="planLimit.payload.value.current" />
+    <UpgradePromptDialog v-model="planLimit.visible.value" :feature="planLimit.payload.value.feature" :limit="planLimit.payload.value.limit" :current="planLimit.payload.value.current" />
 
     <Toast />
 </template>

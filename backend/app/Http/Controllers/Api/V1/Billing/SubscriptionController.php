@@ -7,6 +7,8 @@ use App\Http\Requests\Billing\CancelSubscriptionRequest;
 use App\Http\Requests\Billing\CheckoutRequest;
 use App\Http\Resources\Billing\SubscriptionResource;
 use App\Models\Coupon;
+use App\Models\Subscription;
+use App\Payments\PaymentGatewayManager;
 use App\Services\Billing\BillingService;
 use App\Services\Billing\PlanService;
 use App\Services\Billing\SubscriptionService;
@@ -21,7 +23,8 @@ class SubscriptionController extends Controller
 
     public function __construct(
         SubscriptionService $service,
-        PlanService $planService
+        PlanService $planService,
+        protected PaymentGatewayManager $gateways,
     ) {
         $this->service     = $service;
         $this->planService = $planService;
@@ -500,6 +503,91 @@ class SubscriptionController extends Controller
             'success' => true,
             'data'    => app(\App\Payments\PaymentGatewayManager::class)->availableProviders(),
         ]);
+    }
+
+    /**
+     * Verify a completed checkout session (called from the success page).
+     */
+    public function verify(Request $request, BillingService $billing)
+    {
+        try {
+            $validated = $request->validate([
+                'session_id' => ['required', 'string'],
+                'provider'   => ['nullable', 'string'],
+            ]);
+
+            $tenant   = app('current_tenant');
+            $provider = $validated['provider'] ?? config('payment.default');
+
+            if (! $tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tenant context is required to verify checkout.',
+                ], 403);
+            }
+
+            if (! $this->gateways->has($provider)) {
+                throw new \InvalidArgumentException("Unsupported provider: {$provider}");
+            }
+
+            $session = $this->gateways->driver($provider)->retrieveCheckoutSession($validated['session_id']);
+
+            if (($session['status'] ?? null) !== 'complete') {
+                return response()->json([
+                    'success' => true,
+                    'data'    => [
+                        'paid'   => false,
+                        'status' => $session['status'] ?? 'unknown',
+                    ],
+                ]);
+            }
+
+            $subscription = Subscription::where('tenant_id', $tenant->id)
+                ->where('metadata->checkout_session_id', $validated['session_id'])
+                ->first();
+
+            if (! $subscription) {
+                // Webhook may have already activated it — return current state.
+                $current = $this->service->getActiveSubscription($tenant->id);
+
+                return response()->json([
+                    'success' => true,
+                    'data'    => $current ? new SubscriptionResource($current) : null,
+                ]);
+            }
+
+            if ($subscription->status === 'pending') {
+                $subscription = $this->service->completePendingCheckout($subscription, [
+                    'provider_subscription_id' => $session['provider_subscription_id'],
+                    'provider_customer_id'     => $session['provider_customer_id'],
+                    'provider_payment_id'      => $session['provider_payment_id'] ?? null,
+                    'provider_invoice_id'      => $session['provider_invoice_id'] ?? null,
+                    'source'                   => 'checkout.verify',
+                ]);
+            }
+
+            if (! $subscription->relationLoaded('plan')) {
+                $subscription->load('plan');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => new SubscriptionResource($subscription),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Failed to verify checkout:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to verify checkout: ' . $e->getMessage(),
+            ], 422);
+        }
     }
 
 }

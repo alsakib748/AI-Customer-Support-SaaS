@@ -8,13 +8,10 @@ import DashboardAnalyticsWidget from '@/components/analytics/DashboardAnalyticsW
 </script>
 
 <template>
-
-
     <div class="">
         <DashboardAnalyticsWidget />
         <!-- rest of your existing dashboard -->
     </div>
-
 
     <div class="grid grid-cols-12 gap-8">
         <StatsWidget />

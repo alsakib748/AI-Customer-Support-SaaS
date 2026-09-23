@@ -4,7 +4,9 @@ defineProps({ invoice: { type: Object, required: true } });
 const formatDate = (date) => {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 };
 
@@ -32,9 +34,7 @@ const formatCurrency = (amount, currency = 'USD') => {
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="text-sm text-surface-500">Billing Period</label>
-                <div class="font-medium">
-                    {{ formatDate(invoice.period_starts_at) }} — {{ formatDate(invoice.period_ends_at) }}
-                </div>
+                <div class="font-medium">{{ formatDate(invoice.period_starts_at) }} — {{ formatDate(invoice.period_ends_at) }}</div>
             </div>
             <div>
                 <label class="text-sm text-surface-500">Due Date</label>
@@ -46,9 +46,7 @@ const formatCurrency = (amount, currency = 'USD') => {
             </div>
             <div v-if="invoice.discount_amount > 0">
                 <label class="text-sm text-surface-500">Discount</label>
-                <div class="font-medium text-success">
-                    -{{ formatCurrency(invoice.discount_amount, invoice.currency) }}
-                </div>
+                <div class="font-medium text-success">-{{ formatCurrency(invoice.discount_amount, invoice.currency) }}</div>
             </div>
         </div>
 
@@ -56,8 +54,7 @@ const formatCurrency = (amount, currency = 'USD') => {
 
         <div v-if="invoice.line_items?.length">
             <h4 class="font-semibold mb-2">Line Items</h4>
-            <div v-for="(item, index) in invoice.line_items" :key="index"
-                class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
+            <div v-for="(item, index) in invoice.line_items" :key="index" class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
                 <div>
                     <div class="font-medium">{{ item.description }}</div>
                     <div class="text-sm text-surface-500">Qty: {{ item.quantity }}</div>

@@ -34,14 +34,14 @@ const filters = reactive({
     unassigned: false,
     sort: 'last_message_at',
     direction: 'desc',
-    per_page: 20,
+    per_page: 20
 });
 
 const createForm = reactive({
     customer_id: null,
     subject: '',
     channel: 'web',
-    priority: 'normal',
+    priority: 'normal'
 });
 
 // ============================================
@@ -73,32 +73,27 @@ const statusOptions = [
     { label: 'Open', value: 'open' },
     { label: 'Pending', value: 'pending' },
     { label: 'Resolved', value: 'resolved' },
-    { label: 'Closed', value: 'closed' },
+    { label: 'Closed', value: 'closed' }
 ];
 
 const priorityOptions = [
     { label: 'Low', value: 'low' },
     { label: 'Normal', value: 'normal' },
     { label: 'High', value: 'high' },
-    { label: 'Urgent', value: 'urgent' },
+    { label: 'Urgent', value: 'urgent' }
 ];
 
 const channelOptions = [
     { label: 'Website', value: 'web' },
-    { label: 'API', value: 'api' },
+    { label: 'API', value: 'api' }
 ];
 
 // ============================================
 // METHODS
 // ============================================
 
-
 const loadData = async () => {
-    await Promise.all([
-        conversationStore.fetchConversations({ ...filters }),
-        conversationStore.fetchStatistics(),
-        customerStore.fetchCustomers({ per_page: 100 }),
-    ]);
+    await Promise.all([conversationStore.fetchConversations({ ...filters }), conversationStore.fetchStatistics(), customerStore.fetchCustomers({ per_page: 100 })]);
 };
 
 const refreshData = () => {
@@ -120,7 +115,7 @@ const clearFilters = () => {
         unassigned: false,
         sort: 'last_message_at',
         direction: 'desc',
-        per_page: 20,
+        per_page: 20
     });
     applyFilters();
 };
@@ -161,7 +156,7 @@ const resetCreateForm = () => {
         customer_id: null,
         subject: '',
         channel: 'web',
-        priority: 'normal',
+        priority: 'normal'
     });
 };
 
@@ -229,7 +224,7 @@ const getChannelIcon = (channel) => {
         api: 'pi pi-server',
         email: 'pi pi-envelope',
         whatsapp: 'pi pi-whatsapp',
-        messenger: 'pi pi-facebook',
+        messenger: 'pi pi-facebook'
     };
     return icons[channel] || 'pi pi-circle';
 };
@@ -241,10 +236,9 @@ const formatDate = (date) => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
+        minute: '2-digit'
     });
 };
-
 
 const getFieldError = (field) => {
     return conversationStore.getFieldError(field);
@@ -258,9 +252,12 @@ onMounted(() => {
     loadData();
 });
 
-watch(() => filters.search, () => {
-    applyFilters();
-});
+watch(
+    () => filters.search,
+    () => {
+        applyFilters();
+    }
+);
 </script>
 
 <template>
@@ -272,10 +269,8 @@ watch(() => filters.search, () => {
                 <p class="text-surface-600 dark:text-surface-400">Manage customer conversations and support tickets</p>
             </div>
             <div class="flex gap-3">
-                <Button v-if="canCreateConversations" label="New Conversation" icon="pi pi-plus" severity="primary"
-                    @click="showCreateDialog = true" />
-                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
-                    :loading="loading" />
+                <Button v-if="canCreateConversations" label="New Conversation" icon="pi pi-plus" severity="primary" @click="showCreateDialog = true" />
+                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
 
@@ -318,20 +313,16 @@ watch(() => filters.search, () => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search conversations..." class="w-full"
-                    @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search conversations..." class="w-full" @input="applyFilters" />
             </div>
             <div class="w-40">
-                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-40">
-                <Select v-model="filters.priority" :options="priorityOptions" optionLabel="label" optionValue="value"
-                    placeholder="Priority" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.priority" :options="priorityOptions" optionLabel="label" optionValue="value" placeholder="Priority" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-40">
-                <Select v-model="filters.channel" :options="channelOptions" optionLabel="label" optionValue="value"
-                    placeholder="Channel" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.channel" :options="channelOptions" optionLabel="label" optionValue="value" placeholder="Channel" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="flex items-center gap-2">
                 <Checkbox v-model="filters.unassigned" binary @change="applyFilters" />
@@ -341,9 +332,19 @@ watch(() => filters.search, () => {
         </div>
 
         <!-- Conversations Table -->
-        <DataTable :value="conversations" :loading="loading" paginator :rows="filters.per_page"
-            :totalRecords="totalConversations" :lazy="true" @page="onPageChange" @sort="onSortChange" class="w-full"
-            v-model:sortField="filters.sort" v-model:sortOrder="sortOrder">
+        <DataTable
+            :value="conversations"
+            :loading="loading"
+            paginator
+            :rows="filters.per_page"
+            :totalRecords="totalConversations"
+            :lazy="true"
+            @page="onPageChange"
+            @sort="onSortChange"
+            class="w-full"
+            v-model:sortField="filters.sort"
+            v-model:sortOrder="sortOrder"
+        >
             <Column field="customer.full_name" header="Customer" sortable>
                 <template #body="{ data }">
                     <div>
@@ -403,35 +404,25 @@ watch(() => filters.search, () => {
                 <template #body="{ data }">
                     <div class="flex gap-1 flex-wrap">
                         <!-- View Button -->
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewConversation(data)"
-                            tooltip="View Details" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewConversation(data)" tooltip="View Details" />
 
                         <!-- Resolve Button (Open/Pending only) -->
-                        <Button v-if="canUpdateConversations && (data.status === 'open' || data.status === 'pending')"
-                            icon="pi pi-check" severity="success" text rounded @click="handleResolve(data)"
-                            tooltip="Resolve" />
+                        <Button v-if="canUpdateConversations && (data.status === 'open' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="handleResolve(data)" tooltip="Resolve" />
 
                         <!-- Reopen Button (Resolved/Closed only) -->
-                        <Button
-                            v-if="canUpdateConversations && (data.status === 'resolved' || data.status === 'closed')"
-                            icon="pi pi-refresh" severity="warning" text rounded @click="handleReopen(data)"
-                            tooltip="Reopen" />
+                        <Button v-if="canUpdateConversations && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="handleReopen(data)" tooltip="Reopen" />
 
                         <!-- Close Button (Open/Pending/Resolved only) -->
-                        <Button v-if="canUpdateConversations && data.status !== 'closed'" icon="pi pi-times"
-                            severity="secondary" text rounded @click="handleClose(data)" tooltip="Close" />
+                        <Button v-if="canUpdateConversations && data.status !== 'closed'" icon="pi pi-times" severity="secondary" text rounded @click="handleClose(data)" tooltip="Close" />
 
                         <!-- Assign to Me Button (in list) -->
-                        <Button v-if="canUpdateConversations && !data.assigned_user_id" icon="pi pi-user-plus"
-                            severity="primary" text rounded @click="handleAssignToMe(data)" tooltip="Assign to Me" />
+                        <Button v-if="canUpdateConversations && !data.assigned_user_id" icon="pi pi-user-plus" severity="primary" text rounded @click="handleAssignToMe(data)" tooltip="Assign to Me" />
 
                         <!-- Unassign Button (in list) -->
-                        <Button v-if="canUpdateConversations && data.assigned_user_id" icon="pi pi-user-minus"
-                            severity="secondary" text rounded @click="handleUnassign(data)" tooltip="Unassign" />
+                        <Button v-if="canUpdateConversations && data.assigned_user_id" icon="pi pi-user-minus" severity="secondary" text rounded @click="handleUnassign(data)" tooltip="Unassign" />
 
                         <!-- Delete Button -->
-                        <Button v-if="canDeleteConversations" icon="pi pi-trash" severity="danger" text rounded
-                            @click="confirmDelete(data)" tooltip="Delete" />
+                        <Button v-if="canDeleteConversations" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
                     </div>
                 </template>
             </Column>
@@ -442,9 +433,7 @@ watch(() => filters.search, () => {
             <form @submit.prevent="handleCreate" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Customer *</label>
-                    <Select v-model="createForm.customer_id" :options="customers" optionLabel="display_name"
-                        optionValue="id" class="w-full" :class="{ 'p-invalid': getFieldError('customer_id') }"
-                        placeholder="Select Customer" filter />
+                    <Select v-model="createForm.customer_id" :options="customers" optionLabel="display_name" optionValue="id" class="w-full" :class="{ 'p-invalid': getFieldError('customer_id') }" placeholder="Select Customer" filter />
                     <small v-if="getFieldError('customer_id')" class="text-red-500">
                         {{ getFieldError('customer_id') }}
                     </small>
@@ -452,15 +441,12 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Subject</label>
-                    <InputText v-model="createForm.subject" class="w-full"
-                        placeholder="Brief description of the issue" />
+                    <InputText v-model="createForm.subject" class="w-full" placeholder="Brief description of the issue" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Channel *</label>
-                    <Select v-model="createForm.channel" :options="channelOptions" optionLabel="label"
-                        optionValue="value" class="w-full" :class="{ 'p-invalid': getFieldError('channel') }"
-                        placeholder="Select Channel" />
+                    <Select v-model="createForm.channel" :options="channelOptions" optionLabel="label" optionValue="value" class="w-full" :class="{ 'p-invalid': getFieldError('channel') }" placeholder="Select Channel" />
                     <small v-if="getFieldError('channel')" class="text-red-500">
                         {{ getFieldError('channel') }}
                     </small>
@@ -468,8 +454,7 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Priority</label>
-                    <Select v-model="createForm.priority" :options="priorityOptions" optionLabel="label"
-                        optionValue="value" class="w-full" placeholder="Select Priority" />
+                    <Select v-model="createForm.priority" :options="priorityOptions" optionLabel="label" optionValue="value" class="w-full" placeholder="Select Priority" />
                 </div>
             </form>
 
@@ -480,18 +465,15 @@ watch(() => filters.search, () => {
         </Dialog>
 
         <!-- Conversation Details Dialog -->
-        <Dialog v-model:visible="showDetailsDialog" header="Conversation Details" :style="{ width: '800px' }" modal
-            :maximizable="true">
+        <Dialog v-model:visible="showDetailsDialog" header="Conversation Details" :style="{ width: '800px' }" modal :maximizable="true">
             <div v-if="selectedConversation" class="space-y-4">
                 <!-- Conversation Header -->
                 <div class="flex items-start justify-between">
                     <div>
                         <h3 class="text-xl font-bold">{{ selectedConversation.subject || 'No Subject' }}</h3>
                         <div class="flex items-center gap-3 mt-1">
-                            <Tag :value="selectedConversation.status_label"
-                                :severity="selectedConversation.status_color" />
-                            <Tag :value="selectedConversation.priority_label"
-                                :severity="selectedConversation.priority_color" />
+                            <Tag :value="selectedConversation.status_label" :severity="selectedConversation.status_color" />
+                            <Tag :value="selectedConversation.priority_label" :severity="selectedConversation.priority_color" />
                             <span class="text-sm text-surface-500">{{ selectedConversation.channel_label }}</span>
                             <span class="text-sm text-surface-500">
                                 {{ selectedConversation.customer?.full_name || 'Unknown' }}
@@ -501,15 +483,21 @@ watch(() => filters.search, () => {
                     <div class="flex gap-2">
                         <Button
                             v-if="canUpdateConversations && (selectedConversation.status === 'open' || selectedConversation.status === 'pending')"
-                            icon="pi pi-check" label="Resolve" severity="success" size="small"
-                            @click="handleResolve(selectedConversation)" />
+                            icon="pi pi-check"
+                            label="Resolve"
+                            severity="success"
+                            size="small"
+                            @click="handleResolve(selectedConversation)"
+                        />
                         <Button
                             v-if="canUpdateConversations && (selectedConversation.status === 'resolved' || selectedConversation.status === 'closed')"
-                            icon="pi pi-refresh" label="Reopen" severity="warning" size="small"
-                            @click="handleReopen(selectedConversation)" />
-                        <Button v-if="canUpdateConversations && selectedConversation.status !== 'closed'"
-                            icon="pi pi-times" label="Close" severity="secondary" size="small"
-                            @click="handleClose(selectedConversation)" />
+                            icon="pi pi-refresh"
+                            label="Reopen"
+                            severity="warning"
+                            size="small"
+                            @click="handleReopen(selectedConversation)"
+                        />
+                        <Button v-if="canUpdateConversations && selectedConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose(selectedConversation)" />
                         <Button icon="pi pi-times" severity="secondary" text @click="showDetailsDialog = false" />
                     </div>
                 </div>
@@ -521,28 +509,21 @@ watch(() => filters.search, () => {
                     <div>
                         <label class="text-sm text-surface-500">Customer</label>
                         <div class="font-medium">{{ selectedConversation.customer?.full_name || 'Unknown' }}</div>
-                        <div class="text-sm text-surface-500">{{ selectedConversation.customer?.email || 'No email' }}
-                        </div>
-                        <div class="text-sm text-surface-500">{{ selectedConversation.customer?.phone || 'No phone' }}
-                        </div>
+                        <div class="text-sm text-surface-500">{{ selectedConversation.customer?.email || 'No email' }}</div>
+                        <div class="text-sm text-surface-500">{{ selectedConversation.customer?.phone || 'No phone' }}</div>
                     </div>
                     <div>
                         <label class="text-sm text-surface-500">Assigned To</label>
                         <div class="font-medium">
                             {{ selectedConversation.assigned_user_id || 'Unassigned' }}
                         </div>
-                        <div class="text-sm text-surface-500">Messages: {{ selectedConversation.messages_count || 0 }}
-                        </div>
+                        <div class="text-sm text-surface-500">Messages: {{ selectedConversation.messages_count || 0 }}</div>
                     </div>
                     <div>
                         <label class="text-sm text-surface-500">Timeline</label>
                         <div class="text-sm">Started: {{ formatDate(selectedConversation.started_at) }}</div>
-                        <div class="text-sm" v-if="selectedConversation.resolved_at">
-                            Resolved: {{ formatDate(selectedConversation.resolved_at) }}
-                        </div>
-                        <div class="text-sm" v-if="selectedConversation.closed_at">
-                            Closed: {{ formatDate(selectedConversation.closed_at) }}
-                        </div>
+                        <div class="text-sm" v-if="selectedConversation.resolved_at">Resolved: {{ formatDate(selectedConversation.resolved_at) }}</div>
+                        <div class="text-sm" v-if="selectedConversation.closed_at">Closed: {{ formatDate(selectedConversation.closed_at) }}</div>
                     </div>
                 </div>
 
@@ -557,12 +538,8 @@ watch(() => filters.search, () => {
 
                 <!-- Quick Actions -->
                 <div class="flex gap-2">
-                    <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id"
-                        icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small"
-                        @click="handleAssignToMe(selectedConversation)" />
-                    <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id"
-                        icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small"
-                        @click="handleUnassign(selectedConversation)" />
+                    <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
+                    <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
                 </div>
             </div>
         </Dialog>
@@ -572,13 +549,10 @@ watch(() => filters.search, () => {
             <!-- ... -->
             <div class="flex gap-2">
                 <!-- ✅ Assign to Me button -->
-                <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus"
-                    label="Assign to Me" severity="primary" size="small"
-                    @click="handleAssignToMe(selectedConversation)" />
+                <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
 
                 <!-- ✅ Unassign button -->
-                <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus"
-                    label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
+                <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
             </div>
         </Dialog>
 

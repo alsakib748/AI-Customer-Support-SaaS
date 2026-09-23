@@ -1,5 +1,4 @@
 <script setup>
-
 import { ref, reactive, onMounted } from 'vue';
 import { useWorkspaceStore } from '@/stores/workspace';
 // import { toast } from 'vue3-toastify';
@@ -20,7 +19,7 @@ const form = reactive({
     support_email: '',
     support_phone: '',
     timezone: 'UTC',
-    default_language: 'en',
+    default_language: 'en'
 });
 
 // Business Hours
@@ -31,7 +30,7 @@ const weekDays = [
     { key: 'thursday', label: 'Thursday' },
     { key: 'friday', label: 'Friday' },
     { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
+    { key: 'sunday', label: 'Sunday' }
 ];
 
 const businessHours = reactive({
@@ -41,7 +40,7 @@ const businessHours = reactive({
     thursday: { enabled: true, open: '09:00', close: '18:00' },
     friday: { enabled: true, open: '09:00', close: '18:00' },
     saturday: { enabled: false, open: '09:00', close: '18:00' },
-    sunday: { enabled: false, open: '09:00', close: '18:00' },
+    sunday: { enabled: false, open: '09:00', close: '18:00' }
 });
 
 // Statistics
@@ -49,7 +48,7 @@ const statistics = reactive({
     team_members: 0,
     customers: 0,
     conversations: 0,
-    tickets: 0,
+    tickets: 0
 });
 
 // Options
@@ -61,7 +60,7 @@ const industries = [
     { label: 'Finance', value: 'Finance' },
     { label: 'Manufacturing', value: 'Manufacturing' },
     { label: 'Retail', value: 'Retail' },
-    { label: 'Other', value: 'Other' },
+    { label: 'Other', value: 'Other' }
 ];
 
 const timezones = [
@@ -74,7 +73,7 @@ const timezones = [
     { label: 'Europe/Paris', value: 'Europe/Paris' },
     { label: 'Australia/Sydney', value: 'Australia/Sydney' },
     { label: 'Asia/Tokyo', value: 'Asia/Tokyo' },
-    { label: 'Asia/Singapore', value: 'Asia/Singapore' },
+    { label: 'Asia/Singapore', value: 'Asia/Singapore' }
 ];
 
 const languages = [
@@ -84,7 +83,7 @@ const languages = [
     { label: 'Français', value: 'fr' },
     { label: 'Deutsch', value: 'de' },
     { label: '日本語', value: 'ja' },
-    { label: '中文', value: 'zh' },
+    { label: '中文', value: 'zh' }
 ];
 
 // Load workspace data
@@ -101,16 +100,16 @@ const loadWorkspace = async () => {
                 support_email: w.support_email || '',
                 support_phone: w.support_phone || '',
                 timezone: w.timezone || 'UTC',
-                default_language: w.default_language || 'en',
+                default_language: w.default_language || 'en'
             });
 
             // Load business hours if exists
             if (w.business_hours) {
-                Object.keys(businessHours).forEach(day => {
+                Object.keys(businessHours).forEach((day) => {
                     if (w.business_hours[day]) {
                         businessHours[day] = {
                             ...businessHours[day],
-                            ...w.business_hours[day],
+                            ...w.business_hours[day]
                         };
                     }
                 });
@@ -119,7 +118,6 @@ const loadWorkspace = async () => {
 
         // Load statistics
         await loadStatistics();
-
     } catch (error) {
         console.error('Failed to load workspace:', error);
         // toast.error('Failed to load workspace settings');
@@ -150,11 +148,10 @@ const handleSubmit = async () => {
             support_email: form.support_email,
             support_phone: form.support_phone,
             timezone: form.timezone,
-            default_language: form.default_language,
+            default_language: form.default_language
         });
 
         // toast.success('Workspace updated successfully.');
-
     } catch (error) {
         console.error('Failed to update workspace:', error);
         // toast.error(error.response?.data?.message || 'Failed to update workspace');
@@ -177,7 +174,6 @@ const handleLogoChange = async (event) => {
         form.logo = workspaceStore.workspace?.logo || '';
 
         // toast.success('Logo updated successfully');
-
     } catch (error) {
         console.error('Failed to upload logo:', error);
         // toast.error('Failed to upload logo');
@@ -193,7 +189,6 @@ const handleLogoDelete = async () => {
         form.logo = '';
 
         // toast.success('Logo removed successfully');
-
     } catch (error) {
         console.error('Failed to delete logo:', error);
         // toast.error('Failed to remove logo');
@@ -206,7 +201,6 @@ const handleBusinessHoursSave = async () => {
         await workspaceStore.updateBusinessHours(businessHours);
 
         // toast.success('Business hours updated successfully');
-
     } catch (error) {
         console.error('Failed to update business hours:', error);
         // toast.error('Failed to update business hours');
@@ -224,7 +218,7 @@ const resetForm = () => {
             support_email: w.support_email || '',
             support_phone: w.support_phone || '',
             timezone: w.timezone || 'UTC',
-            default_language: w.default_language || 'en',
+            default_language: w.default_language || 'en'
         });
     }
 };
@@ -240,12 +234,8 @@ onMounted(() => {
     <div class="max-w-4xl mx-auto p-6">
         <!-- Page Header -->
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">
-                Workspace Settings
-            </h1>
-            <p class="text-surface-600 dark:text-surface-400 mt-2">
-                Manage your workspace information and preferences
-            </p>
+            <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">Workspace Settings</h1>
+            <p class="text-surface-600 dark:text-surface-400 mt-2">Manage your workspace information and preferences</p>
         </div>
 
         <!-- Loading State -->
@@ -256,7 +246,6 @@ onMounted(() => {
         <!-- Workspace Form -->
         <!-- <form v-else @submit.prevent="handleSubmit" class="space-y-6"> -->
         <form @submit.prevent="handleSubmit" class="space-y-6">
-
             <!-- ============================================ -->
             <!-- GENERAL INFORMATION -->
             <!-- ============================================ -->
@@ -271,12 +260,8 @@ onMounted(() => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Workspace Name -->
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Workspace Name <span class="text-red-500">*</span>
-                            </label>
-                            <InputText v-model="form.name" class="w-full"
-                                :class="{ 'p-invalid': workspaceStore.getFieldError('name') }"
-                                placeholder="Enter workspace name" />
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Workspace Name <span class="text-red-500">*</span> </label>
+                            <InputText v-model="form.name" class="w-full" :class="{ 'p-invalid': workspaceStore.getFieldError('name') }" placeholder="Enter workspace name" />
                             <small v-if="workspaceStore.getFieldError('name')" class="text-red-500 block mt-1">
                                 {{ workspaceStore.getFieldError('name') }}
                             </small>
@@ -284,40 +269,28 @@ onMounted(() => {
 
                         <!-- Industry -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Industry
-                            </label>
-                            <Select v-model="form.industry" :options="industries" optionLabel="label"
-                                optionValue="value" placeholder="Select Industry" class="w-full" />
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Industry </label>
+                            <Select v-model="form.industry" :options="industries" optionLabel="label" optionValue="value" placeholder="Select Industry" class="w-full" />
                         </div>
 
                         <!-- Logo Upload -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Logo
-                            </label>
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Logo </label>
                             <div class="flex items-center gap-4">
                                 <!-- Logo Preview -->
-                                <div class="w-16 h-16 rounded-lg border-2 border-dashed border-surface-300 dark:border-surface-600 flex items-center justify-center overflow-hidden"
-                                    :class="{ 'border-primary': form.logo }">
-                                    <img v-if="form.logo" :src="form.logo" alt="Logo"
-                                        class="w-full h-full object-cover" />
+                                <div class="w-16 h-16 rounded-lg border-2 border-dashed border-surface-300 dark:border-surface-600 flex items-center justify-center overflow-hidden" :class="{ 'border-primary': form.logo }">
+                                    <img v-if="form.logo" :src="form.logo" alt="Logo" class="w-full h-full object-cover" />
                                     <i v-else class="pi pi-image text-2xl text-surface-400"></i>
                                 </div>
 
                                 <!-- Upload Buttons -->
                                 <div class="flex gap-2">
-                                    <Button type="button" icon="pi pi-upload" label="Upload" severity="primary"
-                                        size="small" @click="handleLogoUpload" />
-                                    <Button v-if="form.logo" type="button" icon="pi pi-trash" label="Remove"
-                                        severity="danger" size="small" outlined @click="handleLogoDelete" />
+                                    <Button type="button" icon="pi pi-upload" label="Upload" severity="primary" size="small" @click="handleLogoUpload" />
+                                    <Button v-if="form.logo" type="button" icon="pi pi-trash" label="Remove" severity="danger" size="small" outlined @click="handleLogoDelete" />
                                 </div>
-                                <input type="file" ref="logoInput" accept="image/*" class="hidden"
-                                    @change="handleLogoChange" />
+                                <input type="file" ref="logoInput" accept="image/*" class="hidden" @change="handleLogoChange" />
                             </div>
-                            <small class="text-surface-500 dark:text-surface-400 block mt-1">
-                                Recommended: Square image, max 2MB
-                            </small>
+                            <small class="text-surface-500 dark:text-surface-400 block mt-1"> Recommended: Square image, max 2MB </small>
                         </div>
                     </div>
                 </template>
@@ -337,12 +310,8 @@ onMounted(() => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Support Email -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Support Email
-                            </label>
-                            <InputText v-model="form.support_email" type="email" class="w-full"
-                                :class="{ 'p-invalid': workspaceStore.getFieldError('support_email') }"
-                                placeholder="support@example.com" />
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Support Email </label>
+                            <InputText v-model="form.support_email" type="email" class="w-full" :class="{ 'p-invalid': workspaceStore.getFieldError('support_email') }" placeholder="support@example.com" />
                             <small v-if="workspaceStore.getFieldError('support_email')" class="text-red-500 block mt-1">
                                 {{ workspaceStore.getFieldError('support_email') }}
                             </small>
@@ -350,11 +319,8 @@ onMounted(() => {
 
                         <!-- Support Phone -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Support Phone
-                            </label>
-                            <InputText v-model="form.support_phone" type="tel" class="w-full"
-                                placeholder="+1 234 567 8900" />
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Support Phone </label>
+                            <InputText v-model="form.support_phone" type="tel" class="w-full" placeholder="+1 234 567 8900" />
                         </div>
                     </div>
                 </template>
@@ -374,12 +340,8 @@ onMounted(() => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Timezone -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Timezone <span class="text-red-500">*</span>
-                            </label>
-                            <Select v-model="form.timezone" :options="timezones" optionLabel="label" optionValue="value"
-                                placeholder="Select Timezone" class="w-full"
-                                :class="{ 'p-invalid': workspaceStore.getFieldError('timezone') }" />
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Timezone <span class="text-red-500">*</span> </label>
+                            <Select v-model="form.timezone" :options="timezones" optionLabel="label" optionValue="value" placeholder="Select Timezone" class="w-full" :class="{ 'p-invalid': workspaceStore.getFieldError('timezone') }" />
                             <small v-if="workspaceStore.getFieldError('timezone')" class="text-red-500 block mt-1">
                                 {{ workspaceStore.getFieldError('timezone') }}
                             </small>
@@ -387,14 +349,17 @@ onMounted(() => {
 
                         <!-- Default Language -->
                         <div>
-                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                                Default Language <span class="text-red-500">*</span>
-                            </label>
-                            <Select v-model="form.default_language" :options="languages" optionLabel="label"
-                                optionValue="value" placeholder="Select Language" class="w-full"
-                                :class="{ 'p-invalid': workspaceStore.getFieldError('default_language') }" />
-                            <small v-if="workspaceStore.getFieldError('default_language')"
-                                class="text-red-500 block mt-1">
+                            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1"> Default Language <span class="text-red-500">*</span> </label>
+                            <Select
+                                v-model="form.default_language"
+                                :options="languages"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Language"
+                                class="w-full"
+                                :class="{ 'p-invalid': workspaceStore.getFieldError('default_language') }"
+                            />
+                            <small v-if="workspaceStore.getFieldError('default_language')" class="text-red-500 block mt-1">
                                 {{ workspaceStore.getFieldError('default_language') }}
                             </small>
                         </div>
@@ -412,14 +377,12 @@ onMounted(() => {
                             <i class="pi pi-clock text-primary"></i>
                             <span>Business Hours</span>
                         </div>
-                        <Button type="button" :label="showBusinessHours ? 'Hide' : 'Configure'" severity="secondary"
-                            text size="small" @click="showBusinessHours = !showBusinessHours" />
+                        <Button type="button" :label="showBusinessHours ? 'Hide' : 'Configure'" severity="secondary" text size="small" @click="showBusinessHours = !showBusinessHours" />
                     </div>
                 </template>
                 <template #content v-if="showBusinessHours">
                     <div class="space-y-4">
-                        <div v-for="day in weekDays" :key="day.key"
-                            class="flex items-center gap-4 p-3 rounded-lg border border-surface-200 dark:border-surface-700">
+                        <div v-for="day in weekDays" :key="day.key" class="flex items-center gap-4 p-3 rounded-lg border border-surface-200 dark:border-surface-700">
                             <div class="w-28 font-medium text-surface-700 dark:text-surface-300">
                                 {{ day.label }}
                             </div>
@@ -430,16 +393,13 @@ onMounted(() => {
                                 </span>
                             </div>
                             <div v-if="businessHours[day.key].enabled" class="flex items-center gap-3">
-                                <InputMask v-model="businessHours[day.key].open" mask="99:99" placeholder="09:00"
-                                    class="w-24" />
+                                <InputMask v-model="businessHours[day.key].open" mask="99:99" placeholder="09:00" class="w-24" />
                                 <span class="text-surface-500">to</span>
-                                <InputMask v-model="businessHours[day.key].close" mask="99:99" placeholder="18:00"
-                                    class="w-24" />
+                                <InputMask v-model="businessHours[day.key].close" mask="99:99" placeholder="18:00" class="w-24" />
                             </div>
                         </div>
                         <div class="flex justify-end mt-4">
-                            <Button type="button" label="Save Business Hours" severity="secondary"
-                                @click="handleBusinessHoursSave" />
+                            <Button type="button" label="Save Business Hours" severity="secondary" @click="handleBusinessHoursSave" />
                         </div>
                     </div>
                 </template>
@@ -482,13 +442,11 @@ onMounted(() => {
             <!-- ============================================ -->
             <div class="flex justify-end gap-3 pt-4">
                 <Button type="button" label="Reset" severity="secondary" outlined @click="resetForm" />
-                <Button type="submit" :label="saving ? 'Saving...' : 'Save Changes'" severity="primary"
-                    :loading="saving" :disabled="saving" icon="pi pi-save" />
+                <Button type="submit" :label="saving ? 'Saving...' : 'Save Changes'" severity="primary" :loading="saving" :disabled="saving" icon="pi pi-save" />
             </div>
         </form>
     </div>
 </template>
-
 
 <style scoped>
 /* Custom styles for PrimeVue components */

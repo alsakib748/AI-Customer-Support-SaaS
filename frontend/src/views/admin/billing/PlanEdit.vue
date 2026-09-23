@@ -19,7 +19,7 @@ const form = reactive({
     currency: 'USD',
     trial_days: 14,
     is_active: true,
-    is_public: true,
+    is_public: true
 });
 
 const load = async () => {
@@ -48,8 +48,7 @@ onMounted(load);
                 <h1 class="text-2xl font-bold">Edit Plan</h1>
                 <p class="text-surface-600">Update plan details</p>
             </div>
-            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="router.push('/admin/billing/plans')" />
+            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing/plans')" />
         </div>
 
         <Card>

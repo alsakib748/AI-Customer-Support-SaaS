@@ -13,14 +13,14 @@ const statusOptions = [
     { label: 'Completed', value: 'completed' },
     { label: 'Pending', value: 'pending' },
     { label: 'Failed', value: 'failed' },
-    { label: 'Refunded', value: 'refunded' },
+    { label: 'Refunded', value: 'refunded' }
 ];
 
 const providerOptions = [
     { label: 'All', value: null },
     { label: 'Stripe', value: 'stripe' },
     { label: 'PayPal', value: 'paypal' },
-    { label: 'Manual', value: 'manual' },
+    { label: 'Manual', value: 'manual' }
 ];
 
 const loading = computed(() => billingStore.loading);
@@ -29,10 +29,7 @@ const paymentStats = computed(() => billingStore.paymentStats);
 const totalPayments = computed(() => billingStore.paymentsPagination?.total || 0);
 
 const loadData = async () => {
-    await Promise.allSettled([
-        billingStore.fetchPayments({ ...filters }),
-        billingStore.fetchPaymentStatistics(),
-    ]);
+    await Promise.allSettled([billingStore.fetchPayments({ ...filters }), billingStore.fetchPaymentStatistics()]);
 };
 
 const applyFilters = () => loadData();
@@ -54,12 +51,13 @@ const viewInvoice = (invoiceId) => {
 const formatDate = (date) => {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 };
 
-const formatCurrency = (amount, currency = 'USD') =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+const formatCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 
 onMounted(loadData);
 </script>
@@ -71,53 +69,55 @@ onMounted(loadData);
                 <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0">Payment History</h1>
                 <p class="text-surface-600 dark:text-surface-400">View all your payment transactions</p>
             </div>
-            <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="router.push('/billing')" />
+            <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/billing')" />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card><template #content>
+            <Card
+                ><template #content>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-primary">{{ paymentStats.total || 0 }}</div>
                         <div class="text-sm text-surface-600">Total Payments</div>
                     </div>
-                </template></Card>
-            <Card><template #content>
+                </template></Card
+            >
+            <Card
+                ><template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-success">{{ formatCurrency(paymentStats.total_revenue || 0)
-                            }}</div>
+                        <div class="text-2xl font-bold text-success">{{ formatCurrency(paymentStats.total_revenue || 0) }}</div>
                         <div class="text-sm text-surface-600">Total Revenue</div>
                     </div>
-                </template></Card>
-            <Card><template #content>
+                </template></Card
+            >
+            <Card
+                ><template #content>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-danger">{{ paymentStats.failed || 0 }}</div>
                         <div class="text-sm text-surface-600">Failed</div>
                     </div>
-                </template></Card>
-            <Card><template #content>
+                </template></Card
+            >
+            <Card
+                ><template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-warning">{{ formatCurrency(paymentStats.total_refunded || 0)
-                            }}</div>
+                        <div class="text-2xl font-bold text-warning">{{ formatCurrency(paymentStats.total_refunded || 0) }}</div>
                         <div class="text-sm text-surface-600">Refunded</div>
                     </div>
-                </template></Card>
+                </template></Card
+            >
         </div>
 
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="w-48">
-                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-48">
-                <Select v-model="filters.provider" :options="providerOptions" optionLabel="label" optionValue="value"
-                    placeholder="Provider" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.provider" :options="providerOptions" optionLabel="label" optionValue="value" placeholder="Provider" class="w-full" @change="applyFilters" clearable />
             </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
-        <DataTable :value="payments" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalPayments"
-            :lazy="true" @page="onPageChange" class="w-full">
+        <DataTable :value="payments" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalPayments" :lazy="true" @page="onPageChange" class="w-full">
             <Column field="payment_id" header="Payment ID">
                 <template #body="{ data }">
                     <span class="font-mono text-sm">{{ data.payment_id }}</span>
@@ -149,8 +149,7 @@ onMounted(loadData);
             </Column>
             <Column header="Actions" style="width: 100px">
                 <template #body="{ data }">
-                    <Button v-if="data.invoice_id" icon="pi pi-eye" severity="info" text rounded
-                        @click="viewInvoice(data.invoice_id)" />
+                    <Button v-if="data.invoice_id" icon="pi pi-eye" severity="info" text rounded @click="viewInvoice(data.invoice_id)" />
                 </template>
             </Column>
         </DataTable>

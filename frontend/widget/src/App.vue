@@ -11,8 +11,8 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
 const props = defineProps({
     widgetId: {
         type: String,
-        required: true,
-    },
+        required: true
+    }
 });
 
 // ============================================
@@ -52,14 +52,14 @@ const widgetConfig = reactive({
     showBranding: true,
     requireName: false,
     requireEmail: false,
-    requirePhone: false,
+    requirePhone: false
 });
 
 // Customer Form
 const customerForm = reactive({
     name: '',
     email: '',
-    phone: '',
+    phone: ''
 });
 
 // ============================================
@@ -87,7 +87,7 @@ const requireName = computed(() => widgetConfig.requireName);
 
 const welcomeMessage = computed(() => widgetConfig.welcomeMessage || 'Hi! How can we help you today?');
 
-const offlineMessage = computed(() => widgetConfig.offlineMessage || 'Our team is currently offline. Please leave a message and we\'ll get back to you.');
+const offlineMessage = computed(() => widgetConfig.offlineMessage || "Our team is currently offline. Please leave a message and we'll get back to you.");
 
 const statusClass = computed(() => {
     if (isOffline.value) return 'status-offline';
@@ -103,7 +103,7 @@ const widgetStyles = computed(() => {
     const position = widgetConfig.position || 'bottom-right';
     const styles = {
         position: 'fixed',
-        zIndex: 999999,
+        zIndex: 999999
     };
 
     if (position.includes('bottom')) {
@@ -170,7 +170,7 @@ const bootstrapWidget = async () => {
     try {
         const response = await axios.post('/widget/bootstrap', {
             widget_id: props.widgetId,
-            origin: window.location.origin,
+            origin: window.location.origin
         });
 
         if (response.data.success) {
@@ -215,8 +215,8 @@ const createSession = async () => {
                 language: navigator.language,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 screen: `${window.screen.width}x${window.screen.height}`,
-                user_agent: navigator.userAgent,
-            },
+                user_agent: navigator.userAgent
+            }
         });
 
         if (response.data.success) {
@@ -245,8 +245,8 @@ const loadMessages = async () => {
         const response = await axios.get('/widget/messages', {
             params: {
                 session_token: sessionToken.value,
-                limit: 50,
-            },
+                limit: 50
+            }
         });
 
         if (response.data.success) {
@@ -275,7 +275,7 @@ const sendMessage = async () => {
     try {
         const payload = {
             session_token: sessionToken.value,
-            content: content,
+            content: content
         };
 
         // Add customer info if available
@@ -296,8 +296,8 @@ const sendMessage = async () => {
                 created_at: newMsg.created_at,
                 sender: {
                     type: 'customer',
-                    name: customerForm.name || 'You',
-                },
+                    name: customerForm.name || 'You'
+                }
             });
 
             // Update conversation info
@@ -345,8 +345,8 @@ const startAIStreaming = (messageId) => {
         is_streaming: true,
         sender: {
             type: 'ai',
-            name: 'AI Assistant',
-        },
+            name: 'AI Assistant'
+        }
     };
     messages.value.push(streamingMessage);
     scrollToBottom();
@@ -359,10 +359,10 @@ const startAIStreaming = (messageId) => {
     try {
         const eventSource = new EventSourcePolyfill(url, {
             headers: {
-                'Authorization': `Bearer ${sessionToken.value}`,
-                'Accept': 'text/event-stream',
+                Authorization: `Bearer ${sessionToken.value}`,
+                Accept: 'text/event-stream'
             },
-            heartbeatTimeout: 120000,
+            heartbeatTimeout: 120000
         });
 
         eventSource.onmessage = (event) => {
@@ -377,7 +377,7 @@ const startAIStreaming = (messageId) => {
                     case 'chunk':
                         streamingContent.value += data.content;
                         // Update the streaming message in real-time
-                        const msgIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        const msgIndex = messages.value.findIndex((m) => m.id === streamingMessage.id);
                         if (msgIndex !== -1) {
                             messages.value[msgIndex].content = streamingContent.value;
                         }
@@ -387,7 +387,7 @@ const startAIStreaming = (messageId) => {
                     case 'complete':
                         console.log('🟢 Stream complete');
                         // Update the streaming message with final data
-                        const finalIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        const finalIndex = messages.value.findIndex((m) => m.id === streamingMessage.id);
                         if (finalIndex !== -1) {
                             messages.value[finalIndex].id = data.message_id || streamingMessage.id;
                             messages.value[finalIndex].is_streaming = false;
@@ -399,7 +399,7 @@ const startAIStreaming = (messageId) => {
 
                     case 'error':
                         console.error('🟢 Stream error:', data.message);
-                        const errorIndex = messages.value.findIndex(m => m.id === streamingMessage.id);
+                        const errorIndex = messages.value.findIndex((m) => m.id === streamingMessage.id);
                         if (errorIndex !== -1) {
                             messages.value[errorIndex].content = 'I apologize, but I am unable to respond right now. Please try again.';
                             messages.value[errorIndex].is_streaming = false;
@@ -425,7 +425,6 @@ const startAIStreaming = (messageId) => {
         };
 
         streamController = eventSource;
-
     } catch (error) {
         console.error('Failed to initialize stream:', error);
         isStreaming.value = false;
@@ -474,7 +473,7 @@ const submitCustomerInfo = async () => {
                 content: customerForm.name || 'Starting chat',
                 name: customerForm.name,
                 email: customerForm.email,
-                phone: customerForm.phone,
+                phone: customerForm.phone
             });
 
             if (response.data.success) {
@@ -505,8 +504,8 @@ const startPolling = () => {
             const response = await axios.get('/widget/messages', {
                 params: {
                     session_token: sessionToken.value,
-                    limit: 50,
-                },
+                    limit: 50
+                }
             });
 
             if (response.data.success) {
@@ -560,9 +559,12 @@ onUnmounted(() => {
 });
 
 // Watch messages for scrolling
-watch(() => messages.value.length, () => {
-    scrollToBottom();
-});
+watch(
+    () => messages.value.length,
+    () => {
+        scrollToBottom();
+    }
+);
 </script>
 
 <template>
@@ -570,8 +572,7 @@ watch(() => messages.value.length, () => {
         <!-- Chat Button (Closed State) -->
         <div v-if="!isOpen" class="chat-button" @click="openWidget">
             <div class="chat-button-inner">
-                <svg v-if="!hasUnread" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
+                <svg v-if="!hasUnread" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                 </svg>
                 <span v-else class="unread-badge">{{ unreadCount }}</span>
@@ -593,8 +594,7 @@ watch(() => messages.value.length, () => {
                         </div>
                     </div>
                     <button class="chat-close" @click="closeWidget">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18" />
                             <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
@@ -612,19 +612,20 @@ watch(() => messages.value.length, () => {
 
                 <!-- Loading -->
                 <div v-if="isLoading" class="loading-messages">
-                    <div class="typing-indicator">
-                        <span></span><span></span><span></span>
-                    </div>
+                    <div class="typing-indicator"><span></span><span></span><span></span></div>
                 </div>
 
                 <!-- ✅ FIXED: Messages Loop with AI Streaming Support -->
                 <div v-for="message in messages" :key="message.id" class="message-wrapper">
-                    <div class="message" :class="{
-                        'message-customer': message.sender?.type === 'customer',
-                        'message-agent': message.sender?.type === 'agent',
-                        'message-ai': message.sender?.type === 'ai',
-                        'message-system': message.sender?.type === 'system',
-                    }">
+                    <div
+                        class="message"
+                        :class="{
+                            'message-customer': message.sender?.type === 'customer',
+                            'message-agent': message.sender?.type === 'agent',
+                            'message-ai': message.sender?.type === 'ai',
+                            'message-system': message.sender?.type === 'system'
+                        }"
+                    >
                         <div class="message-content">
                             <!-- AI Streaming with cursor -->
                             <span v-if="message.is_streaming">
@@ -644,30 +645,24 @@ watch(() => messages.value.length, () => {
             <div v-if="showCustomerForm" class="customer-form">
                 <div v-if="requireName" class="form-group">
                     <label>Your Name *</label>
-                    <input v-model="customerForm.name" placeholder="Enter your name"
-                        @keyup.enter="submitCustomerInfo" />
+                    <input v-model="customerForm.name" placeholder="Enter your name" @keyup.enter="submitCustomerInfo" />
                 </div>
                 <div v-if="requireEmail" class="form-group">
                     <label>Email Address *</label>
-                    <input v-model="customerForm.email" type="email" placeholder="Enter your email"
-                        @keyup.enter="submitCustomerInfo" />
+                    <input v-model="customerForm.email" type="email" placeholder="Enter your email" @keyup.enter="submitCustomerInfo" />
                 </div>
                 <div v-if="requirePhone" class="form-group">
                     <label>Phone Number *</label>
-                    <input v-model="customerForm.phone" type="tel" placeholder="Enter your phone"
-                        @keyup.enter="submitCustomerInfo" />
+                    <input v-model="customerForm.phone" type="tel" placeholder="Enter your phone" @keyup.enter="submitCustomerInfo" />
                 </div>
                 <button class="form-submit" @click="submitCustomerInfo">Start Chat</button>
             </div>
 
             <!-- Composer -->
             <div v-else class="chat-composer">
-                <textarea v-model="newMessage" placeholder="Type a message..." rows="1"
-                    @keydown.enter.prevent="sendMessage" :disabled="isSending || isClosed || isStreaming"></textarea>
-                <button class="send-button" @click="sendMessage"
-                    :disabled="!newMessage.trim() || isSending || isClosed || isStreaming">
-                    <svg v-if="!isSending" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
+                <textarea v-model="newMessage" placeholder="Type a message..." rows="1" @keydown.enter.prevent="sendMessage" :disabled="isSending || isClosed || isStreaming"></textarea>
+                <button class="send-button" @click="sendMessage" :disabled="!newMessage.trim() || isSending || isClosed || isStreaming">
+                    <svg v-if="!isSending" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="22" y1="2" x2="11" y2="13" />
                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
@@ -704,7 +699,9 @@ watch(() => messages.value.length, () => {
     color: white;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -726,7 +723,7 @@ watch(() => messages.value.length, () => {
     position: absolute;
     top: -8px;
     right: -8px;
-    background: #EF4444;
+    background: #ef4444;
     color: white;
     font-size: 12px;
     font-weight: bold;
@@ -795,11 +792,11 @@ watch(() => messages.value.length, () => {
 }
 
 .status-online {
-    color: #A7F3D0;
+    color: #a7f3d0;
 }
 
 .status-offline {
-    color: #FCA5A5;
+    color: #fca5a5;
 }
 
 .chat-close {
@@ -825,7 +822,7 @@ watch(() => messages.value.length, () => {
     flex: 1;
     overflow-y: auto;
     padding: 16px 20px;
-    background: #F9FAFB;
+    background: #f9fafb;
     max-height: 400px;
 }
 
@@ -838,7 +835,7 @@ watch(() => messages.value.length, () => {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-    background: #D1D5DB;
+    background: #d1d5db;
     border-radius: 2px;
 }
 
@@ -849,7 +846,7 @@ watch(() => messages.value.length, () => {
 .welcome-message {
     text-align: center;
     padding: 40px 20px;
-    color: #6B7280;
+    color: #6b7280;
 }
 
 .welcome-icon {
@@ -893,15 +890,15 @@ watch(() => messages.value.length, () => {
 }
 
 .message-ai {
-    background: #F3E8FF;
-    color: #581C87;
+    background: #f3e8ff;
+    color: #581c87;
     border-bottom-left-radius: 4px;
     margin-right: auto;
 }
 
 .message-system {
-    background: #F3F4F6;
-    color: #6B7280;
+    background: #f3f4f6;
+    color: #6b7280;
     text-align: center;
     max-width: 100%;
     font-size: 12px;
@@ -935,7 +932,6 @@ watch(() => messages.value.length, () => {
 }
 
 @keyframes blink {
-
     0%,
     50% {
         opacity: 1;
@@ -963,7 +959,7 @@ watch(() => messages.value.length, () => {
 .typing-indicator span {
     width: 8px;
     height: 8px;
-    background: #9CA3AF;
+    background: #9ca3af;
     border-radius: 50%;
     animation: typing 1.4s infinite both;
 }
@@ -977,7 +973,6 @@ watch(() => messages.value.length, () => {
 }
 
 @keyframes typing {
-
     0%,
     60%,
     100% {
@@ -999,7 +994,7 @@ watch(() => messages.value.length, () => {
     display: flex;
     gap: 8px;
     padding: 12px 16px;
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid #e5e7eb;
     background: white;
     flex-shrink: 0;
 }
@@ -1017,7 +1012,7 @@ watch(() => messages.value.length, () => {
 }
 
 .chat-composer textarea::placeholder {
-    color: #9CA3AF;
+    color: #9ca3af;
 }
 
 .send-button {
@@ -1070,7 +1065,7 @@ watch(() => messages.value.length, () => {
 .customer-form {
     padding: 16px 20px;
     background: white;
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid #e5e7eb;
 }
 
 .form-group {
@@ -1088,7 +1083,7 @@ watch(() => messages.value.length, () => {
 .form-group input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #D1D5DB;
+    border: 1px solid #d1d5db;
     border-radius: 8px;
     font-size: 14px;
     outline: none;
@@ -1123,11 +1118,11 @@ watch(() => messages.value.length, () => {
 
 .offline-message {
     padding: 12px 16px;
-    background: #FEF2F2;
-    color: #991B1B;
+    background: #fef2f2;
+    color: #991b1b;
     text-align: center;
     font-size: 13px;
-    border-top: 1px solid #FECACA;
+    border-top: 1px solid #fecaca;
 }
 
 /* ============================================ */

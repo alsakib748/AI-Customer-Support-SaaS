@@ -5,7 +5,7 @@ import analyticsService from '@/services/analyticsService';
 import { toast } from 'vue3-toastify';
 
 const props = defineProps({
-    visible: { type: Boolean, default: false },
+    visible: { type: Boolean, default: false }
 });
 const emit = defineEmits(['update:visible', 'queued']);
 
@@ -15,7 +15,7 @@ const form = reactive({
     type: 'conversations',
     period: '30d',
     from: null,
-    to: null,
+    to: null
 });
 
 const typeOptions = [
@@ -24,7 +24,7 @@ const typeOptions = [
     { label: 'Agents', value: 'agents' },
     { label: 'Tickets', value: 'tickets' },
     { label: 'AI Usage', value: 'ai' },
-    { label: 'Chat Widget', value: 'widget' },
+    { label: 'Chat Widget', value: 'widget' }
 ];
 
 const periodOptions = [
@@ -34,7 +34,7 @@ const periodOptions = [
     { label: 'Last 90 Days', value: '90d' },
     { label: 'This Month', value: 'this_month' },
     { label: 'Last Month', value: 'last_month' },
-    { label: 'Custom Range', value: 'custom' },
+    { label: 'Custom Range', value: 'custom' }
 ];
 
 const submit = async () => {
@@ -55,19 +55,16 @@ const submit = async () => {
 </script>
 
 <template>
-    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" header="Export Report"
-        :style="{ width: '480px' }" modal>
+    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" header="Export Report" :style="{ width: '480px' }" modal>
         <div class="space-y-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Report Type *</label>
-                <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value"
-                    class="w-full" placeholder="Select report type" />
+                <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" placeholder="Select report type" />
             </div>
 
             <div>
                 <label class="block text-sm font-medium mb-1">Period</label>
-                <Select v-model="form.period" :options="periodOptions" optionLabel="label" optionValue="value"
-                    class="w-full" />
+                <Select v-model="form.period" :options="periodOptions" optionLabel="label" optionValue="value" class="w-full" />
             </div>
 
             <div v-if="form.period === 'custom'" class="grid grid-cols-2 gap-3">
@@ -89,8 +86,7 @@ const submit = async () => {
 
         <template #footer>
             <Button label="Cancel" severity="secondary" @click="$emit('update:visible', false)" />
-            <Button label="Export CSV" icon="pi pi-download" severity="primary" :loading="loading"
-                :disabled="!form.type" @click="submit" />
+            <Button label="Export CSV" icon="pi pi-download" severity="primary" :loading="loading" :disabled="!form.type" @click="submit" />
         </template>
     </Dialog>
 </template>

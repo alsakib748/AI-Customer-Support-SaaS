@@ -25,23 +25,23 @@ const logs = computed(() => aiStore.logs);
 const chartData = computed(() => {
     const daily = usage.value.daily_usage || [];
     return {
-        labels: daily.map(d => d.date),
+        labels: daily.map((d) => d.date),
         datasets: [
             {
                 label: 'Requests',
-                data: daily.map(d => d.count),
+                data: daily.map((d) => d.count),
                 fill: false,
                 borderColor: '#4F46E5',
-                tension: 0.4,
+                tension: 0.4
             },
             {
                 label: 'Tokens',
-                data: daily.map(d => d.tokens || 0),
+                data: daily.map((d) => d.tokens || 0),
                 fill: false,
                 borderColor: '#10B981',
-                tension: 0.4,
-            },
-        ],
+                tension: 0.4
+            }
+        ]
     };
 });
 
@@ -50,14 +50,14 @@ const chartOptions = {
     maintainAspectRatio: false,
     plugins: {
         legend: {
-            position: 'top',
-        },
+            position: 'top'
+        }
     },
     scales: {
         y: {
-            beginAtZero: true,
-        },
-    },
+            beginAtZero: true
+        }
+    }
 };
 
 // ============================================
@@ -67,12 +67,7 @@ const chartOptions = {
 const loadData = async () => {
     loading.value = true;
     try {
-        await Promise.all([
-            aiStore.fetchUsage(),
-            aiStore.fetchHealth(),
-            aiStore.fetchAnalytics(),
-            aiStore.fetchLogs({ limit: 20 }),
-        ]);
+        await Promise.all([aiStore.fetchUsage(), aiStore.fetchHealth(), aiStore.fetchAnalytics(), aiStore.fetchLogs({ limit: 20 })]);
     } catch (error) {
         console.error('Failed to load AI analytics:', error);
     } finally {
@@ -128,8 +123,7 @@ onMounted(() => {
             <Card>
                 <template #content>
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-warning">{{ formatNumber(health.avg_response_time) }}ms
-                        </div>
+                        <div class="text-2xl font-bold text-warning">{{ formatNumber(health.avg_response_time) }}ms</div>
                         <div class="text-sm text-surface-600 dark:text-surface-400">Avg Response Time</div>
                     </div>
                 </template>
@@ -152,15 +146,12 @@ onMounted(() => {
                 </template>
                 <template #content>
                     <div v-if="usage.by_provider?.length">
-                        <div v-for="item in usage.by_provider" :key="item.provider"
-                            class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
+                        <div v-for="item in usage.by_provider" :key="item.provider" class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
                             <span>{{ item.provider }}</span>
                             <span class="font-medium">{{ item.count }} requests</span>
                         </div>
                     </div>
-                    <div v-else class="text-center text-surface-400 py-4">
-                        No data available
-                    </div>
+                    <div v-else class="text-center text-surface-400 py-4">No data available</div>
                 </template>
             </Card>
 
@@ -170,15 +161,12 @@ onMounted(() => {
                 </template>
                 <template #content>
                     <div v-if="usage.by_model?.length">
-                        <div v-for="item in usage.by_model" :key="item.model"
-                            class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
+                        <div v-for="item in usage.by_model" :key="item.model" class="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800">
                             <span>{{ item.model }}</span>
                             <span class="font-medium">{{ item.count }} requests</span>
                         </div>
                     </div>
-                    <div v-else class="text-center text-surface-400 py-4">
-                        No data available
-                    </div>
+                    <div v-else class="text-center text-surface-400 py-4">No data available</div>
                 </template>
             </Card>
         </div>
@@ -192,9 +180,7 @@ onMounted(() => {
                 <div v-if="usage.daily_usage?.length" class="h-64">
                     <Chart type="line" :data="chartData" :options="chartOptions" />
                 </div>
-                <div v-else class="text-center text-surface-400 py-8">
-                    No data available
-                </div>
+                <div v-else class="text-center text-surface-400 py-8">No data available</div>
             </template>
         </Card>
 
@@ -214,9 +200,7 @@ onMounted(() => {
                         </template>
                     </Column>
                     <Column field="duration_ms" header="Duration">
-                        <template #body="{ data }">
-                            {{ data.duration_ms }}ms
-                        </template>
+                        <template #body="{ data }"> {{ data.duration_ms }}ms </template>
                     </Column>
                     <Column field="created_at" header="Time">
                         <template #body="{ data }">

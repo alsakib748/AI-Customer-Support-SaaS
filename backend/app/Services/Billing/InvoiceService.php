@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\Coupon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class InvoiceService
@@ -40,6 +41,22 @@ class InvoiceService
     public function getInvoice(int $id): Invoice
     {
         return Invoice::with(['tenant', 'subscription', 'payments'])->findOrFail($id);
+    }
+
+    /**
+     * Latest invoice for a subscription (used for idempotent creation).
+     */
+    public function getForSubscription(int $subscriptionId): ?Invoice
+    {
+        return Invoice::where('subscription_id', $subscriptionId)->latest('id')->first();
+    }
+
+    /**
+     * Whether the subscription already has an invoice.
+     */
+    public function hasInvoiceForSubscription(int $subscriptionId): bool
+    {
+        return Invoice::where('subscription_id', $subscriptionId)->exists();
     }
 
     /**
@@ -243,13 +260,19 @@ class InvoiceService
         $prefix = config('billing.invoice.prefix', 'INV-');
         $period = date('Ym');
 
-        $last = Invoice::where('invoice_number', 'LIKE', "{$prefix}{$period}%")
-            ->orderBy('id', 'desc')
-            ->first();
+        // Include soft-deleted rows: invoice_number is unique, and ignoring
+        // trashed rows would let a deleted number be reused and collide.
+        $max = Invoice::withTrashed()
+            ->where('invoice_number', 'LIKE', "{$prefix}{$period}%")
+            ->get(['invoice_number'])
+            ->reduce(function (?int $carry, $invoice) {
+                if (preg_match('/-(\d{6})$/', (string) $invoice->invoice_number, $m)) {
+                    return max($carry ?? 0, (int) $m[1]);
+                }
+                return $carry;
+            });
 
-        $next = $last
-            ? str_pad((string) (((int) substr($last->invoice_number, -6)) + 1), 6, '0', STR_PAD_LEFT)
-            : '000001';
+        $next = str_pad(($max ?? 0) + 1, 6, '0', STR_PAD_LEFT);
 
         return "{$prefix}{$period}-{$next}";
     }

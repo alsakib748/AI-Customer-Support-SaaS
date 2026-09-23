@@ -42,11 +42,9 @@ watch(() => [filters.period, filters.from, filters.to], load);
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div class="lg:col-span-2">
-                    <TrendChart title="AI Usage Over Time" :labels="data.usage_trend.labels"
-                        :datasets="data.usage_trend.datasets" />
+                    <TrendChart title="AI Usage Over Time" :labels="data.usage_trend.labels" :datasets="data.usage_trend.datasets" />
                 </div>
-                <StatusChart title="Provider Distribution" :labels="data.provider_breakdown.labels"
-                    :values="data.provider_breakdown.values" />
+                <StatusChart title="Provider Distribution" :labels="data.provider_breakdown.labels" :values="data.provider_breakdown.values" />
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -69,15 +67,11 @@ watch(() => [filters.period, filters.from, filters.to], load);
                         <div class="space-y-3 text-sm">
                             <div class="flex justify-between">
                                 <span>Success Rate</span>
-                                <span class="font-medium text-success">
-                                    {{ data.health.success_rate }}%
-                                </span>
+                                <span class="font-medium text-success"> {{ data.health.success_rate }}% </span>
                             </div>
                             <div class="flex justify-between">
                                 <span>Failure Rate</span>
-                                <span class="font-medium text-danger">
-                                    {{ data.health.failure_rate }}%
-                                </span>
+                                <span class="font-medium text-danger"> {{ data.health.failure_rate }}% </span>
                             </div>
                             <div class="flex justify-between">
                                 <span>Avg Response</span>

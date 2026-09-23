@@ -42,7 +42,14 @@ class BillingWebhookService
 
     protected function paymentSucceeded(array $event): void
     {
-        $invoice = $this->findInvoice($event);
+        $invoice      = $this->findInvoice($event);
+        $subscription = $invoice?->subscription ?? $this->findSubscription($event);
+
+        // No local invoice yet (e.g. checkout during trial): create one from the
+        // webhook payload so invoices and payments are kept in sync with Stripe.
+        if (! $invoice && $subscription) {
+            $invoice = $this->createInvoiceFromEvent($subscription, $event);
+        }
 
         $payment = Payment::updateOrCreate(
             [
@@ -50,15 +57,16 @@ class BillingWebhookService
                 'provider_payment_id'=> $event['provider_payment_id'],
             ],
             [
-                'tenant_id'               => $invoice?->tenant_id,
+                'tenant_id'               => $invoice?->tenant_id ?? $subscription?->tenant_id,
                 'invoice_id'              => $invoice?->id,
-                'subscription_id'         => $invoice?->subscription_id,
+                'subscription_id'         => $invoice?->subscription_id ?? $subscription?->id,
                 'provider_invoice_id'     => $event['provider_invoice_id'],
                 'provider_subscription_id'=> $event['provider_subscription_id'],
                 'amount'                  => $event['amount'],
                 'currency'                => $event['currency'] ?? 'USD',
                 'status'                  => 'completed',
                 'provider'                => $event['provider'],
+                'payment_method'          => $event['provider'] === 'paypal' ? 'paypal' : 'card',
                 'paid_at'                 => now(),
             ]
         );
@@ -73,6 +81,67 @@ class BillingWebhookService
         if ($invoice?->subscription_id) {
             $this->subscriptions->activate($invoice->subscription_id);
         }
+
+        // Fallback: no local invoice exists for checkout flows. Activate the
+        // pending subscription by its provider subscription id instead.
+        if (!empty($event['provider_subscription_id'])) {
+            $pending = Subscription::where('provider_subscription_id', $event['provider_subscription_id'])
+                ->where('status', 'pending')
+                ->first();
+
+            if ($pending) {
+                $this->subscriptions->completePendingCheckout($pending, [
+                    'provider_subscription_id' => $event['provider_subscription_id'],
+                    'provider_customer_id'     => $event['provider_customer_id'],
+                    'source'                   => 'invoice.webhook',
+                ]);
+            }
+        }
+    }
+
+    protected function createInvoiceFromEvent(Subscription $subscription, array $event): ?Invoice
+    {
+        $plan      = $subscription->plan;
+        $amount    = $event['amount'] ?? (float) $plan?->getPriceForCycle($subscription->billing_cycle);
+        $currency  = strtoupper($event['currency'] ?? ($plan?->currency ?? 'USD'));
+        $provider  = $event['provider'];
+        $usePaypal = $provider === 'paypal';
+
+        return Invoice::create([
+            'tenant_id'         => $subscription->tenant_id,
+            'subscription_id'   => $subscription->id,
+            'invoice_number'    => $this->invoices->generateInvoiceNumber(),
+            'subtotal'          => $amount,
+            'tax_amount'        => 0,
+            'discount_amount'   => 0,
+            'total'             => $amount,
+            'currency'          => $currency,
+            'status'            => 'paid',
+            'paid_at'           => now(),
+            'payment_provider'  => $provider,
+            'payment_method'    => 'card',
+            $usePaypal ? 'paypal_invoice_id' : 'stripe_invoice_id' => $event['provider_invoice_id'] ?? null,
+            'period_starts_at'  => $this->periodFromMetadata($event, 'current_period_start'),
+            'period_ends_at'    => $this->periodFromMetadata($event, 'current_period_end'),
+            'line_items'        => [[
+                'description' => ($plan?->name ?? 'Subscription') . ' — ' . ucfirst($subscription->billing_cycle),
+                'quantity'    => 1,
+                'unit_price'  => $amount,
+                'total'       => $amount,
+            ]],
+            'metadata'          => $event['metadata'] ?? [],
+        ]) ?: null;
+    }
+
+    protected function periodFromMetadata(array $event, string $key): ?\Illuminate\Support\Carbon
+    {
+        $value = $event['metadata'][$key] ?? null;
+        if ($value === null) {
+            return null;
+        }
+        return is_numeric($value)
+            ? \Illuminate\Support\Carbon::createFromTimestamp((int) $value)
+            : \Illuminate\Support\Carbon::parse($value);
     }
 
     protected function paymentFailed(array $event): void
@@ -90,6 +159,7 @@ class BillingWebhookService
             'amount'                  => $event['amount'] ?? 0,
             'currency'                => $event['currency'] ?? 'USD',
             'status'                  => 'failed',
+            'payment_method'          => $event['provider'] === 'paypal' ? 'paypal' : 'card',
             'failure_reason'          => $event['metadata']['failure_reason'] ?? 'Provider reported failure',
         ]);
 
@@ -117,7 +187,30 @@ class BillingWebhookService
 
     protected function checkoutCompleted(array $event): void
     {
-        // Nothing to do here — activation happens on invoice.paid / subscription.activated
+        // The checkout session id is carried in provider_invoice_id (event object id).
+        $sessionId = $event['provider_invoice_id'] ?? null;
+
+        if (! $sessionId) {
+            Log::warning('checkoutCompleted: missing session id', ['type' => $event['type'] ?? null]);
+            return;
+        }
+
+        $subscription = Subscription::where('metadata->checkout_session_id', $sessionId)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$subscription) {
+            Log::warning('checkoutCompleted: no pending subscription for session', ['session_id' => $sessionId]);
+            return;
+        }
+
+        $this->subscriptions->completePendingCheckout($subscription, [
+            'provider_subscription_id' => $event['provider_subscription_id'],
+            'provider_customer_id'     => $event['provider_customer_id'],
+            'provider_payment_id'      => $event['provider_payment_id'] ?? null,
+            'provider_invoice_id'      => $event['provider_invoice_id'] ?? null,
+            'source'                   => 'checkout.webhook',
+        ]);
     }
 
     protected function subscriptionCreated(array $event): void
@@ -167,7 +260,9 @@ class BillingWebhookService
         }
 
         $subscription->update(array_merge([
-            'status'              => $subscription->status,
+            'status'                   => $subscription->status,
+            'provider_subscription_id' => $event['provider_subscription_id'] ?? $subscription->provider_subscription_id,
+            'provider_customer_id'     => $event['provider_customer_id'] ?? $subscription->provider_customer_id,
             'current_period_starts_at' => $event['metadata']['current_period_start'] ?? $subscription->current_period_starts_at,
             'current_period_ends_at'   => $event['metadata']['current_period_end']   ?? $subscription->current_period_ends_at,
             'cancel_at_period_end'=> $event['metadata']['cancel_at_period_end'] ?? $subscription->cancel_at_period_end,
@@ -194,7 +289,11 @@ class BillingWebhookService
     protected function findInvoice(array $event): ?Invoice
     {
         if (!empty($event['provider_invoice_id'])) {
-            return Invoice::where('provider_invoice_id', $event['provider_invoice_id'])->first();
+            $field  = $event['provider'] === 'paypal' ? 'paypal_invoice_id' : 'stripe_invoice_id';
+            $invoice = Invoice::where($field, $event['provider_invoice_id'])->first();
+            if ($invoice) {
+                return $invoice;
+            }
         }
 
         if (!empty($event['metadata']['invoice_id'])) {

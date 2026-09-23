@@ -150,6 +150,29 @@ class PayPalGateway implements PaymentGateway
         return $this->request('GET', "/v1/billing/subscriptions/{$providerSubscriptionId}");
     }
 
+    public function createPlanPrice(array $data): array
+    {
+        throw new PaymentGatewayException(
+            'Auto-provisioning is not supported for PayPal. Configure the plan in the PayPal dashboard.'
+        );
+    }
+
+    public function retrieveCheckoutSession(string $sessionId): array
+    {
+        // PayPal has no "checkout session"; the order capture is the closest equivalent.
+        $order = $this->request('GET', "/v2/checkout/orders/{$sessionId}");
+
+        return [
+            'status'                   => $order['status'] ?? null,
+            'session_id'               => $sessionId,
+            'provider_subscription_id' => null,
+            'provider_payment_id'      => $order['purchase_units'][0]['payments']['captures'][0]['id'] ?? null,
+            'provider_customer_id'     => null,
+            'metadata'                 => [],
+            'raw'                      => $order,
+        ];
+    }
+
     public function createBillingPortal(string $providerCustomerId, array $options = []): array
     {
         // PayPal has no hosted billing portal. Redirect to PayPal's account page.

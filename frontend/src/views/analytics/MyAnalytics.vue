@@ -32,9 +32,7 @@ watch(() => [filters.period, filters.from, filters.to], load);
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold">My Analytics</h1>
-                <p class="text-surface-600 dark:text-surface-400">
-                    Your personal performance metrics
-                </p>
+                <p class="text-surface-600 dark:text-surface-400">Your personal performance metrics</p>
             </div>
             <DateRangePicker v-model="filters" @refresh="load" />
         </div>
@@ -61,8 +59,6 @@ watch(() => [filters.period, filters.from, filters.to], load);
             </Card>
         </template>
 
-        <div v-else class="text-center py-12 text-surface-500">
-            No data available for the selected period.
-        </div>
+        <div v-else class="text-center py-12 text-surface-500">No data available for the selected period.</div>
     </div>
 </template>

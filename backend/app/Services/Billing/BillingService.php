@@ -4,6 +4,7 @@ namespace App\Services\Billing;
 
 use App\Models\BillingCustomer;
 use App\Models\Plan;
+use App\Models\PlanProviderPrice;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Payments\PaymentGatewayManager;
@@ -71,8 +72,8 @@ class BillingService
 
         $price = $plan->providerPrice($provider, $billingCycle, $plan->currency);
 
-        if (!$price) {
-            throw new \RuntimeException("No price configured for {$provider} on this plan.");
+        if (! $price) {
+            $price = $this->provisionPlanPrice($plan, $provider, $billingCycle);
         }
 
         $billingCustomer = $this->ensureProviderCustomer($tenant, $provider);
@@ -88,6 +89,59 @@ class BillingService
                 'plan_id'        => $plan->id,
                 'billing_cycle'  => $billingCycle,
             ],
+        ]);
+    }
+
+    /**
+     * Resolve or auto-create a provider price for a plan cycle.
+     * Falls back to legacy plans.stripe_price_id_* columns first.
+     */
+    protected function provisionPlanPrice(Plan $plan, string $provider, string $billingCycle): PlanProviderPrice
+    {
+        $legacyId = $billingCycle === 'yearly'
+            ? $plan->stripe_price_id_yearly
+            : $plan->stripe_price_id_monthly;
+
+        if ($legacyId) {
+            return PlanProviderPrice::create([
+                'plan_id'           => $plan->id,
+                'provider'          => $provider,
+                'billing_cycle'     => $billingCycle,
+                'currency'          => $plan->currency,
+                'provider_price_id' => $legacyId,
+                'amount'            => $plan->getPriceForCycle($billingCycle),
+                'is_active'         => true,
+            ]);
+        }
+
+        $gateway = $this->gateways->driver($provider);
+
+        $result = $gateway->createPlanPrice([
+            'name'                => $plan->name . ' (' . ucfirst($billingCycle) . ')',
+            'amount'              => $plan->getPriceForCycle($billingCycle),
+            'currency'            => $plan->currency,
+            'cycle'               => $billingCycle,
+            'provider_product_id' => $plan->stripe_product_id,
+            'metadata'            => [
+                'plan_id'       => $plan->id,
+                'plan_slug'     => $plan->slug,
+                'billing_cycle' => $billingCycle,
+            ],
+        ]);
+
+        if (empty($plan->stripe_product_id) && !empty($result['provider_product_id'])) {
+            Plan::where('id', $plan->id)->update(['stripe_product_id' => $result['provider_product_id']]);
+        }
+
+        return PlanProviderPrice::create([
+            'plan_id'           => $plan->id,
+            'provider'          => $provider,
+            'billing_cycle'     => $billingCycle,
+            'currency'          => $plan->currency,
+            'provider_price_id' => $result['provider_price_id'],
+            'amount'            => $plan->getPriceForCycle($billingCycle),
+            'is_active'         => true,
+            'metadata'          => ['auto_provisioned' => true],
         ]);
     }
 }

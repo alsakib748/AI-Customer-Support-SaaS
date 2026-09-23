@@ -222,6 +222,13 @@ class BillingService {
         return api.post('/subscription/checkout', data);
     }
 
+    verifyCheckout(sessionId, provider = null) {
+        return api.post('/subscription/checkout/verify', {
+            session_id: sessionId,
+            provider
+        });
+    }
+
     // ============================================
     // USAGE
     // ============================================

@@ -7,7 +7,7 @@ const props = defineProps({
     value: { type: [Number, String], default: 0 },
     change: { type: Number, default: null },
     isPositive: { type: Boolean, default: null },
-    suffix: { type: String, default: '' },
+    suffix: { type: String, default: '' }
 });
 
 const formattedValue = computed(() => {
@@ -40,15 +40,12 @@ const changeIcon = computed(() => {
                     <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">
                         {{ formattedValue }}
                     </div>
-                    <div v-if="change !== null && change !== undefined"
-                        class="flex items-center gap-1 text-sm font-medium" :class="changeClass">
+                    <div v-if="change !== null && change !== undefined" class="flex items-center gap-1 text-sm font-medium" :class="changeClass">
                         <i :class="changeIcon"></i>
                         <span>{{ Math.abs(change).toFixed(1) }}%</span>
                     </div>
                 </div>
-                <div v-if="change !== null && change !== undefined" class="text-xs text-surface-400 mt-1">
-                    vs previous period
-                </div>
+                <div v-if="change !== null && change !== undefined" class="text-xs text-surface-400 mt-1">vs previous period</div>
             </div>
         </template>
     </Card>

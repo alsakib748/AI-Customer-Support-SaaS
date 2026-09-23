@@ -10,6 +10,20 @@ class Payment extends Model
 {
     use SoftDeletes;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+            if (empty($model->payment_id)) {
+                $model->payment_id = 'pay_' . \Illuminate\Support\Str::random(24);
+            }
+        });
+    }
+
     protected $connection = 'central';
 
     protected $fillable = [

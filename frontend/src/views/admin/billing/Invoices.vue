@@ -13,7 +13,7 @@ const statusOptions = [
     { label: 'Draft', value: 'draft' },
     { label: 'Open', value: 'open' },
     { label: 'Paid', value: 'paid' },
-    { label: 'Void', value: 'void' },
+    { label: 'Void', value: 'void' }
 ];
 
 const loading = computed(() => billingStore.loading);
@@ -32,8 +32,7 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-const formatCurrency = (amount, currency = 'USD') =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+const formatCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 
 onMounted(load);
 </script>
@@ -45,19 +44,16 @@ onMounted(load);
                 <h1 class="text-2xl font-bold">All Invoices</h1>
                 <p class="text-surface-600">Platform-wide invoices</p>
             </div>
-            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="router.push('/admin/billing')" />
+            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing')" />
         </div>
 
         <div class="mb-4 flex gap-3 items-center">
             <div class="w-48">
-                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Status" class="w-full" @change="load" clearable />
+                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="load" clearable />
             </div>
         </div>
 
-        <DataTable :value="invoices" :loading="loading" paginator :rows="filters.per_page" :totalRecords="total"
-            :lazy="true" @page="onPageChange" class="w-full">
+        <DataTable :value="invoices" :loading="loading" paginator :rows="filters.per_page" :totalRecords="total" :lazy="true" @page="onPageChange" class="w-full">
             <Column field="invoice_number" header="Invoice #" />
             <Column field="tenant_id" header="Tenant" />
             <Column field="total" header="Amount">

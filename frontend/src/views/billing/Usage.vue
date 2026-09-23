@@ -19,7 +19,7 @@ const items = computed(() => {
         { key: 'widgets', label: 'Widgets', icon: 'pi pi-comments', used: u.widgets?.used || 0, limit: u.widgets?.limit, percentage: u.widgets?.percentage || 0 },
         { key: 'kb_articles', label: 'Knowledge Base', icon: 'pi pi-book', used: u.kb_articles?.used || 0, limit: u.kb_articles?.limit, percentage: u.kb_articles?.percentage || 0 },
         { key: 'conversations', label: 'Conversations', icon: 'pi pi-send', used: u.conversations?.used || 0, limit: u.conversations?.limit, percentage: u.conversations?.percentage || 0 },
-        { key: 'storage', label: 'Storage', icon: 'pi pi-database', used: u.storage?.used || 0, limit: u.storage?.limit, percentage: u.storage?.percentage || 0, isStorage: true },
+        { key: 'storage', label: 'Storage', icon: 'pi pi-database', used: u.storage?.used || 0, limit: u.storage?.limit, percentage: u.storage?.percentage || 0, isStorage: true }
     ];
 });
 
@@ -54,8 +54,7 @@ onMounted(() => {
                 <h1 class="text-2xl font-bold">Usage</h1>
                 <p class="text-surface-600">Track your plan usage and limits</p>
             </div>
-            <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="router.push('/billing')" />
+            <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/billing')" />
         </div>
 
         <div v-if="loading" class="flex justify-center py-12">
@@ -92,11 +91,8 @@ onMounted(() => {
                                 {{ formatValue(item.limit, item.isStorage) }}
                             </span>
                         </div>
-                        <ProgressBar :value="item.percentage" :class="getProgressClass(item.percentage)"
-                            :showValue="false" style="height: 8px" />
-                        <div class="text-xs text-surface-500 mt-1 text-right">
-                            {{ item.percentage.toFixed(1) }}% used
-                        </div>
+                        <ProgressBar :value="item.percentage" :class="getProgressClass(item.percentage)" :showValue="false" style="height: 8px" />
+                        <div class="text-xs text-surface-500 mt-1 text-right">{{ item.percentage.toFixed(1) }}% used</div>
                     </template>
                 </Card>
             </div>

@@ -20,29 +20,29 @@ const kpis = computed(() => {
             value: val('total_conversations').toLocaleString?.() ?? val('total_conversations'),
             change: chg('total_conversations'),
             positive: pos('total_conversations'),
-            icon: 'pi pi-comments',
+            icon: 'pi pi-comments'
         },
         {
             title: 'Resolved',
             value: val('resolved_conversations').toLocaleString?.() ?? val('resolved_conversations'),
             change: chg('resolved_conversations'),
             positive: pos('resolved_conversations'),
-            icon: 'pi pi-check-circle',
+            icon: 'pi pi-check-circle'
         },
         {
             title: 'New Customers',
             value: val('new_customers').toLocaleString?.() ?? val('new_customers'),
             change: chg('new_customers'),
             positive: pos('new_customers'),
-            icon: 'pi pi-users',
+            icon: 'pi pi-users'
         },
         {
             title: 'Open Tickets',
             value: val('open_tickets'),
             change: null,
             positive: true,
-            icon: 'pi pi-ticket',
-        },
+            icon: 'pi pi-ticket'
+        }
     ];
 });
 
@@ -71,14 +71,13 @@ onMounted(async () => {
                         <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">
                             {{ kpi.value }}
                         </div>
-                        <div v-if="kpi.change !== null" class="text-xs mt-1"
-                            :class="kpi.positive ? 'text-success' : 'text-danger'">
+                        <div v-if="kpi.change !== null" class="text-xs mt-1" :class="kpi.positive ? 'text-success' : 'text-danger'">
                             <i :class="kpi.change >= 0 ? 'pi pi-arrow-up-right' : 'pi pi-arrow-down-right'"></i>
                             {{ Math.abs(kpi.change).toFixed(1) }}%
                             <span class="text-surface-400 ml-1">vs prev</span>
                         </div>
                     </div>
-                    <i :class="kpi.icon" class="text-4xl text-primary" style="font-size: 1.5rem;"></i>
+                    <i :class="kpi.icon" class="text-4xl text-primary" style="font-size: 1.5rem"></i>
                 </div>
             </template>
         </Card>

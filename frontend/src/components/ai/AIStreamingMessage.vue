@@ -5,36 +5,36 @@ import { computed } from 'vue';
 const props = defineProps({
     content: {
         type: String,
-        default: '',
+        default: ''
     },
     isStreaming: {
         type: Boolean,
-        default: false,
+        default: false
     },
     metadata: {
         type: Object,
-        default: () => ({}),
+        default: () => ({})
     },
     tokens: {
         type: Number,
-        default: 0,
+        default: 0
     },
     createdAt: {
         type: String,
-        default: null,
-    },
+        default: null
+    }
 });
 
 const formattedTime = computed(() => {
     if (props.createdAt) {
         return new Date(props.createdAt).toLocaleTimeString([], {
             hour: '2-digit',
-            minute: '2-digit',
+            minute: '2-digit'
         });
     }
     return new Date().toLocaleTimeString([], {
         hour: '2-digit',
-        minute: '2-digit',
+        minute: '2-digit'
     });
 });
 </script>
@@ -48,20 +48,15 @@ const formattedTime = computed(() => {
             <div class="flex-1">
                 <!-- Header -->
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-success-700 dark:text-success-300">
-                        AI Assistant
-                    </span>
+                    <span class="text-sm font-medium text-success-700 dark:text-success-300"> AI Assistant </span>
                     <span class="text-xs text-surface-400">
                         {{ formattedTime }}
                     </span>
-                    <span v-if="isStreaming" class="text-xs text-success-500 animate-pulse">
-                        ● Thinking...
-                    </span>
+                    <span v-if="isStreaming" class="text-xs text-success-500 animate-pulse"> ● Thinking... </span>
                 </div>
 
                 <!-- Content -->
-                <div
-                    class="rounded-lg px-4 py-2 mt-1 break-words bg-success-50 dark:bg-success-950 text-success-900 dark:text-success-100">
+                <div class="rounded-lg px-4 py-2 mt-1 break-words bg-success-50 dark:bg-success-950 text-success-900 dark:text-success-100">
                     <!-- Streaming content with cursor -->
                     <span v-if="isStreaming">
                         {{ content }}
@@ -75,12 +70,8 @@ const formattedTime = computed(() => {
                 <div v-if="metadata?.model && !isStreaming" class="text-xs text-surface-400 mt-1">
                     <i class="pi pi-robot mr-1"></i>
                     {{ metadata.model }}
-                    <span v-if="metadata.tokens" class="ml-2">
-                        • {{ metadata.tokens }} tokens
-                    </span>
-                    <span v-if="metadata.knowledge_used" class="ml-2 text-success">
-                        • Knowledge used
-                    </span>
+                    <span v-if="metadata.tokens" class="ml-2"> • {{ metadata.tokens }} tokens </span>
+                    <span v-if="metadata.knowledge_used" class="ml-2 text-success"> • Knowledge used </span>
                 </div>
             </div>
         </div>

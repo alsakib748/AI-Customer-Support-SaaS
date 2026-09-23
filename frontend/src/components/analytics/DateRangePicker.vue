@@ -3,7 +3,7 @@
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
-    modelValue: { type: Object, required: true },
+    modelValue: { type: Object, required: true }
 });
 const emit = defineEmits(['update:modelValue', 'refresh']);
 
@@ -18,7 +18,7 @@ const periodOptions = [
     { label: 'This Month', value: 'this_month' },
     { label: 'Last Month', value: 'last_month' },
     { label: 'This Year', value: 'this_year' },
-    { label: 'Custom Range', value: 'custom' },
+    { label: 'Custom Range', value: 'custom' }
 ];
 
 const updatePeriod = (period) => {
@@ -26,7 +26,7 @@ const updatePeriod = (period) => {
         ...props.modelValue,
         period,
         from: period === 'custom' ? props.modelValue.from : null,
-        to: period === 'custom' ? props.modelValue.to : null,
+        to: period === 'custom' ? props.modelValue.to : null
     });
 };
 
@@ -41,23 +41,24 @@ const updateRange = (range) => {
             ...props.modelValue,
             period: 'custom',
             from: fmt(range[0]),
-            to: fmt(range[1]),
+            to: fmt(range[1])
         });
     }
 };
 
 // Sync custom range when external change
-watch(() => props.modelValue, (v) => {
-    if (v.period !== 'custom') customRange.value = null;
-});
+watch(
+    () => props.modelValue,
+    (v) => {
+        if (v.period !== 'custom') customRange.value = null;
+    }
+);
 </script>
 
 <template>
     <div class="flex flex-wrap items-center gap-3">
-        <Select :modelValue="modelValue.period" :options="periodOptions" optionLabel="label" optionValue="value"
-            class="w-48" @update:modelValue="(v) => updatePeriod(v)" />
-        <Calendar v-if="modelValue.period === 'custom'" :modelValue="customRange" selectionMode="range"
-            :manualInput="false" dateFormat="yy-mm-dd" @update:modelValue="(v) => updateRange(v)" />
+        <Select :modelValue="modelValue.period" :options="periodOptions" optionLabel="label" optionValue="value" class="w-48" @update:modelValue="(v) => updatePeriod(v)" />
+        <Calendar v-if="modelValue.period === 'custom'" :modelValue="customRange" selectionMode="range" :manualInput="false" dateFormat="yy-mm-dd" @update:modelValue="(v) => updateRange(v)" />
         <Button icon="pi pi-refresh" label="Refresh" severity="secondary" outlined @click="$emit('refresh')" />
     </div>
 </template>

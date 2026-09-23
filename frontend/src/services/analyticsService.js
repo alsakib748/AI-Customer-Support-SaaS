@@ -59,7 +59,7 @@ class AnalyticsService {
 
     downloadExport(exportId) {
         return api.get(`/analytics/exports/${exportId}/download`, {
-            responseType: 'blob',
+            responseType: 'blob'
         });
     }
 }

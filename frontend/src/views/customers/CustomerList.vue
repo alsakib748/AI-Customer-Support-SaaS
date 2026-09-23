@@ -28,7 +28,7 @@ const filters = reactive({
     tag: null,
     sort: 'created_at',
     direction: 'desc',
-    per_page: 20,
+    per_page: 20
 });
 
 const form = reactive({
@@ -40,7 +40,7 @@ const form = reactive({
     company_name: '',
     status: 'active',
     tags: [],
-    notes: '',
+    notes: ''
 });
 
 // ============================================
@@ -73,7 +73,7 @@ const canDeleteCustomers = computed(() => {
 const statusOptions = [
     { label: 'Active', value: 'active' },
     { label: 'Inactive', value: 'inactive' },
-    { label: 'Blocked', value: 'blocked' },
+    { label: 'Blocked', value: 'blocked' }
 ];
 
 // ============================================
@@ -82,11 +82,7 @@ const statusOptions = [
 
 const loadData = async () => {
     try {
-        await Promise.all([
-            customerStore.fetchCustomers({ ...filters }),
-            customerStore.fetchStatistics(),
-            customerStore.fetchTags(),
-        ]);
+        await Promise.all([customerStore.fetchCustomers({ ...filters }), customerStore.fetchStatistics(), customerStore.fetchTags()]);
     } catch (error) {
         console.error('Failed to load data:', error);
     }
@@ -108,7 +104,7 @@ const clearFilters = () => {
         tag: null,
         sort: 'created_at',
         direction: 'desc',
-        per_page: 20,
+        per_page: 20
     });
     applyFilters();
 };
@@ -178,7 +174,7 @@ const addTagToForm = () => {
 };
 
 const removeTagFromForm = (tag) => {
-    form.tags = form.tags.filter(t => t !== tag);
+    form.tags = form.tags.filter((t) => t !== tag);
 };
 
 const handleSubmit = async () => {
@@ -191,7 +187,7 @@ const handleSubmit = async () => {
             company_name: form.company_name || null,
             status: form.status,
             tags: form.tags,
-            notes: form.notes || null,
+            notes: form.notes || null
         };
 
         if (formMode.value === 'create') {
@@ -205,7 +201,6 @@ const handleSubmit = async () => {
         showFormDialog.value = false;
         resetForm();
         await loadData();
-
     } catch (error) {
         // Error handled in store
         console.error('Form submission error:', error);
@@ -243,7 +238,7 @@ const formatDate = (date) => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
+        minute: '2-digit'
     });
 };
 
@@ -259,9 +254,12 @@ onMounted(() => {
     loadData();
 });
 
-watch(() => filters.search, () => {
-    applyFilters();
-});
+watch(
+    () => filters.search,
+    () => {
+        applyFilters();
+    }
+);
 </script>
 
 <template>
@@ -274,10 +272,8 @@ watch(() => filters.search, () => {
             </div>
             <div class="flex gap-3">
                 <!-- Fixed: Use openCreateModal instead of showCreateDialog -->
-                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal"
-                    v-if="canCreateCustomers" />
-                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
-                    :loading="loading" />
+                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal" v-if="canCreateCustomers" />
+                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
 
@@ -320,35 +316,47 @@ watch(() => filters.search, () => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search customers..." class="w-full"
-                    @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search customers..." class="w-full" @input="applyFilters" />
             </div>
             <div class="w-48">
-                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-48">
-                <Select v-model="filters.tag" :options="tags" placeholder="Tag" class="w-full" @change="applyFilters"
-                    clearable />
+                <Select v-model="filters.tag" :options="tags" placeholder="Tag" class="w-full" @change="applyFilters" clearable />
             </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
         <!-- Customers Table -->
-        <DataTable :value="customers" :loading="loading" paginator :rows="filters.per_page"
-            :totalRecords="totalCustomers" :lazy="true" @page="onPageChange" @sort="onSortChange" class="w-full"
-            v-model:sortField="filters.sort" v-model:sortOrder="sortOrder">
+        <DataTable
+            :value="customers"
+            :loading="loading"
+            paginator
+            :rows="filters.per_page"
+            :totalRecords="totalCustomers"
+            :lazy="true"
+            @page="onPageChange"
+            @sort="onSortChange"
+            class="w-full"
+            v-model:sortField="filters.sort"
+            v-model:sortOrder="sortOrder"
+        >
             <Column selectionMode="multiple" v-if="canDeleteCustomers" style="width: 3rem" />
 
             <Column field="full_name" header="Name" sortable>
                 <template #body="{ data }">
                     <div class="flex items-center gap-3">
-                        <Avatar :label="data.initials || '?'" :image="data.avatar_url" shape="circle" size="large"
+                        <Avatar
+                            :label="data.initials || '?'"
+                            :image="data.avatar_url"
+                            shape="circle"
+                            size="large"
                             :class="{
                                 'bg-success': data.status === 'active',
                                 'bg-warning': data.status === 'inactive',
-                                'bg-danger': data.status === 'blocked',
-                            }" />
+                                'bg-danger': data.status === 'blocked'
+                            }"
+                        />
                         <div>
                             <div class="font-medium">{{ data.full_name || data.display_name }}</div>
                             <div class="text-sm text-surface-500">{{ data.email || data.phone || '—' }}</div>
@@ -399,30 +407,23 @@ watch(() => filters.search, () => {
             <Column header="Actions" style="width: 160px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewCustomer(data)"
-                            tooltip="View Details" />
-                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" text rounded
-                            @click="editCustomer(data)" tooltip="Edit" />
-                        <Button v-if="data.status === 'blocked' && canUpdateCustomers" icon="pi pi-unlock"
-                            severity="success" text rounded @click="handleUnblock(data)" tooltip="Unblock" />
-                        <Button v-if="data.status !== 'blocked' && canUpdateCustomers" icon="pi pi-lock"
-                            severity="danger" text rounded @click="handleBlock(data)" tooltip="Block" />
-                        <Button v-if="canDeleteCustomers" icon="pi pi-trash" severity="danger" text rounded
-                            @click="confirmDelete(data)" tooltip="Delete" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewCustomer(data)" tooltip="View Details" />
+                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" text rounded @click="editCustomer(data)" tooltip="Edit" />
+                        <Button v-if="data.status === 'blocked' && canUpdateCustomers" icon="pi pi-unlock" severity="success" text rounded @click="handleUnblock(data)" tooltip="Unblock" />
+                        <Button v-if="data.status !== 'blocked' && canUpdateCustomers" icon="pi pi-lock" severity="danger" text rounded @click="handleBlock(data)" tooltip="Block" />
+                        <Button v-if="canDeleteCustomers" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
                     </div>
                 </template>
             </Column>
         </DataTable>
 
         <!-- ✅ Create/Edit Dialog -->
-        <Dialog v-model:visible="showFormDialog" :header="formMode === 'create' ? 'Add Customer' : 'Edit Customer'"
-            :style="{ width: '600px' }" modal>
+        <Dialog v-model:visible="showFormDialog" :header="formMode === 'create' ? 'Add Customer' : 'Edit Customer'" :style="{ width: '600px' }" modal>
             <form @submit.prevent="handleSubmit" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">First Name *</label>
-                        <InputText v-model="form.first_name" class="w-full"
-                            :class="{ 'p-invalid': getFieldError('first_name') }" placeholder="John" />
+                        <InputText v-model="form.first_name" class="w-full" :class="{ 'p-invalid': getFieldError('first_name') }" placeholder="John" />
                         <small v-if="getFieldError('first_name')" class="text-red-500">
                             {{ getFieldError('first_name') }}
                         </small>
@@ -435,8 +436,7 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Email</label>
-                    <InputText v-model="form.email" type="email" class="w-full"
-                        :class="{ 'p-invalid': getFieldError('email') }" placeholder="john@example.com" />
+                    <InputText v-model="form.email" type="email" class="w-full" :class="{ 'p-invalid': getFieldError('email') }" placeholder="john@example.com" />
                     <small v-if="getFieldError('email')" class="text-red-500">
                         {{ getFieldError('email') }}
                     </small>
@@ -454,27 +454,23 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Status</label>
-                    <Select v-model="form.status" :options="statusOptions" optionLabel="label" optionValue="value"
-                        class="w-full" />
+                    <Select v-model="form.status" :options="statusOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Tags</label>
                     <div class="flex gap-2 mb-2">
-                        <InputText v-model="tagInput" placeholder="Add a tag" class="flex-1"
-                            @keydown.enter.prevent="addTagToForm" />
+                        <InputText v-model="tagInput" placeholder="Add a tag" class="flex-1" @keydown.enter.prevent="addTagToForm" />
                         <Button icon="pi pi-plus" severity="secondary" @click="addTagToForm" />
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Chip v-for="tag in form.tags" :key="tag" :label="tag" removable
-                            @remove="removeTagFromForm(tag)" />
+                        <Chip v-for="tag in form.tags" :key="tag" :label="tag" removable @remove="removeTagFromForm(tag)" />
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Notes</label>
-                    <Textarea v-model="form.notes" class="w-full" rows="3"
-                        placeholder="Add notes about this customer..." />
+                    <Textarea v-model="form.notes" class="w-full" rows="3" placeholder="Add notes about this customer..." />
                 </div>
 
                 <div v-if="getFieldError('general')" class="text-red-500 text-sm">
@@ -484,8 +480,7 @@ watch(() => filters.search, () => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showFormDialog = false" />
-                <Button :label="formMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary"
-                    :loading="saving" @click="handleSubmit" />
+                <Button :label="formMode === 'create' ? 'Create' : 'Save'" icon="pi pi-save" severity="primary" :loading="saving" @click="handleSubmit" />
             </template>
         </Dialog>
 
@@ -493,15 +488,19 @@ watch(() => filters.search, () => {
         <Dialog v-model:visible="showDetailsDialog" header="Customer Details" :style="{ width: '700px' }" modal>
             <div v-if="selectedCustomer" class="space-y-4">
                 <div class="flex items-start gap-4">
-                    <Avatar :label="selectedCustomer.initials || '?'" :image="selectedCustomer.avatar_url"
-                        shape="circle" size="xlarge" :class="{
+                    <Avatar
+                        :label="selectedCustomer.initials || '?'"
+                        :image="selectedCustomer.avatar_url"
+                        shape="circle"
+                        size="xlarge"
+                        :class="{
                             'bg-success': selectedCustomer.status === 'active',
                             'bg-warning': selectedCustomer.status === 'inactive',
-                            'bg-danger': selectedCustomer.status === 'blocked',
-                        }" />
+                            'bg-danger': selectedCustomer.status === 'blocked'
+                        }"
+                    />
                     <div class="flex-1">
-                        <div class="text-xl font-bold">{{ selectedCustomer.full_name || selectedCustomer.display_name }}
-                        </div>
+                        <div class="text-xl font-bold">{{ selectedCustomer.full_name || selectedCustomer.display_name }}</div>
                         <div class="text-surface-500">{{ selectedCustomer.email || 'No email' }}</div>
                         <div class="flex items-center gap-2 mt-1">
                             <Tag :value="selectedCustomer.status_label" :severity="selectedCustomer.status_color" />
@@ -511,8 +510,7 @@ watch(() => filters.search, () => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning"
-                            @click="editCustomer(selectedCustomer)" />
+                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" @click="editCustomer(selectedCustomer)" />
                         <Button icon="pi pi-times" severity="secondary" @click="showDetailsDialog = false" />
                     </div>
                 </div>
@@ -552,9 +550,7 @@ watch(() => filters.search, () => {
 
                 <div class="text-sm text-surface-500">
                     <div>Created: {{ formatDate(selectedCustomer.created_at) }}</div>
-                    <div v-if="selectedCustomer.last_contacted_at">
-                        Last Contacted: {{ formatDate(selectedCustomer.last_contacted_at) }}
-                    </div>
+                    <div v-if="selectedCustomer.last_contacted_at">Last Contacted: {{ formatDate(selectedCustomer.last_contacted_at) }}</div>
                 </div>
             </div>
         </Dialog>

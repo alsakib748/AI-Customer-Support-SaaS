@@ -39,7 +39,6 @@ const sanitizedContent = computed(() => {
 // METHODS
 // ============================================
 
-
 const loadArticle = async () => {
     loading.value = true;
     try {
@@ -66,7 +65,7 @@ const formatDate = (date) => {
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
+        minute: '2-digit'
     });
 };
 
@@ -105,10 +104,8 @@ onMounted(() => {
                 </div>
             </div>
             <div class="flex gap-2">
-                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" label="Edit" severity="warning"
-                    @click="router.push(`/knowledge-base/articles/${article.id}/edit`)" />
-                <Button icon="pi pi-arrow-left" label="Back" severity="secondary" outlined
-                    @click="router.push('/knowledge-base')" />
+                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" label="Edit" severity="warning" @click="router.push(`/knowledge-base/articles/${article.id}/edit`)" />
+                <Button icon="pi pi-arrow-left" label="Back" severity="secondary" outlined @click="router.push('/knowledge-base')" />
             </div>
         </div>
 

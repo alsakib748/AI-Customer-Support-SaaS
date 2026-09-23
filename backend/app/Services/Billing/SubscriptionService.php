@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
+use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -580,6 +581,96 @@ class SubscriptionService
         ]);
 
         return $sub->fresh();
+    }
+
+    /**
+     * Complete a checkout for a pending subscription: link provider IDs,
+     * activate it, and supersede any other active (free) subscription.
+     */
+    public function completePendingCheckout(Subscription $subscription, array $providerData = []): Subscription
+    {
+        return DB::connection('central')->transaction(function () use ($subscription, $providerData) {
+            $subscription = Subscription::find($subscription->id);
+
+            if (! $subscription) {
+                throw new \RuntimeException('Pending subscription not found.');
+            }
+
+            // Mark any other active/trialing subscription as cancelled so there
+            // is exactly one active plan per tenant.
+            Subscription::forTenant($subscription->tenant_id)
+                ->where('id', '!=', $subscription->id)
+                ->active()
+                ->update([
+                    'status'       => 'cancelled',
+                    'cancelled_at' => now(),
+                ]);
+
+$plan        = $subscription->plan;
+            $isTrialing  = (int) ($plan?->trial_days ?? 0) > 0;
+            $periodEnd   = $subscription->billing_cycle === 'yearly'
+                ? now()->addYear()
+                : now()->addMonth();
+            $trialEndsAt = $isTrialing ? now()->addDays((int) $plan->trial_days) : null;
+
+            $subscription->update(array_merge([
+                'status'                   => $isTrialing ? 'trialing' : 'active',
+                'provider_subscription_id' => $providerData['provider_subscription_id'] ?? $subscription->provider_subscription_id,
+                'provider_customer_id'     => $providerData['provider_customer_id'] ?? $subscription->provider_customer_id,
+                'provider_price_id'        => $providerData['provider_price_id'] ?? $subscription->provider_price_id,
+                'trial_starts_at'          => $isTrialing ? now() : null,
+                'trial_ends_at'            => $trialEndsAt,
+                'ends_at'                  => $isTrialing ? $trialEndsAt : $periodEnd,
+                'next_billing_at'          => $isTrialing ? $trialEndsAt : $periodEnd,
+                'current_period_starts_at' => $providerData['current_period_starts_at'] ?? now(),
+                'current_period_ends_at'   => $providerData['current_period_ends_at'] ?? ($trialEndsAt ?? $periodEnd),
+                'last_billing_at'          => $isTrialing ? null : now(),
+                'metadata'                 => array_merge($subscription->metadata ?? [], [
+                    'activated_at'      => now()->toISOString(),
+                    'activation_source' => $providerData['source'] ?? 'webhook',
+                ]),
+            ]));
+
+            // Record the initial invoice for paid plans (idempotent).
+            if (! $plan?->isFree() && ! $this->invoiceService->hasInvoiceForSubscription($subscription->id)) {
+                $invoice = $this->invoiceService->createSubscriptionInvoice($subscription);
+
+                if ($isTrialing) {
+                    $invoice->update([
+                        'due_at'          => $trialEndsAt,
+                        'period_ends_at'  => $trialEndsAt,
+                    ]);
+                } elseif (! empty($providerData['provider_payment_id'])) {
+                    // Non-trial checkout charged immediately: record the payment.
+                    $invoice->update([
+                        'payment_provider'  => $subscription->provider ?? 'stripe',
+                        'payment_method'    => 'card',
+                        'stripe_invoice_id' => $subscription->provider === 'paypal' ? null : ($providerData['provider_invoice_id'] ?? null),
+                        'paypal_invoice_id' => $subscription->provider === 'paypal' ? ($providerData['provider_invoice_id'] ?? null) : null,
+                    ]);
+
+                    Payment::create([
+                        'tenant_id'                => $subscription->tenant_id,
+                        'invoice_id'               => $invoice->id,
+                        'subscription_id'          => $subscription->id,
+                        'provider'                 => $subscription->provider ?? 'stripe',
+                        'provider_payment_id'      => $providerData['provider_payment_id'],
+                        'provider_subscription_id' => $subscription->provider_subscription_id,
+                        'provider_invoice_id'      => $providerData['provider_invoice_id'] ?? null,
+                        'amount'                   => (float) $invoice->total,
+                        'currency'                 => $invoice->currency ?? 'USD',
+                        'status'                   => 'completed',
+                        'payment_method'           => 'card',
+                        'payment_id'               => (string) \Illuminate\Support\Str::uuid(),
+                        'paid_at'                  => now(),
+                    ]);
+
+                    $this->invoiceService->markAsPaid($invoice, 'card', $providerData['provider_payment_id']);
+                }
+            }
+
+            return $subscription->fresh(['plan']);
+        });
     }
 
 }

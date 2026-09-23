@@ -41,10 +41,8 @@ watch(() => [filters.period, filters.from, filters.to], load);
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                <TrendChart title="Sessions & Conversations" :labels="data.trend.labels"
-                    :datasets="data.trend.datasets" />
-                <StatusChart title="Sessions by Widget" :labels="data.by_widget.map(w => w.widget_name)"
-                    :values="data.by_widget.map(w => w.sessions)" />
+                <TrendChart title="Sessions & Conversations" :labels="data.trend.labels" :datasets="data.trend.datasets" />
+                <StatusChart title="Sessions by Widget" :labels="data.by_widget.map((w) => w.widget_name)" :values="data.by_widget.map((w) => w.sessions)" />
             </div>
 
             <Card>

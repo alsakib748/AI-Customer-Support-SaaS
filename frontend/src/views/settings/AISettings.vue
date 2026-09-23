@@ -26,7 +26,7 @@ const form = reactive({
     temperature: 0.7,
     max_tokens: 2000,
     system_prompt: '',
-    custom_instructions: '',
+    custom_instructions: ''
 });
 
 // ============================================
@@ -40,13 +40,13 @@ const health = computed(() => aiStore.health);
 
 const statusOptions = [
     { label: 'Enabled', value: true },
-    { label: 'Disabled', value: false },
+    { label: 'Disabled', value: false }
 ];
 
 const providerOptions = [
     { label: 'OpenAI', value: 'openai' },
     { label: 'Anthropic', value: 'anthropic' },
-    { label: 'Google Gemini', value: 'gemini' },
+    { label: 'Google Gemini', value: 'gemini' }
 ];
 
 const geminiModels = [
@@ -54,35 +54,42 @@ const geminiModels = [
     { label: 'Gemini 1.5 Flash (Fast & Efficient)', value: 'gemini-1.5-flash' },
     { label: 'Gemini 1.5 Pro (Powerful)', value: 'gemini-1.5-pro' },
     { label: 'Gemini 1.0 Pro', value: 'gemini-1.0-pro' },
-    { label: 'Gemini 2.0 Flash (Experimental)', value: 'gemini-2.0-flash-exp' },
+    { label: 'Gemini 2.0 Flash (Experimental)', value: 'gemini-2.0-flash-exp' }
 ];
 
 const openaiModels = [
     { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
     { label: 'GPT-4o', value: 'gpt-4o' },
-    { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+    { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' }
 ];
 
 const anthropicModels = [
     { label: 'Claude 3 Sonnet', value: 'claude-3-sonnet-20241022' },
-    { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' },
+    { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' }
 ];
 
 const availableModels = computed(() => {
     switch (form.provider) {
-        case 'gemini': return geminiModels;
-        case 'openai': return openaiModels;
-        case 'anthropic': return anthropicModels;
-        default: return geminiModels;
+        case 'gemini':
+            return geminiModels;
+        case 'openai':
+            return openaiModels;
+        case 'anthropic':
+            return anthropicModels;
+        default:
+            return geminiModels;
     }
 });
 
-watch(() => form.provider, () => {
-    const models = availableModels.value;
-    if (!models.some((model) => model.value === form.model)) {
-        form.model = models[0]?.value || '';
+watch(
+    () => form.provider,
+    () => {
+        const models = availableModels.value;
+        if (!models.some((model) => model.value === form.model)) {
+            form.model = models[0]?.value || '';
+        }
     }
-});
+);
 
 // ============================================
 // METHODS
@@ -107,10 +114,7 @@ const formatNumber = (value, decimals = 2) => {
 };
 
 const loadData = async () => {
-    await Promise.all([
-        aiStore.fetchConfiguration(),
-        aiStore.fetchHealth(),
-    ]);
+    await Promise.all([aiStore.fetchConfiguration(), aiStore.fetchHealth()]);
 
     // Populate form with configuration
     const config = aiStore.configuration;
@@ -127,11 +131,9 @@ const loadData = async () => {
         //  Parse max_tokens as an integer
         max_tokens: parseInt(config.max_tokens) || 2000,
         system_prompt: config.system_prompt || '',
-        custom_instructions: config.custom_instructions || '',
+        custom_instructions: config.custom_instructions || ''
     });
 };
-
-
 
 const saveConfiguration = async () => {
     try {
@@ -139,7 +141,7 @@ const saveConfiguration = async () => {
         const dataToSave = {
             ...form,
             temperature: parseFloat(form.temperature) || 0.7,
-            max_tokens: parseInt(form.max_tokens) || 2000,
+            max_tokens: parseInt(form.max_tokens) || 2000
         };
 
         await aiStore.updateConfiguration(dataToSave);
@@ -167,9 +169,6 @@ const getFieldError = (field) => {
     return aiStore.getFieldError(field);
 };
 
-
-
-
 // ============================================
 // LIFECYCLE
 // ============================================
@@ -187,34 +186,34 @@ onMounted(() => {
                 <p class="text-surface-600 dark:text-surface-400">Configure AI assistant for your workspace</p>
             </div>
             <div class="flex gap-3">
-                <Button label="Test AI" icon="pi pi-play" severity="secondary" outlined @click="testAI"
-                    :loading="testing" />
-                <Button label="Save" icon="pi pi-save" severity="primary" @click="saveConfiguration"
-                    :loading="saving" />
+                <Button label="Test AI" icon="pi pi-play" severity="secondary" outlined @click="testAI" :loading="testing" />
+                <Button label="Save" icon="pi pi-save" severity="primary" @click="saveConfiguration" :loading="saving" />
             </div>
         </div>
 
         <!-- Health Status -->
         <div v-if="health.status" class="mb-6">
-            <div class="flex items-center gap-3 p-4 rounded-lg" :class="{
-                'bg-green-50 dark:bg-green-950': health.status === 'healthy',
-                'bg-yellow-50 dark:bg-yellow-950': health.status === 'degraded',
-                'bg-red-50 dark:bg-red-950': health.status === 'unhealthy',
-            }">
-                <i class="pi" :class="{
-                    'pi-check-circle text-green-600': health.status === 'healthy',
-                    'pi-exclamation-triangle text-yellow-600': health.status === 'degraded',
-                    'pi-times-circle text-red-600': health.status === 'unhealthy',
-                }" />
+            <div
+                class="flex items-center gap-3 p-4 rounded-lg"
+                :class="{
+                    'bg-green-50 dark:bg-green-950': health.status === 'healthy',
+                    'bg-yellow-50 dark:bg-yellow-950': health.status === 'degraded',
+                    'bg-red-50 dark:bg-red-950': health.status === 'unhealthy'
+                }"
+            >
+                <i
+                    class="pi"
+                    :class="{
+                        'pi-check-circle text-green-600': health.status === 'healthy',
+                        'pi-exclamation-triangle text-yellow-600': health.status === 'degraded',
+                        'pi-times-circle text-red-600': health.status === 'unhealthy'
+                    }"
+                />
                 <div>
                     <span class="font-medium">AI Status:</span>
                     <span class="ml-2">{{ health.status_label || health.status }}</span>
-                    <span class="ml-4 text-sm text-surface-500">
-                        Success Rate: {{ formatNumber(health.success_rate, 1) }}%
-                    </span>
-                    <span class="ml-4 text-sm text-surface-500">
-                        Avg Response: {{ formatNumber(health.avg_response_time, 0) }}ms
-                    </span>
+                    <span class="ml-4 text-sm text-surface-500"> Success Rate: {{ formatNumber(health.success_rate, 1) }}% </span>
+                    <span class="ml-4 text-sm text-surface-500"> Avg Response: {{ formatNumber(health.avg_response_time, 0) }}ms </span>
                 </div>
             </div>
         </div>
@@ -228,20 +227,17 @@ onMounted(() => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Status</label>
-                        <Select v-model="form.enabled" :options="statusOptions" optionLabel="label" optionValue="value"
-                            class="w-full" />
+                        <Select v-model="form.enabled" :options="statusOptions" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Provider</label>
-                        <Select v-model="form.provider" :options="providerOptions" optionLabel="label"
-                            optionValue="value" class="w-full" />
+                        <Select v-model="form.provider" :options="providerOptions" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                 </div>
 
                 <div class="mt-4">
                     <label class="block text-sm font-medium mb-1">Model</label>
-                    <Select v-model="form.model" :options="availableModels" optionLabel="label" optionValue="value"
-                        class="w-full" />
+                    <Select v-model="form.model" :options="availableModels" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
             </div>
 
@@ -312,15 +308,13 @@ onMounted(() => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">System Prompt</label>
-                    <Textarea v-model="form.system_prompt" class="w-full" rows="4"
-                        placeholder="Default system prompt will be used if empty" />
+                    <Textarea v-model="form.system_prompt" class="w-full" rows="4" placeholder="Default system prompt will be used if empty" />
                     <p class="text-xs text-surface-400 mt-1">Instructions that define the AI's behavior</p>
                 </div>
 
                 <div class="mt-4">
                     <label class="block text-sm font-medium mb-1">Custom Instructions</label>
-                    <Textarea v-model="form.custom_instructions" class="w-full" rows="3"
-                        placeholder="Additional instructions for the AI" />
+                    <Textarea v-model="form.custom_instructions" class="w-full" rows="3" placeholder="Additional instructions for the AI" />
                     <p class="text-xs text-surface-400 mt-1">Tenant-specific instructions appended to system prompt</p>
                 </div>
             </div>
@@ -342,8 +336,7 @@ onMounted(() => {
 
             <template #footer>
                 <Button label="Close" icon="pi pi-times" severity="secondary" @click="showTestDialog = false" />
-                <Button label="Send" icon="pi pi-send" severity="primary" :loading="testing" @click="handleTest"
-                    :disabled="!testMessage.trim()" />
+                <Button label="Send" icon="pi pi-send" severity="primary" :loading="testing" @click="handleTest" :disabled="!testMessage.trim()" />
             </template>
         </Dialog>
 

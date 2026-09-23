@@ -18,17 +18,17 @@ const form = reactive({
     currency: 'USD',
     provider_price_id: '',
     amount: 0,
-    is_active: true,
+    is_active: true
 });
 
 const providerOptions = [
     { label: 'Stripe', value: 'stripe' },
-    { label: 'PayPal', value: 'paypal' },
+    { label: 'PayPal', value: 'paypal' }
 ];
 
 const cycleOptions = [
     { label: 'Monthly', value: 'monthly' },
-    { label: 'Yearly', value: 'yearly' },
+    { label: 'Yearly', value: 'yearly' }
 ];
 
 const load = async () => {
@@ -48,7 +48,7 @@ const openCreate = () => {
         currency: 'USD',
         provider_price_id: '',
         amount: 0,
-        is_active: true,
+        is_active: true
     });
     showDialog.value = true;
 };
@@ -78,8 +78,7 @@ const handleDelete = async (row) => {
     }
 };
 
-const formatCurrency = (amount, currency = 'USD') =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+const formatCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 
 onMounted(load);
 </script>
@@ -92,8 +91,7 @@ onMounted(load);
                 <p class="text-surface-600">Map this plan to Stripe / PayPal prices</p>
             </div>
             <div class="flex gap-2">
-                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                    @click="$router.push('/admin/billing/plans')" />
+                <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="$router.push('/admin/billing/plans')" />
                 <Button label="Add Price" icon="pi pi-plus" @click="openCreate" />
             </div>
         </div>
@@ -122,13 +120,11 @@ onMounted(load);
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Provider</label>
-                    <Select v-model="form.provider" :options="providerOptions" optionLabel="label"
-                        optionValue="value" />
+                    <Select v-model="form.provider" :options="providerOptions" optionLabel="label" optionValue="value" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Billing Cycle</label>
-                    <Select v-model="form.billing_cycle" :options="cycleOptions" optionLabel="label"
-                        optionValue="value" />
+                    <Select v-model="form.billing_cycle" :options="cycleOptions" optionLabel="label" optionValue="value" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium">Currency</label>

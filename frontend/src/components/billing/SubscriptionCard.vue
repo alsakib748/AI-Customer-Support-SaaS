@@ -4,7 +4,9 @@ defineProps({ subscription: { type: Object, default: null } });
 const formatDate = (date) => {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 };
 </script>
@@ -37,8 +39,7 @@ const formatDate = (date) => {
                     </div>
                     <div>
                         <label class="text-sm text-surface-500">Auto Renew</label>
-                        <Tag :value="subscription.auto_renew ? 'Enabled' : 'Disabled'"
-                            :severity="subscription.auto_renew ? 'success' : 'warning'" />
+                        <Tag :value="subscription.auto_renew ? 'Enabled' : 'Disabled'" :severity="subscription.auto_renew ? 'success' : 'warning'" />
                     </div>
                 </div>
 
@@ -52,8 +53,7 @@ const formatDate = (date) => {
                     Cancelled. Access until {{ formatDate(subscription.ends_at) }}
                 </div>
 
-                <div v-if="subscription?.metadata?.pending_plan_id"
-                    class="p-3 bg-info-50 dark:bg-info-950 rounded-lg mb-4">
+                <div v-if="subscription?.metadata?.pending_plan_id" class="p-3 bg-info-50 dark:bg-info-950 rounded-lg mb-4">
                     <div class="flex items-center gap-2">
                         <i class="pi pi-info-circle text-info"></i>
                         <span class="font-medium">

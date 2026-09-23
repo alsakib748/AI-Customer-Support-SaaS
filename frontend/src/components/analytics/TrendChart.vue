@@ -10,7 +10,7 @@ const props = defineProps({
     values: { type: Array, default: () => [] },
     datasets: { type: Array, default: null },
     height: { type: Number, default: 280 },
-    color: { type: String, default: '#4F46E5' },
+    color: { type: String, default: '#4F46E5' }
 });
 
 const chartData = computed(() => {
@@ -21,25 +21,25 @@ const chartData = computed(() => {
                 label: ds.label,
                 data: ds.values,
                 borderColor: ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'][i % 4],
-                backgroundColor: props.type === 'bar'
-                    ? ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'][i % 4] + '33'
-                    : undefined,
+                backgroundColor: props.type === 'bar' ? ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'][i % 4] + '33' : undefined,
                 fill: props.type === 'line' ? false : undefined,
-                tension: 0.35,
-            })),
+                tension: 0.35
+            }))
         };
     }
 
     return {
         labels: props.labels,
-        datasets: [{
-            label: props.title,
-            data: props.values,
-            borderColor: props.color,
-            backgroundColor: props.color + '22',
-            fill: props.type === 'line',
-            tension: 0.35,
-        }],
+        datasets: [
+            {
+                label: props.title,
+                data: props.values,
+                borderColor: props.color,
+                backgroundColor: props.color + '22',
+                fill: props.type === 'line',
+                tension: 0.35
+            }
+        ]
     };
 });
 
@@ -49,14 +49,14 @@ const chartOptions = {
     plugins: {
         legend: {
             position: 'bottom',
-            labels: { usePointStyle: true, padding: 16 },
+            labels: { usePointStyle: true, padding: 16 }
         },
-        tooltip: { mode: 'index', intersect: false },
+        tooltip: { mode: 'index', intersect: false }
     },
     scales: {
         y: { beginAtZero: true, ticks: { precision: 0 } },
-        x: { grid: { display: false } },
-    },
+        x: { grid: { display: false } }
+    }
 };
 </script>
 

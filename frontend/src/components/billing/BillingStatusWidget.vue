@@ -40,8 +40,7 @@ const goToBilling = () => router.push('/billing');
 
 <template>
     <div v-if="subscription" class="billing-widget">
-        <div class="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800"
-            @click="goToBilling">
+        <div class="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800" @click="goToBilling">
             <i :class="statusIcon" :style="{ color: statusColor }"></i>
             <div class="flex flex-col">
                 <span class="text-xs font-medium">{{ planName }}</span>

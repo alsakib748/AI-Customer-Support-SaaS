@@ -391,6 +391,7 @@ Route::prefix('v1')->group(function () {
 
             // Checkout
             Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+            Route::post('/checkout/verify', [SubscriptionController::class, 'verify']);
             Route::get('/providers', [ProviderController::class, 'index']);
         });
 
@@ -469,10 +470,10 @@ Route::prefix('v1/admin/billing')
     ->middleware(['jwt.auth', 'super.admin'])
     ->group(function () {
         // Plans
-        // Route::get('/plans', [AdminBillingController::class, 'plans']);
-        // Route::post('/plans', [AdminBillingController::class, 'storePlan']);
-        // Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
-        // Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
+        Route::get('/plans', [AdminBillingController::class, 'plans']);
+        Route::post('/plans', [AdminBillingController::class, 'storePlan']);
+        Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
+        Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
         Route::get   ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'index']);
         Route::post  ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'store']);
         Route::delete('/prices/{price}',[PlanProviderPriceController::class, 'destroy']);

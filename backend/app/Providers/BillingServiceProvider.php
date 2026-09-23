@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Payments\PayPal\PayPalGateway;
+use App\Payments\Stripe\StripeGateway;
 use App\Services\Billing\PaymentGatewayManager;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,10 +26,6 @@ class BillingServiceProvider extends ServiceProvider
             }
 
             return $manager;
-        });
-
-        $this->app->bind(PaymentGatewayInterface::class, function ($app) {
-            return $app->make(PaymentGatewayManager::class)->gateway();
         });
     }
 

@@ -13,10 +13,7 @@ const loadingUsage = ref(false);
 const loadData = async () => {
     loading.value = true;
     try {
-        const [overviewRes, usageRes] = await Promise.all([
-            api.get('/admin/analytics/overview'),
-            api.get('/admin/analytics/tenant-usage'),
-        ]);
+        const [overviewRes, usageRes] = await Promise.all([api.get('/admin/analytics/overview'), api.get('/admin/analytics/tenant-usage')]);
 
         overview.value = overviewRes.data.data;
         tenantUsage.value = usageRes.data.data;
@@ -35,12 +32,9 @@ onMounted(loadData);
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold">Platform Analytics</h1>
-                <p class="text-surface-600 dark:text-surface-400">
-                    Platform-wide metrics across all tenants
-                </p>
+                <p class="text-surface-600 dark:text-surface-400">Platform-wide metrics across all tenants</p>
             </div>
-            <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading"
-                @click="loadData" />
+            <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading" @click="loadData" />
         </div>
 
         <div v-if="loading" class="flex justify-center py-12">
@@ -59,8 +53,7 @@ onMounted(loadData);
             <Card>
                 <template #title>Per-Tenant Usage</template>
                 <template #content>
-                    <DataTable :value="tenantUsage" :loading="loadingUsage" paginator :rows="10"
-                        responsiveLayout="scroll">
+                    <DataTable :value="tenantUsage" :loading="loadingUsage" paginator :rows="10" responsiveLayout="scroll">
                         <Column field="tenant_id" header="Tenant ID">
                             <template #body="{ data }">
                                 <span class="font-mono text-xs">{{ data.tenant_id }}</span>

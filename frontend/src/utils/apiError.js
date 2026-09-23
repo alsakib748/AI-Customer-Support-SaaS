@@ -47,4 +47,3 @@ export function showApiError(err, fallback = 'Something went wrong. Please try a
     // 403 / 404 / 500 / network / anything else
     toast.error(message);
 }
-

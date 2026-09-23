@@ -30,7 +30,7 @@ const filters = reactive({
     role: null,
     sort: 'created_at',
     direction: 'desc',
-    per_page: 20,
+    per_page: 20
 });
 
 const editForm = reactive({
@@ -41,14 +41,14 @@ const editForm = reactive({
     position: '',
     availability_status: 'online',
     max_concurrent_chats: 5,
-    skills: [],
+    skills: []
 });
 
 const inviteForm = reactive({
     email: '',
     role: 'agent',
     department: '',
-    position: '',
+    position: ''
 });
 
 // ============================================
@@ -62,7 +62,7 @@ const selectedTenantId = computed({
     set: (value) => {
         teamStore.selectedTenantId = value;
         teamStore.fetchMembers();
-    },
+    }
 });
 const loading = computed(() => teamStore.loading);
 const saving = computed(() => teamStore.saving);
@@ -77,14 +77,14 @@ const statusOptions = [
     { label: 'Online', value: 'online' },
     { label: 'Offline', value: 'offline' },
     { label: 'Away', value: 'away' },
-    { label: 'Busy', value: 'busy' },
+    { label: 'Busy', value: 'busy' }
 ];
 
 const roleOptions = [
     { label: 'Administrator', value: 'admin' },
     { label: 'Manager', value: 'manager' },
     { label: 'Support Agent', value: 'agent' },
-    { label: 'Viewer', value: 'viewer' },
+    { label: 'Viewer', value: 'viewer' }
 ];
 
 // ============================================
@@ -92,11 +92,7 @@ const roleOptions = [
 // ============================================
 
 const loadData = async () => {
-    await Promise.all([
-        teamStore.fetchMembers({ ...filters }),
-        teamStore.fetchStatistics(),
-        teamStore.fetchDepartments(),
-    ]);
+    await Promise.all([teamStore.fetchMembers({ ...filters }), teamStore.fetchStatistics(), teamStore.fetchDepartments()]);
 };
 
 const refreshData = () => {
@@ -116,7 +112,7 @@ const clearFilters = () => {
         role: null,
         sort: 'created_at',
         direction: 'desc',
-        per_page: 20,
+        per_page: 20
     });
     applyFilters();
 };
@@ -158,12 +154,11 @@ const handleUpdateMember = async () => {
             position: editForm.position,
             availability_status: editForm.availability_status,
             max_concurrent_chats: editForm.max_concurrent_chats,
-            skills: editForm.skills,
+            skills: editForm.skills
         });
 
         showEditDialog.value = false;
         await loadData();
-
     } catch (error) {
         // Error handled in store
     }
@@ -179,7 +174,6 @@ const handleRemoveMember = async (id) => {
     try {
         await teamStore.removeMember(id);
         await loadData();
-
     } catch (error) {
         // Error handled in store
     }
@@ -194,7 +188,7 @@ const addSkill = () => {
 };
 
 const removeSkill = (skill) => {
-    editForm.skills = editForm.skills.filter(s => s !== skill);
+    editForm.skills = editForm.skills.filter((s) => s !== skill);
 };
 
 const handleSendInvitation = async () => {
@@ -204,7 +198,6 @@ const handleSendInvitation = async () => {
         showInviteDialog.value = false;
         resetInviteForm();
         await teamStore.fetchInvitations();
-
     } catch (error) {
         if (isPlanLimitError(error)) {
             planLimit.showPlanLimit(error);
@@ -219,7 +212,7 @@ const resetInviteForm = () => {
         email: '',
         role: 'agent',
         department: '',
-        position: '',
+        position: ''
     });
 };
 
@@ -228,7 +221,7 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
+        day: 'numeric'
     });
 };
 
@@ -241,7 +234,6 @@ const getError = (field) => {
 // ============================================
 
 onMounted(async () => {
-
     if (isSuperAdmin.value) {
         await teamStore.fetchTenants();
     }
@@ -252,13 +244,15 @@ onMounted(async () => {
     // console.log('Fetch Departments: ', teamStore.fetchDepartments());
 
     // If Super Admin, load all tenants first
-
 });
 
 // Watch for search filter changes
-watch(() => filters.search, () => {
-    applyFilters();
-});
+watch(
+    () => filters.search,
+    () => {
+        applyFilters();
+    }
+);
 </script>
 
 <!-- src/views/team/Members.vue -->
@@ -273,20 +267,16 @@ watch(() => filters.search, () => {
                 </p>
             </div>
             <div class="flex gap-3">
-                <Button label="Invite Member" icon="pi pi-user-plus" severity="primary" @click="showInviteDialog = true"
-                    v-if="canManageTeam && !isSuperAdmin" />
-                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
-                    :loading="loading" />
+                <Button label="Invite Member" icon="pi pi-user-plus" severity="primary" @click="showInviteDialog = true" v-if="canManageTeam && !isSuperAdmin" />
+                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
 
         <!-- Tenant Filter (Super Admin Only) -->
         <div v-if="isSuperAdmin" class="mb-4 flex items-center gap-3">
             <label class="font-medium text-surface-700 dark:text-surface-300">Workspace:</label>
-            <Select v-model="selectedTenantId" :options="tenants" optionLabel="name" optionValue="id"
-                placeholder="All Workspaces" class="w-64" @change="applyFilters" clearable />
-            <span class="text-sm text-surface-500">Showing {{ totalMembers }} members across {{ tenants.length }}
-                workspaces</span>
+            <Select v-model="selectedTenantId" :options="tenants" optionLabel="name" optionValue="id" placeholder="All Workspaces" class="w-64" @change="applyFilters" clearable />
+            <span class="text-sm text-surface-500">Showing {{ totalMembers }} members across {{ tenants.length }} workspaces</span>
         </div>
 
         <!-- Statistics Cards -->
@@ -328,34 +318,38 @@ watch(() => filters.search, () => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search members..." class="w-full"
-                    @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search members..." class="w-full" @input="applyFilters" />
             </div>
             <div class="w-48">
-                <Select v-model="filters.department" :options="departments" placeholder="Department" class="w-full"
-                    @change="applyFilters" clearable />
+                <Select v-model="filters.department" :options="departments" placeholder="Department" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-48">
-                <Select v-model="filters.availability_status" :options="statusOptions" optionLabel="label"
-                    optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.availability_status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
             </div>
             <div class="w-48">
-                <Select v-model="filters.role" :options="roleOptions" optionLabel="label" optionValue="value"
-                    placeholder="Role" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.role" :options="roleOptions" optionLabel="label" optionValue="value" placeholder="Role" class="w-full" @change="applyFilters" clearable />
             </div>
             <!-- Additional filter for Super Admin -->
             <div v-if="isSuperAdmin" class="w-48">
-                <Select v-model="filters.tenant_id" :options="tenants" optionLabel="name" optionValue="id"
-                    placeholder="Filter by Workspace" class="w-full" @change="applyFilters" clearable />
+                <Select v-model="filters.tenant_id" :options="tenants" optionLabel="name" optionValue="id" placeholder="Filter by Workspace" class="w-full" @change="applyFilters" clearable />
             </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearFilters" />
         </div>
 
         <!-- Members Table -->
-        <DataTable :value="members" :loading="loading" paginator :rows="filters.per_page" :totalRecords="totalMembers"
-            :lazy="true" @page="onPageChange" @sort="onSortChange" class="w-full" v-model:sortField="filters.sort"
-            v-model:sortOrder="sortOrder">
-
+        <DataTable
+            :value="members"
+            :loading="loading"
+            paginator
+            :rows="filters.per_page"
+            :totalRecords="totalMembers"
+            :lazy="true"
+            @page="onPageChange"
+            @sort="onSortChange"
+            class="w-full"
+            v-model:sortField="filters.sort"
+            v-model:sortOrder="sortOrder"
+        >
             <!-- Tenant Column (Super Admin Only) -->
             <Column v-if="isSuperAdmin" field="tenant.name" header="Workspace" sortable>
                 <template #body="{ data }">
@@ -366,8 +360,7 @@ watch(() => filters.search, () => {
             <Column field="name" header="Name" sortable>
                 <template #body="{ data }">
                     <div class="flex items-center gap-3">
-                        <Avatar :label="data.name?.charAt(0) || '?'" :image="data.avatar_url" shape="circle"
-                            size="large" />
+                        <Avatar :label="data.name?.charAt(0) || '?'" :image="data.avatar_url" shape="circle" size="large" />
                         <div>
                             <div class="font-medium">{{ data.name }}</div>
                             <div class="text-sm text-surface-500">{{ data.email }}</div>
@@ -399,12 +392,15 @@ watch(() => filters.search, () => {
             <Column field="availability_status" header="Status" sortable>
                 <template #body="{ data }">
                     <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full" :class="{
-                            'bg-green-500': data.availability_status === 'online',
-                            'bg-yellow-500': data.availability_status === 'away',
-                            'bg-red-500': data.availability_status === 'busy',
-                            'bg-gray-500': data.availability_status === 'offline',
-                        }" />
+                        <span
+                            class="w-2 h-2 rounded-full"
+                            :class="{
+                                'bg-green-500': data.availability_status === 'online',
+                                'bg-yellow-500': data.availability_status === 'away',
+                                'bg-red-500': data.availability_status === 'busy',
+                                'bg-gray-500': data.availability_status === 'offline'
+                            }"
+                        />
                         <span>{{ data.availability_status_label }}</span>
                     </div>
                 </template>
@@ -419,12 +415,9 @@ watch(() => filters.search, () => {
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
                     <div class="flex gap-2">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)"
-                            tooltip="View Details" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text
-                            rounded @click="editMember(data)" tooltip="Edit" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded
-                            @click="confirmRemove(data)" tooltip="Remove" :loading="deleting" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)" tooltip="View Details" />
+                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" tooltip="Edit" />
+                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" tooltip="Remove" :loading="deleting" />
                     </div>
                 </template>
             </Column>
@@ -434,8 +427,7 @@ watch(() => filters.search, () => {
         <Dialog v-model:visible="showMemberDialog" header="Member Details" :style="{ width: '600px' }" modal>
             <div v-if="selectedMember" class="space-y-4">
                 <div class="flex items-center gap-4">
-                    <Avatar :label="selectedMember.name?.charAt(0) || '?'" :image="selectedMember.avatar_url"
-                        shape="circle" size="xlarge" />
+                    <Avatar :label="selectedMember.name?.charAt(0) || '?'" :image="selectedMember.avatar_url" shape="circle" size="xlarge" />
                     <div>
                         <div class="text-xl font-bold">{{ selectedMember.name }}</div>
                         <div class="text-surface-500">{{ selectedMember.email }}</div>
@@ -456,19 +448,21 @@ watch(() => filters.search, () => {
                     <div>
                         <label class="text-sm text-surface-500">Role</label>
                         <div class="font-medium">
-                            <Tag :value="selectedMember.role_label"
-                                :severity="selectedMember.is_owner ? 'warning' : 'info'" />
+                            <Tag :value="selectedMember.role_label" :severity="selectedMember.is_owner ? 'warning' : 'info'" />
                         </div>
                     </div>
                     <div>
                         <label class="text-sm text-surface-500">Status</label>
                         <div class="font-medium flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full" :class="{
-                                'bg-green-500': selectedMember.availability_status === 'online',
-                                'bg-yellow-500': selectedMember.availability_status === 'away',
-                                'bg-red-500': selectedMember.availability_status === 'busy',
-                                'bg-gray-500': selectedMember.availability_status === 'offline',
-                            }" />
+                            <span
+                                class="w-2 h-2 rounded-full"
+                                :class="{
+                                    'bg-green-500': selectedMember.availability_status === 'online',
+                                    'bg-yellow-500': selectedMember.availability_status === 'away',
+                                    'bg-red-500': selectedMember.availability_status === 'busy',
+                                    'bg-gray-500': selectedMember.availability_status === 'offline'
+                                }"
+                            />
                             {{ selectedMember.availability_status_label }}
                         </div>
                     </div>
@@ -492,16 +486,14 @@ watch(() => filters.search, () => {
                 <div v-if="selectedMember.permissions?.length">
                     <label class="text-sm text-surface-500">Permissions</label>
                     <div class="flex flex-wrap gap-2 mt-1">
-                        <Tag v-for="perm in selectedMember.permissions" :key="perm" :value="perm"
-                            severity="secondary" />
+                        <Tag v-for="perm in selectedMember.permissions" :key="perm" :value="perm" severity="secondary" />
                     </div>
                 </div>
             </div>
 
             <template #footer>
                 <Button label="Close" icon="pi pi-times" @click="showMemberDialog = false" />
-                <Button v-if="canManageTeam && selectedMember && !selectedMember.is_owner" label="Edit"
-                    icon="pi pi-pencil" severity="warning" @click="editMember(selectedMember)" />
+                <Button v-if="canManageTeam && selectedMember && !selectedMember.is_owner" label="Edit" icon="pi pi-pencil" severity="warning" @click="editMember(selectedMember)" />
             </template>
         </Dialog>
 
@@ -531,8 +523,7 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Availability Status</label>
-                    <Select v-model="editForm.availability_status" :options="statusOptions" optionLabel="label"
-                        optionValue="value" class="w-full" />
+                    <Select v-model="editForm.availability_status" :options="statusOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div>
@@ -543,13 +534,11 @@ watch(() => filters.search, () => {
                 <div>
                     <label class="block text-sm font-medium mb-1">Skills</label>
                     <div class="flex gap-2 mb-2">
-                        <InputText v-model="skillInput" placeholder="Add a skill" class="flex-1"
-                            @keydown.enter.prevent="addSkill" />
+                        <InputText v-model="skillInput" placeholder="Add a skill" class="flex-1" @keydown.enter.prevent="addSkill" />
                         <Button icon="pi pi-plus" severity="secondary" @click="addSkill" />
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Chip v-for="skill in editForm.skills" :key="skill" :label="skill" removable
-                            @remove="removeSkill(skill)" />
+                        <Chip v-for="skill in editForm.skills" :key="skill" :label="skill" removable @remove="removeSkill(skill)" />
                     </div>
                 </div>
 
@@ -560,8 +549,7 @@ watch(() => filters.search, () => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showEditDialog = false" />
-                <Button label="Save" icon="pi pi-save" severity="primary" :loading="saving"
-                    @click="handleUpdateMember" />
+                <Button label="Save" icon="pi pi-save" severity="primary" :loading="saving" @click="handleUpdateMember" />
             </template>
         </Dialog>
 
@@ -570,8 +558,7 @@ watch(() => filters.search, () => {
             <form @submit.prevent="handleSendInvitation" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Email Address *</label>
-                    <InputText v-model="inviteForm.email" type="email" class="w-full"
-                        :class="{ 'p-invalid': getError('email') }" placeholder="member@example.com" />
+                    <InputText v-model="inviteForm.email" type="email" class="w-full" :class="{ 'p-invalid': getError('email') }" placeholder="member@example.com" />
                     <small v-if="getError('email')" class="text-red-500">
                         {{ getError('email') }}
                     </small>
@@ -579,8 +566,7 @@ watch(() => filters.search, () => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Role *</label>
-                    <Select v-model="inviteForm.role" :options="roleOptions" optionLabel="label" optionValue="value"
-                        class="w-full" :class="{ 'p-invalid': getError('role') }" placeholder="Select Role" />
+                    <Select v-model="inviteForm.role" :options="roleOptions" optionLabel="label" optionValue="value" class="w-full" :class="{ 'p-invalid': getError('role') }" placeholder="Select Role" />
                     <small v-if="getError('role')" class="text-red-500">
                         {{ getError('role') }}
                     </small>
@@ -599,8 +585,7 @@ watch(() => filters.search, () => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showInviteDialog = false" />
-                <Button label="Send Invitation" icon="pi pi-send" severity="primary" :loading="saving"
-                    @click="handleSendInvitation" />
+                <Button label="Send Invitation" icon="pi pi-send" severity="primary" :loading="saving" @click="handleSendInvitation" />
             </template>
         </Dialog>
 

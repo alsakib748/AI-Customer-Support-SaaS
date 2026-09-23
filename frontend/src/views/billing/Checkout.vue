@@ -18,15 +18,12 @@ const submitting = ref(false);
 const loadData = async () => {
     loading.value = true;
     try {
-        const [planRes, providersRes] = await Promise.all([
-            billingService.getPlan(route.params.planId),
-            billingService.getProviders(),
-        ]);
+        const [planRes, providersRes] = await Promise.all([billingService.getPlan(route.params.planId), billingService.getProviders()]);
 
         if (planRes.data.success) plan.value = planRes.data.data;
         if (providersRes.data.success) {
             providers.value = providersRes.data.data;
-            selectedProvider.value = providers.value.find(p => p.available)?.key || null;
+            selectedProvider.value = providers.value.find((p) => p.available)?.key || null;
         }
     } catch (e) {
         console.error('Failed to load checkout data:', e);
@@ -39,11 +36,7 @@ const submit = async () => {
     if (!selectedProvider.value) return;
     submitting.value = true;
     try {
-        const data = await billingStore.createCheckout(
-            plan.value.id,
-            route.query.cycle || 'monthly',
-            selectedProvider.value,
-        );
+        const data = await billingStore.createCheckout(plan.value.id, route.query.cycle || 'monthly', selectedProvider.value);
 
         // Redirect to provider's hosted checkout
         window.location.href = data.checkout_url;
@@ -98,8 +91,7 @@ onMounted(loadData);
 
             <div class="flex justify-end gap-2">
                 <Button label="Cancel" severity="secondary" outlined @click="cancel" />
-                <Button label="Continue to Payment" icon="pi pi-arrow-right" :disabled="!selectedProvider"
-                    :loading="submitting" @click="submit" />
+                <Button label="Continue to Payment" icon="pi pi-arrow-right" :disabled="!selectedProvider" :loading="submitting" @click="submit" />
             </div>
         </template>
 

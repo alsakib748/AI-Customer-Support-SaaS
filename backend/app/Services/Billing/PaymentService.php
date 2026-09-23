@@ -18,7 +18,7 @@ class PaymentService
     public function __construct(InvoiceService $invoiceService,PaymentGatewayManager $gateways,)
     {
         $this->invoiceService = $invoiceService;
-        $this->$gateways = $gateways;
+        $this->gateways = $gateways;
     }
 
     /**

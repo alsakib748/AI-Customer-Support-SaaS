@@ -191,6 +191,66 @@ class StripeGateway implements PaymentGateway
         }
     }
 
+    public function createPlanPrice(array $data): array
+    {
+        try {
+            $productId = $data['provider_product_id'] ?? null;
+
+            if (! $productId) {
+                $product = $this->client->products->create([
+                    'name'     => $data['name'] ?? 'Plan',
+                    'metadata' => $data['metadata'] ?? [],
+                ]);
+                $productId = $product->id;
+            }
+
+            $price = $this->client->prices->create([
+                'product'     => $productId,
+                'unit_amount' => (int) round(((float) ($data['amount'] ?? 0)) * 100),
+                'currency'    => strtolower($data['currency'] ?? 'usd'),
+                'recurring'   => ['interval' => ($data['cycle'] ?? 'monthly') === 'yearly' ? 'year' : 'month'],
+                'metadata'    => $data['metadata'] ?? [],
+            ]);
+
+            return [
+                'provider_product_id' => $productId,
+                'provider_price_id'   => $price->id,
+                'raw'                 => $price->toArray(),
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Stripe createPlanPrice failed', ['error' => $e->getMessage()]);
+            throw new PaymentGatewayException('Stripe price creation failed: ' . $e->getMessage());
+        }
+    }
+
+    public function retrieveCheckoutSession(string $sessionId): array
+    {
+        try {
+            // No expand: returning ids is enough and avoids extra API round-trips.
+            $session = $this->client->checkout->sessions->retrieve($sessionId);
+
+            $subscriptionId = is_object($session->subscription) && method_exists($session->subscription, 'toArray')
+                ? $session->subscription->id
+                : $session->subscription;
+
+            $paymentIntentId = is_object($session->payment_intent) && method_exists($session->payment_intent, 'toArray')
+                ? $session->payment_intent->id
+                : $session->payment_intent;
+
+            return [
+                'status'                   => $session->status,
+                'session_id'               => $session->id,
+                'provider_subscription_id' => $subscriptionId,
+                'provider_payment_id'      => $paymentIntentId,
+                'provider_customer_id'     => $session->customer,
+                'metadata'                 => $session->metadata?->toArray() ?? [],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Stripe retrieveCheckoutSession failed', ['error' => $e->getMessage()]);
+            throw new PaymentGatewayException('Stripe session retrieve failed: ' . $e->getMessage());
+        }
+    }
+
     public function createBillingPortal(string $providerCustomerId, array $options = []): array
     {
         try {

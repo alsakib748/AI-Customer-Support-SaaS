@@ -25,7 +25,7 @@ const form = reactive({
         analytics: true,
         integrations: false,
         custom_branding: true,
-        priority_support: false,
+        priority_support: false
     },
     limits: {
         'agents.max': 5,
@@ -35,8 +35,8 @@ const form = reactive({
         'conversations.monthly': 5000,
         'ai.requests.monthly': 2000,
         'ai.tokens.monthly': 1000000,
-        'storage.bytes': 5368709120,
-    },
+        'storage.bytes': 5368709120
+    }
 });
 
 const handleSubmit = async () => {
@@ -56,8 +56,7 @@ const handleSubmit = async () => {
                 <h1 class="text-2xl font-bold">Create Plan</h1>
                 <p class="text-surface-600">Add a new subscription plan</p>
             </div>
-            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined
-                @click="router.push('/admin/billing/plans')" />
+            <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing/plans')" />
         </div>
 
         <Card>
