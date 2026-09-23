@@ -768,61 +768,61 @@ const router = createRouter({
                     path: '/admin/billing',
                     name: 'AdminBillingDashboard',
                     component: () => import('@/views/admin/billing/BillingDashboard.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Billing Dashboard' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.view', title: 'Billing Overview' }
                 },
                 {
                     path: '/admin/billing/plans',
                     name: 'AdminBillingPlans',
                     component: () => import('@/views/admin/billing/Plans.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Manage Plans' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.plans', title: 'Plans' }
                 },
                 {
                     path: '/admin/billing/plans/create',
                     name: 'AdminBillingPlanCreate',
                     component: () => import('@/views/admin/billing/PlanCreate.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Create Plan' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.plans', title: 'Create Plan' }
                 },
                 {
                     path: '/admin/billing/plans/:id/edit',
                     name: 'AdminBillingPlanEdit',
                     component: () => import('@/views/admin/billing/PlanEdit.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Edit Plan' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.plans', title: 'Edit Plan' }
                 },
                 {
                     path: '/admin/billing/plans/:id/prices',
                     name: 'AdminBillingPlanPrices',
                     component: () => import('@/views/admin/billing/PlanProviderPrices.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.plans', title: 'Plan Prices' }
                 },
                 {
                     path: '/admin/billing/subscriptions',
                     name: 'AdminBillingSubscriptions',
                     component: () => import('@/views/admin/billing/Subscriptions.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Subscriptions' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.subscriptions', title: 'Subscriptions' }
                 },
                 {
                     path: '/admin/billing/invoices',
                     name: 'AdminBillingInvoices',
                     component: () => import('@/views/admin/billing/Invoices.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'All Invoices' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.invoices', title: 'Invoices' }
                 },
                 {
                     path: '/admin/billing/payments',
                     name: 'AdminBillingPayments',
                     component: () => import('@/views/admin/billing/Payments.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'All Payments' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.payments', title: 'Payments' }
                 },
                 {
                     path: '/admin/billing/coupons',
                     name: 'AdminBillingCoupons',
                     component: () => import('@/views/admin/billing/Coupons.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Coupons' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.coupons', title: 'Coupons' }
                 },
                 {
                     path: '/admin/billing/analytics',
                     name: 'AdminBillingAnalytics',
                     component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Billing Analytics' }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.analytics', title: 'Billing Analytics' }
                 },
 
                 // -------------------------------------------------
@@ -838,6 +838,52 @@ const router = createRouter({
                         permission: 'platform.settings',
                         title: 'Roles & Permissions'
                     }
+                },
+
+                // -------------------------------------------------
+                // PLATFORM ADMIN
+                // -------------------------------------------------
+                {
+                    path: '/admin/tenants',
+                    name: 'AdminTenants',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.tenants', title: 'Tenants' }
+                },
+                {
+                    path: '/admin/users',
+                    name: 'AdminUsers',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.users', title: 'Users' }
+                },
+                {
+                    path: '/admin/audit-logs',
+                    name: 'AdminAuditLogs',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.audit_logs', title: 'Audit Logs' }
+                },
+                {
+                    path: '/admin/settings',
+                    name: 'AdminSystemSettings',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.settings', title: 'System Settings' }
+                },
+                {
+                    path: '/admin/system-health',
+                    name: 'AdminSystemHealth',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.system_health', title: 'System Health' }
+                },
+                {
+                    path: '/admin/notifications',
+                    name: 'AdminNotifications',
+                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.notifications', title: 'Notifications' }
+                },
+                {
+                    path: '/admin/profile',
+                    name: 'AdminProfile',
+                    component: () => import('@/views/admin/profile/Profile.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.profile', title: 'My Profile' }
                 },
 
                 // -------------------------------------------------

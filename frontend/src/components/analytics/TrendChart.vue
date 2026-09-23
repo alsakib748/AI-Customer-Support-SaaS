@@ -1,7 +1,6 @@
-<!-- src/components/analytics/TrendChart.vue -->
 <script setup>
-import { computed } from 'vue';
-import Chart from 'primevue/chart';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import Chart from 'chart.js/auto';
 
 const props = defineProps({
     title: { type: String, default: '' },
@@ -13,15 +12,36 @@ const props = defineProps({
     color: { type: String, default: '#4F46E5' }
 });
 
-const chartData = computed(() => {
+const canvas = ref(null);
+let chart = null;
+
+const palette = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: { usePointStyle: true, padding: 16 }
+        },
+        tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+        x: { grid: { display: false } }
+    }
+};
+
+function buildData() {
     if (props.datasets) {
         return {
             labels: props.labels,
             datasets: props.datasets.map((ds, i) => ({
                 label: ds.label,
                 data: ds.values,
-                borderColor: ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'][i % 4],
-                backgroundColor: props.type === 'bar' ? ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'][i % 4] + '33' : undefined,
+                borderColor: palette[i % palette.length],
+                backgroundColor: props.type === 'bar' ? palette[i % palette.length] + '33' : undefined,
                 fill: props.type === 'line' ? false : undefined,
                 tension: 0.35
             }))
@@ -41,23 +61,40 @@ const chartData = computed(() => {
             }
         ]
     };
-});
+}
 
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'bottom',
-            labels: { usePointStyle: true, padding: 16 }
-        },
-        tooltip: { mode: 'index', intersect: false }
-    },
-    scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 } },
-        x: { grid: { display: false } }
+function create() {
+    if (!canvas.value) return;
+    chart = new Chart(canvas.value, {
+        type: props.type,
+        data: buildData(),
+        options: chartOptions
+    });
+}
+
+function destroy() {
+    if (chart) {
+        chart.destroy();
+        chart = null;
     }
-};
+}
+
+function update() {
+    if (!chart) return;
+    chart.data = buildData();
+    chart.update();
+}
+
+function reinit() {
+    destroy();
+    create();
+}
+
+onMounted(create);
+onBeforeUnmount(destroy);
+
+watch(() => [props.labels, props.values, props.datasets], update, { deep: true });
+watch(() => props.type, reinit);
 </script>
 
 <template>
@@ -65,7 +102,7 @@ const chartOptions = {
         <template #title>{{ title }}</template>
         <template #content>
             <div :style="{ height: height + 'px' }">
-                <Chart :type="type" :data="chartData" :options="chartOptions" />
+                <canvas ref="canvas"></canvas>
             </div>
         </template>
     </Card>

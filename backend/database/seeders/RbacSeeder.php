@@ -72,6 +72,12 @@ class RbacSeeder extends Seeder
             // Platform (Super Admin only)
             'platform.dashboard', 'platform.tenants', 'platform.users',
             'platform.analytics', 'platform.billing', 'platform.settings',
+            'platform.billing.view', 'platform.billing.plans',
+            'platform.billing.subscriptions', 'platform.billing.invoices',
+            'platform.billing.payments', 'platform.billing.coupons',
+            'platform.billing.analytics',
+            'platform.audit_logs', 'platform.system_health',
+            'platform.notifications', 'platform.profile',
         ];
 
         foreach ($permissions as $name) {

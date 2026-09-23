@@ -1,7 +1,7 @@
 <!-- src/views/analytics/AgentAnalytics.vue -->
 <script setup>
-import { reactive, ref, computed, onMounted, watch } from 'vue';
-import Chart from 'primevue/chart';
+import { reactive, ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
+import Chart from 'chart.js/auto';
 import { useAnalyticsStore } from '@/stores/analytics';
 import MetricCard from '@/components/analytics/MetricCard.vue';
 import DateRangePicker from '@/components/analytics/DateRangePicker.vue';
@@ -10,6 +10,8 @@ const store = useAnalyticsStore();
 const filters = reactive({ period: '30d' });
 const loading = computed(() => store.loading);
 const data = computed(() => store.agents);
+const workloadCanvas = ref(null);
+let workloadChart = null;
 
 const workloadData = computed(() => ({
     labels: data.value?.workload?.labels || [],
@@ -36,7 +38,40 @@ const load = async () => {
     await store.fetchAgents();
 };
 
-onMounted(load);
+function ensureChart() {
+    if (workloadChart || !workloadCanvas.value) return;
+    workloadChart = new Chart(workloadCanvas.value, {
+        type: 'bar',
+        data: workloadData.value,
+        options: barOptions
+    });
+}
+
+function destroyChart() {
+    if (workloadChart) {
+        workloadChart.destroy();
+        workloadChart = null;
+    }
+}
+
+onMounted(() => {
+    ensureChart();
+    load();
+});
+
+onBeforeUnmount(destroyChart);
+
+watch(
+    workloadData,
+    (newData) => {
+        ensureChart();
+        if (!workloadChart) return;
+        workloadChart.data = newData;
+        workloadChart.update();
+    },
+    { immediate: true }
+);
+
 watch(() => [filters.period, filters.from, filters.to], load);
 </script>
 
@@ -77,7 +112,7 @@ watch(() => [filters.period, filters.from, filters.to], load);
                 <template #title>Agent Workload (Current Open)</template>
                 <template #content>
                     <div style="height: 320px">
-                        <Chart type="bar" :data="workloadData" :options="barOptions" />
+                        <canvas ref="workloadCanvas"></canvas>
                     </div>
                 </template>
             </Card>
