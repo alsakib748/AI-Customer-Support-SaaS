@@ -14,7 +14,7 @@ class UpdatePlanRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
-        // return auth()->check() && auth()->user()->hasRole('super-admin');
+        // return auth()->check() && auth()->user()->hasRole('super_admin');
     }
 
     /**

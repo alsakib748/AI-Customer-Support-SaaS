@@ -14,7 +14,7 @@ class StoreCouponRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
-        // return $this->user()?->hasRole('super-admin') ?? false;
+        // return $this->user()?->hasRole('super_admin') ?? false;
     }
 
     /**

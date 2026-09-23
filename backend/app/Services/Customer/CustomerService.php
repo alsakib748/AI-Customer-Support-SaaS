@@ -73,7 +73,7 @@ class CustomerService
         }
 
         // 5. Check if user is Super Admin
-        if (!$tenant && auth()->check() && auth()->user()->hasRole('super-admin')) {
+        if (!$tenant && auth()->check() && auth()->user()->hasRole('super_admin')) {
             Log::info('Super Admin accessing customer service - no tenant needed');
             // For Super Admin, we can return empty data or all tenants
             // We'll handle this in the methods
@@ -121,7 +121,7 @@ class CustomerService
      */
     protected function isSuperAdmin(): bool
     {
-        return auth()->check() && auth()->user()->hasRole('super-admin');
+        return auth()->check() && auth()->user()->hasRole('super_admin');
     }
 
     /**

@@ -32,7 +32,7 @@ class TicketCommentController extends Controller
                 ], 403);
             }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',
@@ -71,7 +71,7 @@ class TicketCommentController extends Controller
                 ], 403);
             }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot add comments without tenant context.',
@@ -115,7 +115,7 @@ class TicketCommentController extends Controller
                 ], 403);
             }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete comments without tenant context.',

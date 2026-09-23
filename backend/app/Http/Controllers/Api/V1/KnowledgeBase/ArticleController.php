@@ -36,7 +36,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',
@@ -93,7 +93,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot create articles without tenant context.',
@@ -151,7 +151,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have article context.',
@@ -191,7 +191,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot update articles without tenant context.',
@@ -235,7 +235,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete articles without tenant context.',
@@ -279,7 +279,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot publish articles without tenant context.',
@@ -330,7 +330,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot unpublish articles without tenant context.',
@@ -381,7 +381,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot archive articles without tenant context.',
@@ -432,7 +432,7 @@ class ArticleController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',

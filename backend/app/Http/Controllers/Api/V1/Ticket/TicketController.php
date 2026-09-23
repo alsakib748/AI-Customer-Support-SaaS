@@ -34,7 +34,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',
@@ -94,7 +94,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot create tickets without tenant context.',
@@ -144,7 +144,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have ticket context.',
@@ -184,7 +184,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot update tickets without tenant context.',
@@ -228,7 +228,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete tickets without tenant context.',
@@ -272,7 +272,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot assign tickets without tenant context.',
@@ -323,7 +323,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot unassign tickets without tenant context.',
@@ -367,7 +367,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot start tickets without tenant context.',
@@ -418,7 +418,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot set tickets to pending without tenant context.',
@@ -469,7 +469,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot resolve tickets without tenant context.',
@@ -520,7 +520,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot reopen tickets without tenant context.',
@@ -571,7 +571,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot close tickets without tenant context.',
@@ -622,7 +622,7 @@ class TicketController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',

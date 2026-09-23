@@ -43,7 +43,7 @@ class ConversationAnalyticsController extends Controller
             abort(403, 'You do not have permission to view this analytics.');
         }
 
-        if (auth()->user()->hasRole('super-admin')) {
+        if (auth()->user()->hasRole('super_admin')) {
             abort(403, 'Super Admin must use platform analytics.');
         }
     }

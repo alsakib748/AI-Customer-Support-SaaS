@@ -23,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'track.usage'        => \App\Http\Middleware\TrackUsage::class,
             'billing.rate.limit' => \App\Http\Middleware\BillingRateLimit::class,
             'super.admin'        => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'role'                => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'set.permission.team' => \App\Http\Middleware\SetPermissionTeam::class,
+            'role_or_permission'  => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withCommands([

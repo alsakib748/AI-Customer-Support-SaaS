@@ -5,6 +5,9 @@ use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
+use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\RoleController;
+use App\Http\Controllers\Api\V1\Admin\UserRoleController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -106,9 +109,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/validate-token', [AuthController::class, 'validateToken']);
     });
 
-    // Protected Routes - Authentication Required
-    Route::middleware(['jwt.auth', 'tenant.aware'])->group(function () {
-
+     Route::middleware(['jwt.auth'])->group(function () {
         // Auth Routes
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
@@ -117,18 +118,25 @@ Route::prefix('v1')->group(function () {
             Route::post('/change-password', [AuthController::class, 'changePassword']);
             Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
         });
+     });
+
+    // Protected Routes - Authentication Required
+    Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team'])->group(function () {
 
         // Tenant Routes
         Route::prefix('tenants')->group(function () {
-            Route::get('/current', [TenantController::class, 'current']);
-            Route::get('/my-tenants', [TenantController::class, 'getUserTenants']);
-            Route::post('/', [TenantController::class, 'store']);
-            Route::put('/{id}', [TenantController::class, 'update']);
-            Route::post('/switch/{tenantId}', [TenantController::class, 'switchTenant']);
-            Route::get('/{tenantId}/users', [TenantController::class, 'getUsers']);
-            Route::post('/{tenantId}/invite', [TenantController::class, 'inviteUser']);
-            Route::delete('/{tenantId}/users/{userId}', [TenantController::class, 'removeUser']);
-            Route::put('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole']);
+            Route::get ('/current',            [TenantController::class, 'current']);
+            Route::get ('/my-tenants',         [TenantController::class, 'getUserTenants']);
+            Route::post('/',                   [TenantController::class, 'store']);
+            Route::put ('/{id}',               [TenantController::class, 'update']);
+            Route::post('/switch/{tenantId}',  [TenantController::class, 'switchTenant']);
+            Route::get ('/{tenantId}/users',   [TenantController::class, 'getUsers']);
+            Route::post('/{tenantId}/invite',  [TenantController::class, 'inviteUser'])
+                ->middleware('permission:team.invite');
+            Route::delete('/{tenantId}/users/{userId}', [TenantController::class, 'removeUser'])
+                ->middleware('permission:team.remove');
+            Route::put ('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole'])
+                ->middleware('permission:team.assign_role');
         });
 
         // todo; ======================  WORKSPACE ROUTES =======================
@@ -182,14 +190,14 @@ Route::prefix('v1')->group(function () {
         //todo; =========== Customer Management Routes ==========
         Route::prefix('customers')->group(function () {
             // Main CRUD
-            Route::get('/', [CustomerController::class, 'index']);
-            Route::post('/', [CustomerController::class, 'store']);
+            Route::get ('/',       [CustomerController::class, 'index'])  ->middleware('permission:customers.view');
+            Route::post('/',       [CustomerController::class, 'store'])  ->middleware('permission:customers.create');
             Route::get('/statistics', [CustomerController::class, 'statistics']);
             Route::get('/tags', [CustomerController::class, 'tags']);
             Route::get('/export', [CustomerController::class, 'export']);
-            Route::get('/{id}', [CustomerController::class, 'show']);
-            Route::put('/{id}', [CustomerController::class, 'update']);
-            Route::delete('/{id}', [CustomerController::class, 'destroy']);
+            Route::get ('/{id}',   [CustomerController::class, 'show'])   ->middleware('permission:customers.view');
+            Route::put ('/{id}',   [CustomerController::class, 'update']) ->middleware('permission:customers.update');
+            Route::delete('/{id}', [CustomerController::class, 'destroy'])->middleware('permission:customers.delete');
 
             // Restore (soft delete)
             Route::post('/{id}/restore', [CustomerController::class, 'restore']);
@@ -343,9 +351,9 @@ Route::prefix('v1')->group(function () {
 
         // todo; Analytics
         Route::prefix('analytics')->group(function () {
-            Route::get('/overview', [OverviewController::class, 'index']);
-            Route::get('/conversations', [ConversationAnalyticsController::class, 'index']);
-            Route::get('/customers', [CustomerAnalyticsController::class, 'index']);
+            Route::get('/overview',      [OverviewController::class, 'index'])              ->middleware('permission:analytics.view');
+            Route::get('/conversations', [ConversationAnalyticsController::class, 'index'])->middleware('permission:analytics.conversations');
+            Route::get('/customers',     [CustomerAnalyticsController::class, 'index'])    ->middleware('permission:analytics.customers');
             Route::get('/agents', [AgentAnalyticsController::class, 'index']);
             Route::get('/tickets', [TicketAnalyticsController::class, 'index']);
             Route::get('/ai', [AIAnalyticsController::class, 'index']);
@@ -500,4 +508,62 @@ Route::prefix('v1/admin/billing')
         Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show']);
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy']);
+    });
+
+
+Route::prefix('v1/admin/rbac')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+
+        // Roles
+        Route::get   ('/roles',                     [RoleController::class, 'index']);
+        Route::post  ('/roles',                     [RoleController::class, 'store']);
+        Route::get   ('/roles/{role}',              [RoleController::class, 'show']);
+        Route::put   ('/roles/{role}',              [RoleController::class, 'update']);
+        Route::delete('/roles/{role}',              [RoleController::class, 'destroy']);
+        Route::put   ('/roles/{role}/permissions',  [RoleController::class, 'syncPermissions']);
+
+        // Permissions
+        Route::get   ('/permissions',               [PermissionController::class, 'index']);
+        Route::post  ('/permissions',               [PermissionController::class, 'store']);
+        Route::put   ('/permissions/{permission}',  [PermissionController::class, 'update']);
+        Route::delete('/permissions/{permission}',  [PermissionController::class, 'destroy']);
+
+        // User ↔ Role
+        Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign']);
+        Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke']);
+    });
+
+/*
+|--------------------------------------------------------------------------
+| RBAC — Tenant Owner / Admin (scoped to their tenant)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/rbac')
+    ->middleware(['jwt.auth', 'tenant.aware', 'set.permission.team'])
+    ->group(function () {
+
+        // Roles — tenant can view global roles + manage their own
+        Route::get   ('/roles',                     [RoleController::class, 'index'])
+            ->middleware('permission:team.view');
+        Route::post  ('/roles',                     [RoleController::class, 'store'])
+            ->middleware('permission:team.assign_role');
+        Route::get   ('/roles/{role}',              [RoleController::class, 'show'])
+            ->middleware('permission:team.view');
+        Route::put   ('/roles/{role}',              [RoleController::class, 'update'])
+            ->middleware('permission:team.assign_role');
+        Route::delete('/roles/{role}',              [RoleController::class, 'destroy'])
+            ->middleware('permission:team.assign_role');
+        Route::put   ('/roles/{role}/permissions',  [RoleController::class, 'syncPermissions'])
+            ->middleware('permission:team.assign_role');
+
+        // Permissions — read-only for tenant users
+        Route::get   ('/permissions',               [PermissionController::class, 'index'])
+            ->middleware('permission:team.view');
+
+        // User ↔ Role
+        Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign'])
+            ->middleware('permission:team.assign_role');
+        Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke'])
+            ->middleware('permission:team.assign_role');
     });

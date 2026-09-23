@@ -28,7 +28,7 @@ class ChatWidgetController extends Controller
             // }
 
             //  Super Admin: Return empty or require tenant selection
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: Please use tenant context to view widgets.',
@@ -72,7 +72,7 @@ class ChatWidgetController extends Controller
             // }
 
             // Super Admin cannot create widgets directly
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot create widgets. Please switch to a tenant workspace.',
@@ -120,7 +120,7 @@ class ChatWidgetController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have widget context.',
@@ -154,7 +154,7 @@ class ChatWidgetController extends Controller
             // }
 
             // Super Admin cannot update widgets directly
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot update widgets. Please switch to a tenant workspace.',
@@ -201,7 +201,7 @@ class ChatWidgetController extends Controller
             }
 
             // Super Admin cannot delete widgets directly
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete widgets. Please switch to a tenant workspace.',
@@ -247,7 +247,7 @@ class ChatWidgetController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot enable widgets directly.',
@@ -291,7 +291,7 @@ class ChatWidgetController extends Controller
                 ], 403);
             }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot disable widgets directly.',
@@ -335,7 +335,7 @@ class ChatWidgetController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot regenerate keys directly.',
@@ -372,7 +372,7 @@ class ChatWidgetController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have widget context.',

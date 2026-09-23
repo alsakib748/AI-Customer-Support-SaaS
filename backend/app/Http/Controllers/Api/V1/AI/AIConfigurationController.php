@@ -24,7 +24,7 @@ class AIConfigurationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have AI configuration context.',
@@ -61,7 +61,7 @@ class AIConfigurationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot update AI configuration without tenant context.',
@@ -150,7 +150,7 @@ class AIConfigurationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot test AI without tenant context.',

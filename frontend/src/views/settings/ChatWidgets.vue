@@ -63,7 +63,6 @@ const canViewWidgets = computed(() => authStore.hasPermission('widgets.view'));
 const canCreateWidgets = computed(() => authStore.hasPermission('widgets.create'));
 const canUpdateWidgets = computed(() => authStore.hasPermission('widgets.update'));
 const canDeleteWidgets = computed(() => authStore.hasPermission('widgets.delete'));
-const canManageWidgets = computed(() => authStore.hasPermission('widgets.manage'));
 
 const statusOptions = [
     { label: 'All', value: null },

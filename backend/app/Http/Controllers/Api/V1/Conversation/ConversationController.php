@@ -39,7 +39,7 @@ class ConversationController extends Controller
             // }
 
             // Check if Super Admin
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',
@@ -95,7 +95,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot create conversations without tenant context.',
@@ -158,7 +158,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have conversation context.',
@@ -198,7 +198,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot update conversations without tenant context.',
@@ -242,7 +242,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete conversations without tenant context.',
@@ -286,7 +286,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot resolve conversations without tenant context.',
@@ -330,7 +330,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot reopen conversations without tenant context.',
@@ -374,7 +374,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot close conversations without tenant context.',
@@ -418,7 +418,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot assign conversations without tenant context.',
@@ -462,7 +462,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot unassign conversations without tenant context.',
@@ -506,7 +506,7 @@ class ConversationController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',

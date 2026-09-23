@@ -55,9 +55,9 @@ const publishedCount = computed(() => knowledgeBaseStore.publishedCount);
 const draftCount = computed(() => knowledgeBaseStore.draftCount);
 const archivedCount = computed(() => knowledgeBaseStore.archivedCount);
 
-const canCreateKnowledge = computed(() => authStore.hasPermission('knowledge.create'));
-const canUpdateKnowledge = computed(() => authStore.hasPermission('knowledge.update'));
-const canDeleteKnowledge = computed(() => authStore.hasPermission('knowledge.delete'));
+const canCreateKnowledge = computed(() => authStore.hasPermission('knowledge_base.create'));
+const canUpdateKnowledge = computed(() => authStore.hasPermission('knowledge_base.update'));
+const canDeleteKnowledge = computed(() => authStore.hasPermission('knowledge_base.delete'));
 
 const statusOptions = [
     { label: 'All', value: null },

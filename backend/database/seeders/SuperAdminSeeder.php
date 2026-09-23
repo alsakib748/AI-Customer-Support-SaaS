@@ -5,41 +5,46 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Spatie\Permission\PermissionRegistrar;
 
 class SuperAdminSeeder extends Seeder
 {
     /**
-     * Create/refresh the super-admin user with no tenant association.
+     * Assign the platform-scoped super_admin role to the platform accounts
+     * and guarantee they have no tenant association.
      */
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        setPermissionsTeamId(null);
 
         $role = \Spatie\Permission\Models\Role::firstOrCreate([
-            'name'       => 'super-admin',
+            'name'       => 'super_admin',
             'guard_name' => 'api',
         ]);
 
-        $user = User::withTrashed()->updateOrCreate(
-            ['email' => 'alsakib.dev@gmail.com'],
-            [
-                'first_name' => 'Al',
-                'last_name'  => 'Sakib',
-                'username'   => 'alsakib',
-                'email'      => 'alsakib.dev@gmail.com',
-                'password'   => '11111111',
-                'uuid'       => Str::uuid(),
-                'is_active'  => true,
-                'deleted_at' => null,
-            ]
-        );
+        foreach (['alsakib@gmail.com', 'superadmin@gmail.com'] as $email) {
+            $user = User::withTrashed()->updateOrCreate(
+                ['email' => $email],
+                [
+                    'first_name' => 'Platform',
+                    'last_name'  => 'Admin',
+                    'username'   => str($email)->before('@'),
+                    'email'      => $email,
+                    'password'   => '11111111',
+                    'uuid'       => Str::uuid(),
+                    'is_active'  => true,
+                    'deleted_at' => null,
+                ]
+            );
 
-        $user->syncRoles([$role]);
+            $user->syncRoles([$role]);
 
-        // Guarantee no tenant association.
-        $user->tenants()->detach();
-        $user->update(['current_tenant_id' => null]);
+            // Guarantee no tenant association.
+            $user->tenants()->detach();
+            $user->update(['current_tenant_id' => null]);
+        }
 
-        $this->command->info('Super Admin ready: alsakib.dev@gmail.com / 11111111');
+        $this->command->info('Super Admins ready: alsakib@gmail.com / 11111111 and superadmin@gmail.com / 11111111');
     }
 }

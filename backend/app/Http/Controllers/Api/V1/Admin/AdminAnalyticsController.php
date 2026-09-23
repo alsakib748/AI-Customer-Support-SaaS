@@ -15,7 +15,7 @@ class AdminAnalyticsController extends Controller
 
     public function overview()
     {
-        if (!auth()->user()->hasRole('super-admin')) {
+        if (!auth()->user()->hasRole('super_admin')) {
             abort(403, 'Super Admin only.');
         }
         return response()->json(['success' => true, 'data' => $this->service->overview()]);
@@ -23,7 +23,7 @@ class AdminAnalyticsController extends Controller
 
     public function tenantUsage()
     {
-        if (!auth()->user()->hasRole('super-admin')) {
+        if (!auth()->user()->hasRole('super_admin')) {
             abort(403, 'Super Admin only.');
         }
         return response()->json(['success' => true, 'data' => $this->service->tenantUsage()]);

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
@@ -391,8 +392,6 @@ class AuthService
         }
 
         $user = auth()->user();
-        // Load user permissions
-        $user->load('roles.permissions');
 
         // Update last login
         $user->update([
@@ -407,7 +406,14 @@ class AuthService
             $user->update(['current_tenant_id' => $currentTenant->id]);
         }
 
+        ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
+            = $this->authContext($user, $currentTenant?->id);
+
         return [
+            'role'        => $role,
+            'roles'       => $roles,
+            'permissions' => $permissions,
+            'scope'       => $scope,
             'user'    => [
                 'id'                => $user->id,
                 'uuid'              => $user->uuid,
@@ -422,8 +428,8 @@ class AuthService
                 'is_active'         => $user->is_active,
                 'last_login_at'     => $user->last_login_at,
                 'current_tenant_id' => $user->current_tenant_id,
-                'permissions'       => $user->getAllPermissions()->pluck('name'),
-                'roles'             => $user->getRoleNames(),
+                'permissions'       => $permissions,
+                'roles'             => $roles,
             ],
             'tenant'  => $currentTenant ? [
                 'id'        => $currentTenant->id,
@@ -488,9 +494,16 @@ class AuthService
     public function me(): array
     {
         $user          = auth()->user();
-        $currentTenant = $user->currentTenant;
+        $currentTenant = $user->currentTenant ?? $user->tenants()->first();
+
+        ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
+            = $this->authContext($user, $currentTenant?->id);
 
         return [
+            'role'        => $role,
+            'roles'       => $roles,
+            'permissions' => $permissions,
+            'scope'       => $scope,
             'user'    => [
                 'id'                => $user->id,
                 'uuid'              => $user->uuid,
@@ -505,8 +518,8 @@ class AuthService
                 'is_active'         => $user->is_active,
                 'last_login_at'     => $user->last_login_at,
                 'current_tenant_id' => $user->current_tenant_id,
-                'permissions'       => $user->getAllPermissions()->pluck('name'),
-                'roles'             => $user->getRoleNames(),
+                'permissions'       => $permissions,
+                'roles'             => $roles,
             ],
             'tenant'  => $currentTenant ? [
                 'id'        => $currentTenant->id,
@@ -533,6 +546,36 @@ class AuthService
                     ],
                 ];
             }),
+        ];
+    }
+
+    /**
+     * Resolve the user's effective role(s) and permissions within the given
+     * tenant context. Needs explicit team scoping because /auth/login and
+     * /auth/me run outside the tenant.aware middleware group.
+     *
+     * @return array{role: string|null, roles: string[], permissions: string[], scope: 'platform'|'tenant'}
+     */
+    protected function authContext(User $user, ?string $tenantId): array
+    {
+        $tenantId = $tenantId ?: null;
+        setPermissionsTeamId($tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $roles = $user->getRoleNames()->values();
+        $role  = $roles->contains('super_admin') ? 'super_admin' : $roles->first();
+
+        $permissions = $user->getAllPermissions()->pluck('name')->sort()->values()->all();
+
+        // Restore a clean, request-local team state after computing.
+        setPermissionsTeamId(null);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return [
+            'role'        => $role,
+            'roles'       => $roles->all(),
+            'permissions' => $permissions,
+            'scope'       => $tenantId ? 'tenant' : 'platform',
         ];
     }
 

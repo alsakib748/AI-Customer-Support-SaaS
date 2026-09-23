@@ -145,7 +145,7 @@ class User extends Authenticatable implements JWTSubject
     // Methods
     public function isSuperAdmin()
     {
-        return $this->hasRole('super-admin');
+        return $this->hasRole('super_admin');
     }
 
     public function hasTenantAccess($tenantId)
@@ -175,46 +175,6 @@ class User extends Authenticatable implements JWTSubject
             return false;
         }
         return $this->tenants()->where('tenant_id', $tenant->id)->exists();
-    }
-
-    // Spatie Permission team integration
-    public function getTeamId()
-    {
-        return $this->current_tenant_id;
-    }
-
-    public function hasPermissionTo($permission, $guardName = null)
-    {
-        $permission = $this->getPermission($permission, $guardName);
-
-        if (!$permission) {
-            return false;
-        }
-
-        // Check if user has permission directly or through roles
-        return $this->hasDirectPermission($permission)
-            || $this->hasPermissionViaRole($permission);
-    }
-
-    // For Spatie Permission with teams
-    protected function getPermission($permission, $guardName)
-    {
-        $className = config('permission.models.permission');
-
-        $query = (new $className)->where(function ($query) use ($permission, $guardName) {
-            $query->where('name', $permission);
-
-            if ($guardName) {
-                $query->where('guard_name', $guardName);
-            }
-        });
-
-        // Scope permission to current tenant if teams are enabled
-        if (config('permission.teams')) {
-            $query->where('team_foreign_key', $this->getTeamId());
-        }
-
-        return $query->first();
     }
 
 }

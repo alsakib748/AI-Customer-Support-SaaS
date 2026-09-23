@@ -36,7 +36,7 @@ class MessageController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Super Admin: No tenant context required.',
@@ -86,7 +86,7 @@ class MessageController extends Controller
     public function store(StoreMessageRequest $request, Conversation $conversation)
     {
         try {
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot send messages without tenant context.',
@@ -135,7 +135,7 @@ class MessageController extends Controller
     public function addNote(StoreInternalNoteRequest $request, Conversation $conversation)
     {
         try {
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot add notes without tenant context.',
@@ -185,7 +185,7 @@ class MessageController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin does not have message context.',
@@ -233,7 +233,7 @@ class MessageController extends Controller
             //     ], 403);
             // }
 
-            if (auth()->user()->hasRole('super-admin')) {
+            if (auth()->user()->hasRole('super_admin')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Super Admin cannot delete messages without tenant context.',

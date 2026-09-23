@@ -22,7 +22,7 @@ class TenantAware
         $user = auth()->user();
 
         // Check if user is Super Admin
-        if ($user && $user->hasRole('super-admin')) {
+        if ($user && $user->hasRole('super_admin')) {
             Log::info('Super Admin accessing route', [
                 'user_id' => $user->id,
                 'path' => $request->path(),
@@ -54,7 +54,7 @@ class TenantAware
                 ], 404);
             }
 
-            if (!$user->hasRole('super-admin') && !$user->hasTenantAccess($tenant->id)) {
+            if (!$user->hasRole('super_admin') && !$user->hasTenantAccess($tenant->id)) {
                 Log::warning('Tenant access denied', [
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
@@ -91,7 +91,7 @@ class TenantAware
         }
 
         // 4. Super Admin fallback to first available tenant in system
-        if (!$tenant && $user && $user->hasRole('super-admin')) {
+        if (!$tenant && $user && $user->hasRole('super_admin')) {
             $tenant = Tenant::first();
             if ($tenant) {
                 Log::info('Super Admin fallback to first system tenant', ['tenant_id' => $tenant->id]);
@@ -117,7 +117,7 @@ class TenantAware
             Log::info('Tenant set in request', ['tenant_id' => $tenant->id]);
         } else {
             // Allow Super Admin to proceed without a tenant context
-            if ($user && $user->hasRole('super-admin')) {
+            if ($user && $user->hasRole('super_admin')) {
                 Log::info('Super Admin proceeding without tenant context', [
                     'path' => $request->path(),
                 ]);

@@ -213,6 +213,16 @@ api.interceptors.response.use(
             }
         }
 
+        // Handle 402 Payment Required - plan limit reached
+        if (error.response?.status === 402) {
+            toast.error(error.response?.data?.message || 'Plan limit reached.');
+        }
+
+        // Handle 403 Forbidden - missing permission
+        if (error.response?.status === 403 && !error.config?.skipErrorToast) {
+            toast.error(error.response?.data?.message || 'You do not have permission to perform this action.');
+        }
+
         // Handle 500 Server Error
         if (error.response?.status === 500) {
             toast.error('Server error. Please try again later.');

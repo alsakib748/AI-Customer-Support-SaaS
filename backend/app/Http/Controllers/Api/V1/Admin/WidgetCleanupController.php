@@ -20,7 +20,7 @@ class WidgetCleanupController extends Controller
      */
     public function stats(Request $request)
     {
-        if (!auth()->user()->hasRole('super-admin')) {
+        if (!auth()->user()->hasRole('super_admin')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -40,7 +40,7 @@ class WidgetCleanupController extends Controller
      */
     public function cleanup(Request $request)
     {
-        if (!auth()->user()->hasRole('super-admin')) {
+        if (!auth()->user()->hasRole('super_admin')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',

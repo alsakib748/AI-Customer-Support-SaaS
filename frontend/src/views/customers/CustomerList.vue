@@ -272,7 +272,7 @@ watch(
             </div>
             <div class="flex gap-3">
                 <!-- Fixed: Use openCreateModal instead of showCreateDialog -->
-                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal" v-if="canCreateCustomers" />
+                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal" v-if="authStore.hasPermission('customers.create')" />
                 <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>

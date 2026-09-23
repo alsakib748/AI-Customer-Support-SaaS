@@ -136,8 +136,7 @@ onMounted(async () => {
             </div>
             <div class="flex items-center gap-3">
                 <SelectButton v-model="billingCycle" :options="cycleOptions" optionLabel="label" optionValue="value" />
-                <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined
-                    @click="router.push('/billing')" />
+                <Button label="Back to Billing" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/billing')" />
             </div>
         </div>
 
@@ -164,21 +163,16 @@ onMounted(async () => {
                             <div class="mt-4 mb-5">
                                 <div class="flex items-end gap-2">
                                     <span class="text-3xl font-bold text-primary">{{ planPrice(plan) }}</span>
-                                    <span class="text-sm text-surface-500 pb-1"> /{{ billingCycle === 'yearly' ? 'year'
-                                        : 'month' }} </span>
-                                    <span v-if="billingCycle === 'yearly'"
-                                        class="text-xs font-semibold text-success mb-2">
+                                    <span class="text-sm text-surface-500 pb-1"> /{{ billingCycle === 'yearly' ? 'year' : 'month' }} </span>
+                                    <span v-if="billingCycle === 'yearly'" class="text-xs font-semibold text-success mb-2">
                                         {{ yearlySavingsLabel(plan) }}
                                     </span>
                                 </div>
-                                <div v-if="billingCycle === 'yearly' && plan.formatted_price_monthly !== plan.formatted_price_yearly"
-                                    class="text-xs text-surface-500">{{ plan.formatted_price_monthly }}/mo billed yearly
-                                </div>
+                                <div v-if="billingCycle === 'yearly' && plan.formatted_price_monthly !== plan.formatted_price_yearly" class="text-xs text-surface-500">{{ plan.formatted_price_monthly }}/mo billed yearly</div>
                             </div>
 
                             <ul class="space-y-2 mb-6">
-                                <li v-for="(limit, key) in plan.limits" :key="key"
-                                    class="flex items-center gap-2 text-sm">
+                                <li v-for="(limit, key) in plan.limits" :key="key" class="flex items-center gap-2 text-sm">
                                     <i class="pi pi-check text-success"></i>
                                     <span>{{ labelFor(LIMIT_LABELS, key) }}: {{ formatLimit(key, limit) }}</span>
                                 </li>
@@ -190,13 +184,16 @@ onMounted(async () => {
                                 </template>
                             </ul>
 
-                            <Button :label="isCurrentPlan(plan) ? 'Current Plan' : 'Select Plan'"
+                            <Button
+                                :label="isCurrentPlan(plan) ? 'Current Plan' : 'Select Plan'"
                                 :disabled="isCurrentPlan(plan)"
-                                :severity="isCurrentPlan(plan) ? 'secondary' : 'primary'" icon="pi pi-arrow-right"
-                                iconPos="right" class="w-full" @click="selectPlan(plan)" />
-                            <div v-if="plan.trial_days > 0 && !isCurrentPlan(plan)"
-                                class="text-center text-xs text-surface-500 mt-2">{{
-                                    plan.trial_days }} day free trial available</div>
+                                :severity="isCurrentPlan(plan) ? 'secondary' : 'primary'"
+                                icon="pi pi-arrow-right"
+                                iconPos="right"
+                                class="w-full"
+                                @click="selectPlan(plan)"
+                            />
+                            <div v-if="plan.trial_days > 0 && !isCurrentPlan(plan)" class="text-center text-xs text-surface-500 mt-2">{{ plan.trial_days }} day free trial available</div>
                         </template>
                     </Card>
                 </div>
@@ -217,15 +214,13 @@ onMounted(async () => {
                                         <th v-for="plan in activePlans" :key="plan.id" class="p-3 text-center">
                                             <div class="font-bold">{{ plan.name }}</div>
                                             <div class="text-primary font-bold">{{ planPrice(plan) }}</div>
-                                            <div class="text-xs text-surface-500 capitalize">/{{ billingCycle ===
-                                                'yearly' ? 'year' : 'month' }}</div>
+                                            <div class="text-xs text-surface-500 capitalize">/{{ billingCycle === 'yearly' ? 'year' : 'month' }}</div>
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template v-for="row in comparisonRows" :key="row.type + '-' + row.key">
-                                        <tr v-if="row.type === 'limit'"
-                                            class="border-b border-surface-100 dark:border-surface-800">
+                                        <tr v-if="row.type === 'limit'" class="border-b border-surface-100 dark:border-surface-800">
                                             <td class="p-3 font-medium text-surface-700 dark:text-surface-300">
                                                 {{ row.label }}
                                             </td>
@@ -233,14 +228,12 @@ onMounted(async () => {
                                                 {{ row.values[plan.id] }}
                                             </td>
                                         </tr>
-                                        <tr v-if="row.type === 'feature'"
-                                            class="border-b border-surface-100 dark:border-surface-800">
+                                        <tr v-if="row.type === 'feature'" class="border-b border-surface-100 dark:border-surface-800">
                                             <td class="p-3 font-medium text-surface-700 dark:text-surface-300">
                                                 {{ row.label }}
                                             </td>
                                             <td v-for="plan in activePlans" :key="plan.id" class="p-3 text-center">
-                                                <i v-if="row.values[plan.id] === 'yes'"
-                                                    class="pi pi-check text-success"></i>
+                                                <i v-if="row.values[plan.id] === 'yes'" class="pi pi-check text-success"></i>
                                                 <span v-else class="text-surface-400">—</span>
                                             </td>
                                         </tr>

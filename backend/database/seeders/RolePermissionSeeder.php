@@ -88,7 +88,7 @@ class RolePermissionSeeder extends Seeder
 
         // Create roles with permissions
         $roles = [
-            'super-admin' => Permission::all()->pluck('name')->toArray(),
+            'super_admin' => Permission::all()->pluck('name')->toArray(),
             'owner' => Permission::all()->pluck('name')->toArray(),
             'admin' => [
                 'users.view',
@@ -188,7 +188,7 @@ class RolePermissionSeeder extends Seeder
             ]);
         }
 
-        $superAdmin->assignRole('super-admin');
+        $superAdmin->assignRole('super_admin');
 
         $this->command->info('Roles and permissions seeded successfully!');
         $this->command->info('Super Admin created: superadmin@gmail.com / 11111111');

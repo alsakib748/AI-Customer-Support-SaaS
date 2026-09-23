@@ -28,7 +28,7 @@ const article = ref(null);
 // COMPUTED
 // ============================================
 
-const canUpdateKnowledge = computed(() => authStore.hasPermission('knowledge.update'));
+const canUpdateKnowledge = computed(() => authStore.hasPermission('knowledge_base.update'));
 
 const sanitizedContent = computed(() => {
     if (!article.value?.content) return '';

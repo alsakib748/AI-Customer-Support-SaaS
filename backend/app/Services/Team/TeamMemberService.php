@@ -24,7 +24,7 @@ class TeamMemberService
         $this->user = auth()->user();
 
         // Check if user is Super Admin
-        if ($this->user && $this->user->hasRole('super-admin')) {
+        if ($this->user && $this->user->hasRole('super_admin')) {
             $this->isSuperAdmin = true;
             Log::info('Super Admin accessing team service', ['user_id' => $this->user->id]);
             // Super Admin doesn't need a specific tenant
@@ -87,7 +87,7 @@ class TeamMemberService
         }
 
         // Super admin has all permissions
-        if ($this->user->hasRole('super-admin')) {
+        if ($this->user->hasRole('super_admin')) {
             return true;
         }
 
@@ -105,7 +105,7 @@ class TeamMemberService
         }
 
         // Super admin can manage any team
-        if ($this->user->hasRole('super-admin')) {
+        if ($this->user->hasRole('super_admin')) {
             return true;
         }
 

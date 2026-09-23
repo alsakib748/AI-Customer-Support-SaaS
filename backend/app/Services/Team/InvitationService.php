@@ -57,7 +57,7 @@ class InvitationService
             return false;
         }
 
-        if ($this->user->hasRole('super-admin')) {
+        if ($this->user->hasRole('super_admin')) {
             return true;
         }
 

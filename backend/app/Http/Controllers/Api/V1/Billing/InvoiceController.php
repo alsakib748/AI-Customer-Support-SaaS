@@ -35,7 +35,7 @@ class InvoiceController extends Controller
             $tenant = app('current_tenant');
 
             if (!$tenant) {
-                if (auth()->user()?->hasRole('super-admin')) {
+                if (auth()->user()?->hasRole('super_admin')) {
                     return response()->json([
                         'success' => true,
                         'data' => [],
@@ -97,7 +97,7 @@ class InvoiceController extends Controller
             $tenant = app('current_tenant');
 
             if (!$tenant) {
-                if (auth()->user()?->hasRole('super-admin')) {
+                if (auth()->user()?->hasRole('super_admin')) {
                     return response()->json([
                         'success' => true,
                         'data' => [],
@@ -159,7 +159,7 @@ class InvoiceController extends Controller
             $tenant = app('current_tenant');
 
             if (!$tenant) {
-                if (auth()->user()?->hasRole('super-admin')) {
+                if (auth()->user()?->hasRole('super_admin')) {
                     return response()->json([
                         'success' => true,
                         'data' => [],
@@ -213,7 +213,7 @@ class InvoiceController extends Controller
             $tenant = app('current_tenant');
 
             if (!$tenant) {
-                if (auth()->user()?->hasRole('super-admin')) {
+                if (auth()->user()?->hasRole('super_admin')) {
                     return response()->json([
                         'success' => true,
                         'data' => [],

@@ -3,36 +3,47 @@ import { ref, computed } from 'vue';
 import api from '@/services/api';
 import router from '@/router';
 import { toast } from 'vue3-toastify';
-// import { Password } from 'primevue';
 
 export const useAuthStore = defineStore('auth', () => {
-    // State
+    // =========================================================
+    // STATE
+    // =========================================================
     const user = ref(null);
-    const token = ref(null);
+    const token = ref(localStorage.getItem('auth_token') || null);
     const currentTenant = ref(null);
     const tenants = ref([]);
+    const scope = ref(null); // 'platform' | 'tenant'
+    const role = ref(null); // 'owner' | 'admin' | 'manager' | 'support_agent' | 'super_admin'
+    const permissions = ref([]); // ['customers.view', ...]
+
     const loading = ref(false);
     const error = ref(null);
     const errors = ref(null);
     const initialized = ref(false);
     const redirectPath = ref(null);
 
-    // Getters
-    const isAuthenticated = computed(() => !!token.value && !!user.value);
-    const isSuperAdmin = computed(() => {
-        const roles = user.value?.roles || [];
+    // Restore token header on cold boot
+    if (token.value) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
+    }
 
-        return roles.some((role) => {
-            const roleName = typeof role === 'string' ? role : role?.name;
-            return roleName?.toLowerCase().replace(/[_\s]+/g, '-') === 'super-admin';
-        });
-    });
+    // =========================================================
+    // GETTERS
+    // =========================================================
+    const isAuthenticated = computed(() => !!token.value && !!user.value);
+    const isSuperAdmin = computed(() => role.value === 'super_admin' || scope.value === 'platform');
+    const isOwner = computed(() => role.value === 'owner');
+    const isAdmin = computed(() => role.value === 'admin');
+    const isManager = computed(() => role.value === 'manager');
+    const isAgent = computed(() => role.value === 'support_agent');
+
     const currentTenantId = computed(() => currentTenant.value?.id);
     const userFullName = computed(() => user.value?.full_name || user.value?.email);
-    const userPermissions = computed(() => user.value?.permissions || []);
+    const userPermissions = computed(() => permissions.value);
 
-    // Actions
-
+    // =========================================================
+    // REDIRECT HELPERS
+    // =========================================================
     const setRedirectPath = (path) => {
         redirectPath.value = path;
     };
@@ -43,20 +54,74 @@ export const useAuthStore = defineStore('auth', () => {
         return path;
     };
 
-    const setAuth = (data) => {
-        token.value = data.token;
-        user.value = data.user;
-        currentTenant.value = data.tenant || data.tenants?.[0] || null;
-        tenants.value = data.tenants || [];
+    const clearRedirectPath = () => {
+        redirectPath.value = null;
+    };
 
-        // Save to localStorage
-        localStorage.setItem('auth_token', data.token);
+    // =========================================================
+    // PERMISSION HELPERS
+    // =========================================================
+    const hasPermission = (permission) => {
+        if (!permission) return true;
+        if (isSuperAdmin.value) return true; // Super Admin bypasses
+        return permissions.value.includes(permission);
+    };
+
+    const hasAnyPermission = (perms) => {
+        if (!Array.isArray(perms) || perms.length === 0) return true;
+        if (isSuperAdmin.value) return true;
+        return perms.some((p) => permissions.value.includes(p));
+    };
+
+    const hasAllPermissions = (perms) => {
+        if (!Array.isArray(perms) || perms.length === 0) return true;
+        if (isSuperAdmin.value) return true;
+        return perms.every((p) => permissions.value.includes(p));
+    };
+
+    const hasRole = (r) => role.value === r;
+
+    // =========================================================
+    // INTERNAL — apply /me response to state
+    // =========================================================
+    const applyMe = (data) => {
+        user.value = data.user ?? null;
+        currentTenant.value = data.tenant ?? null;
+        scope.value = data.scope ?? null;
+        role.value = data.role ?? null;
+        permissions.value = data.permissions ?? [];
+
         if (currentTenant.value?.id) {
             localStorage.setItem('current_tenant_id', currentTenant.value.id);
         }
+    };
 
-        // Set default authorization header
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    // =========================================================
+    // ACTIONS — auth lifecycle
+    // =========================================================
+    const setAuth = (data) => {
+        token.value = data.token;
+        user.value = data.user;
+
+        if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+            api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        }
+
+        // If the login response already includes tenant + permissions, apply them
+        if (data.tenant || data.permissions || data.role) {
+            applyMe({
+                user: data.user,
+                tenant: data.tenant,
+                scope: data.scope,
+                role: data.role,
+                permissions: data.permissions
+            });
+        } else if (data.tenant || data.tenants?.[0]) {
+            currentTenant.value = data.tenant || data.tenants[0];
+        }
+
+        if (data.tenants) tenants.value = data.tenants;
     };
 
     const clearAuth = () => {
@@ -64,6 +129,11 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null;
         currentTenant.value = null;
         tenants.value = [];
+        scope.value = null;
+        role.value = null;
+        permissions.value = [];
+        redirectPath.value = null;
+
         localStorage.removeItem('auth_token');
         localStorage.removeItem('current_tenant_id');
         delete api.defaults.headers.common['Authorization'];
@@ -76,16 +146,17 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             const response = await api.post('/auth/register', userData);
             const data = response.data.data;
+
             setAuth(data);
 
-            // Redirect to dashboard
-            router.push('/dashboard');
+            // Fetch full authorization context
+            await fetchMe().catch(() => {});
 
-            toast.success(`Welcome back, ${data.user.first_name}`);
+            router.push('/dashboard');
+            toast.success(`Welcome, ${data.user.first_name}`);
 
             return data;
         } catch (err) {
-            // Error toast is fired by the axios response interceptor in services/api.js
             error.value = err.response?.data?.errors || err.response?.data?.message || 'Registration failed';
             throw err;
         } finally {
@@ -100,55 +171,57 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             const response = await api.post('/auth/login', credentials);
 
-            // console.log('Login Response: ', response.data);
-
-            if (response.data.success) {
-                const data = response.data.data;
-
-                setAuth(data);
-
-                // Redirect to dashboard
-                // router.push('/dashboard');
-
-                // Redirect to intended page or dashboard
-                const redirectTo = getRedirectPath();
-                router.push(redirectTo);
-
-                toast.success(`Welcome back, ${data.user.first_name}`);
-
-                return data;
+            if (!response.data.success) {
+                throw new Error('Login failed');
             }
-        } catch (error) {
-            // Error toast is fired by the axios response interceptor in services/api.js
-            if (error.response?.data?.errors) {
-                errors.value = error.response.data.errors;
+
+            const data = response.data.data;
+            setAuth(data);
+
+            // Fetch authorization context (role + permissions)
+            try {
+                await fetchMe();
+            } catch (e) {
+                console.warn('Could not fetch /me after login:', e);
             }
-            throw error;
+
+            const redirectTo = getRedirectPath();
+            router.push(redirectTo);
+            toast.success(`Welcome back, ${data.user.first_name}`);
+
+            return data;
+        } catch (err) {
+            if (err.response?.data?.errors) {
+                errors.value = err.response.data.errors;
+            }
+            throw err;
         } finally {
             loading.value = false;
         }
     };
 
-    const logout = async () => {
-        loading.value = true;
+    /**
+     * Logout — synchronous for router guards, fires the API call asynchronously.
+     */
+    const logout = () => {
+        // Fire-and-forget server-side token invalidation
+        api.post('/auth/logout').catch((err) => {
+            console.warn('Logout API error:', err?.message);
+        });
 
-        try {
-            await api.post('/auth/logout');
-        } catch (err) {
-            console.error('Logout error: ', err);
-        } finally {
-            clearAuth();
-            router.push('/login');
-            loading.value = false;
-        }
+        clearAuth();
+        router.push('/login');
     };
 
     const refreshToken = async () => {
         try {
             const response = await api.post('/auth/refresh');
             const newToken = response.data.data.token;
+
             token.value = newToken;
             localStorage.setItem('auth_token', newToken);
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
             return newToken;
         } catch (err) {
             clearAuth();
@@ -156,26 +229,28 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
-    const fetchUser = async () => {
+    // =========================================================
+    // ACTIONS — fetch /me
+    // =========================================================
+    const fetchMe = async () => {
+        if (!token.value) return null;
+
         loading.value = true;
 
         try {
-            const response = await api.get('/auth/me');
-            const data = response.data.data;
+            const { data } = await api.get('/auth/me');
 
-            user.value = data.user;
-            currentTenant.value = data.tenant;
-            tenants.value = data.tenants || [];
+            if (!data.success) return null;
 
-            if (currentTenant.value?.id) {
-                localStorage.setItem('current_tenant_id', currentTenant.value.id);
-            }
+            applyMe(data.data);
 
-            return data;
+            // Some backends also return tenants list
+            if (data.data.tenants) tenants.value = data.data.tenants;
+
+            return data.data;
         } catch (err) {
             if (err.response?.status === 401) {
                 clearAuth();
-                router.push('/login');
             }
             throw err;
         } finally {
@@ -183,6 +258,17 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
+    // Alias — same as fetchMe
+    const fetchUser = fetchMe;
+
+    const refreshPermissions = async () => {
+        if (!token.value) return null;
+        return fetchMe();
+    };
+
+    // =========================================================
+    // TENANT SWITCHING
+    // =========================================================
     const switchTenant = async (tenantId) => {
         loading.value = true;
 
@@ -191,20 +277,27 @@ export const useAuthStore = defineStore('auth', () => {
             const tenant = response.data.data;
 
             currentTenant.value = tenant;
-            user.value.current_tenant_id = tenant.id;
+            if (user.value) user.value.current_tenant_id = tenant.id;
 
-            // Update tenant is localStorage
             localStorage.setItem('current_tenant_id', tenant.id);
+
+            // ✅ Re-fetch /me so role + permissions update for the new tenant
+            await fetchMe().catch(() => {});
+
+            toast.success(`Switched to ${tenant.name}`);
 
             return tenant;
         } catch (err) {
-            error.value = err.response?.data?.message || 'Failed to switch tenant';
+            error.value = err.response?.data?.message || 'Failed to switch workspace';
             throw err;
         } finally {
             loading.value = false;
         }
     };
 
+    // =========================================================
+    // CHANGE PASSWORD
+    // =========================================================
     const changePassword = async (passwords) => {
         loading.value = true;
         error.value = null;
@@ -212,8 +305,12 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             const response = await api.post('/auth/change-password', passwords);
             const newToken = response.data.data.token;
-            token.value = newToken;
-            localStorage.setItem('auth_token', newToken);
+
+            if (newToken) {
+                token.value = newToken;
+                localStorage.setItem('auth_token', newToken);
+                api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            }
 
             return response.data;
         } catch (err) {
@@ -224,85 +321,39 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
-    // Initialize from localStorage
+    // =========================================================
+    // INIT (called once per app boot by router guard)
+    // =========================================================
     const init = async () => {
-        const savedToken = localStorage.getItem('auth_token');
+        if (initialized.value) return;
 
-        if (!savedToken) {
+        if (!token.value) {
             initialized.value = true;
             return;
         }
 
-        token.value = savedToken;
-
         try {
-            await fetchUser();
-        } catch {
+            await fetchMe();
+        } catch (e) {
+            console.error('auth.init failed:', e);
             clearAuth();
         } finally {
             initialized.value = true;
         }
-
-        // if (savedToken) {
-        //     token.value = savedToken;
-        //     // Fetch user data
-        //     fetchUser().catch(() => {
-        //         clearAuth();
-        //     });
-        // }
     };
 
-    // Has permission helper
-    const hasPermission = (permission) => {
-        if (isSuperAdmin.value) return true;
-
-        // If no permission provided, return false
-        if (!permission) return false;
-
-        // Check if user has the specific permission
-        return userPermissions.value.includes(permission);
-    };
-
-    // Has any permission helper
-    const hasAnyPermission = (permissions) => {
-        if (isSuperAdmin.value) return true;
-
-        // If no permissions provided, return false
-        if (!permissions) return false;
-
-        // If permissions is a string, convert to array
-        const permArray = Array.isArray(permissions) ? permissions : [permissions];
-
-        // If array is empty, return false
-        if (permArray.length === 0) return false;
-
-        // Check if user has any of the permissions
-        return permArray.some((p) => userPermissions.value.includes(p));
-    };
-
-    // Has all permissions helper
-    const hasAllPermissions = (permissions) => {
-        if (isSuperAdmin.value) return true;
-
-        // If no permissions provided, return false
-        if (!permissions) return false;
-
-        // If permissions is a string, convert to array
-        const permArray = Array.isArray(permissions) ? permissions : [permissions];
-
-        // If array is empty, return false
-        if (permArray.length === 0) return false;
-
-        // Check if user has all of the permissions
-        return permArray.every((p) => userPermissions.value.includes(p));
-    };
-
+    // =========================================================
+    // RETURN
+    // =========================================================
     return {
         // State
         user,
         token,
         currentTenant,
         tenants,
+        scope,
+        role,
+        permissions,
         loading,
         error,
         errors,
@@ -312,25 +363,38 @@ export const useAuthStore = defineStore('auth', () => {
         // Getters
         isAuthenticated,
         isSuperAdmin,
+        isOwner,
+        isAdmin,
+        isManager,
+        isAgent,
         currentTenantId,
         userFullName,
         userPermissions,
 
+        // Permission helpers
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
+        hasRole,
+
+        // Redirect helpers
+        setRedirectPath,
+        getRedirectPath,
+        clearRedirectPath,
+
         // Actions
+        setAuth,
+        clearAuth,
         register,
         login,
         logout,
         refreshToken,
+        fetchMe,
         fetchUser,
+        refreshPermissions,
         switchTenant,
         changePassword,
         init,
-        clearAuth,
-        setAuth,
-        setRedirectPath,
-        getRedirectPath,
-        hasPermission,
-        hasAnyPermission,
-        hasAllPermissions
+        applyMe
     };
 });

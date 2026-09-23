@@ -5,75 +5,617 @@ import { toast } from 'vue3-toastify';
 
 const router = createRouter({
     history: createWebHistory(),
+    // routes: [
+    //     {
+    //         path: '/',
+    //         name: 'landing',
+    //         component: () => import('@/views/pages/Landing.vue')
+    //     },
+    //     {
+    //         path: '/login',
+    //         name: 'Login',
+    //         component: () => import('@/views/pages/auth/Login.vue'),
+    //         meta: {
+    //             requiresGuest: true,
+    //             title: 'Login'
+    //         }
+    //     },
+    //     {
+    //         path: '/register',
+    //         name: 'Register',
+    //         component: () => import('@/views/pages/auth/Register.vue'),
+    //         meta: {
+    //             requiresGuest: true,
+    //             title: 'Register'
+    //         }
+    //     },
+    //     {
+    //         path: '/auth/access',
+    //         name: 'accessDenied',
+    //         component: () => import('@/views/pages/auth/Access.vue'),
+    //         meta: {
+    //             requiresGuest: true,
+    //             title: 'Access Denied'
+    //         }
+    //     },
+    //     {
+    //         path: '/auth/error',
+    //         name: 'error',
+    //         component: () => import('@/views/pages/auth/Error.vue'),
+    //         meta: {
+    //             requiresGuest: true,
+    //             title: 'Error'
+    //         }
+    //     },
+    //     // {
+    //     //     path: '/setup/create-workspace',
+    //     //     name: 'CreateWorkspace',
+    //     //     component: () => import('@/views/pages/setup/CreateWorkspace.vue'),
+    //     //     meta: {
+    //     //         requiresAuth: false,
+    //     //         title: 'Create Workspace'
+    //     //     }
+    //     // },
+    //     {
+    //         path: '/dashboard',
+    //         component: AppLayout,
+    //         meta: {
+    //             requiresAuth: true
+    //         },
+    //         children: [
+    //             // Protected routes
+    //             // {
+    //             //     path: '',
+    //             //     redirect: '/dashboard'
+    //             // },
+    //             {
+    //                 path: '/dashboard',
+    //                 name: 'Dashboard',
+    //                 component: () => import('@/views/Dashboard.vue'),
+    //                 meta: { requiresAuth: true }
+    //             },
+    //             {
+    //                 path: '/analytics',
+    //                 name: 'Analytics',
+    //                 redirect: '/analytics/overview'
+    //             },
+    //             {
+    //                 path: '/analytics/overview',
+    //                 name: 'AnalyticsOverview',
+    //                 component: () => import('@/views/analytics/AnalyticsOverview.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Analytics'
+    //                     // permissions: ['analytics.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/conversations',
+    //                 name: 'AnalyticsConversations',
+    //                 component: () => import('@/views/analytics/ConversationAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Conversation Analytics'
+    //                     // permissions: ['analytics.conversations']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/customers',
+    //                 name: 'AnalyticsCustomers',
+    //                 component: () => import('@/views/analytics/CustomerAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Customer Analytics'
+    //                     // permissions: ['analytics.customers']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/agents',
+    //                 name: 'AnalyticsAgents',
+    //                 component: () => import('@/views/analytics/AgentAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Team Analytics'
+    //                     // permissions: ['analytics.agents']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/tickets',
+    //                 name: 'AnalyticsTickets',
+    //                 component: () => import('@/views/analytics/TicketAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Ticket Analytics'
+    //                     // permissions: ['analytics.tickets']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/ai',
+    //                 name: 'AnalyticsAI',
+    //                 component: () => import('@/views/analytics/AIAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'AI Analytics'
+    //                     // permissions: ['analytics.ai']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/widget',
+    //                 name: 'AnalyticsWidget',
+    //                 component: () => import('@/views/analytics/WidgetAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Widget Analytics'
+    //                     // permissions: ['analytics.widget']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/knowledge-base',
+    //                 name: 'AnalyticsKnowledgeBase',
+    //                 component: () => import('@/views/analytics/KnowledgeBaseAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'KB Analytics'
+    //                     // permissions: ['analytics.knowledge_base']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/settings/workspace',
+    //                 name: 'WorkspaceSettings',
+    //                 component: () => import('@/views/settings/Workspace.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Workspace Settings'
+    //                 }
+    //             },
+    //             {
+    //                 path: '/team',
+    //                 name: 'Team',
+    //                 redirect: '/team/members'
+    //             },
+    //             {
+    //                 path: '/team/members',
+    //                 name: 'TeamMembers',
+    //                 component: () => import('@/views/team/Members.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Team Members'
+    //                 }
+    //             },
+    //             {
+    //                 path: '/customers',
+    //                 name: 'Customers',
+    //                 component: () => import('@/views/customers/CustomerList.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Customers'
+    //                     // permissions: ['customers.view'],
+    //                 }
+    //             },
+    //             {
+    //                 path: '/conversations',
+    //                 name: 'Conversation',
+    //                 component: () => import('@/views/conversations/ConversationList.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Conversation'
+    //                     // permissions: ['customers.view'],
+    //                 }
+    //             },
+    //             {
+    //                 path: '/conversations/:id',
+    //                 name: 'ConversationShow',
+    //                 component: () => import('@/views/conversations/ConversationShow.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Conversation',
+    //                     permissions: ['conversations.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/settings/chat-widgets',
+    //                 name: 'ChatWidgets',
+    //                 component: () => import('@/views/settings/ChatWidgets.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Chat Widgets'
+    //                     // permissions: ['widgets.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/tickets',
+    //                 name: 'Tickets',
+    //                 component: () => import('@/views/tickets/Tickets.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Tickets'
+    //                     // permissions: ['tickets.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/knowledge-base',
+    //                 name: 'KnowledgeBase',
+    //                 component: () => import('@/views/knowledge-base/KnowledgeBase.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Knowledge Base'
+    //                     // permissions: ['knowledge.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/knowledge-base/articles/create',
+    //                 name: 'ArticleCreate',
+    //                 component: () => import('@/views/knowledge-base/ArticleCreate.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Create Article'
+    //                     // permissions: ['knowledge.create']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/knowledge-base/articles/:id/edit',
+    //                 name: 'ArticleEdit',
+    //                 component: () => import('@/views/knowledge-base/ArticleEdit.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Edit Article'
+    //                     // permissions: ['knowledge.update']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/knowledge-base/articles/:id',
+    //                 name: 'ArticleShow',
+    //                 component: () => import('@/views/knowledge-base/ArticleShow.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Article Details'
+    //                     // permissions: ['knowledge.view']
+    //                 }
+    //             },
+    //             // AI Routes
+    //             {
+    //                 path: '/settings/ai',
+    //                 name: 'AISettings',
+    //                 component: () => import('@/views/settings/AISettings.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'AI Settings'
+    //                     // permissions: ['ai.configure']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/ai/analytics',
+    //                 name: 'AIAnalytics',
+    //                 component: () => import('@/views/ai/AIAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'AI Analytics'
+    //                     // permissions: ['ai.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/my',
+    //                 name: 'AnalyticsMy',
+    //                 component: () => import('@/views/analytics/MyAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'My Analytics'
+    //                     // permissions: ['analytics.view']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/analytics/exports',
+    //                 name: 'AnalyticsExports',
+    //                 component: () => import('@/views/analytics/ExportHistory.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     title: 'Export History'
+    //                     // permissions: ['analytics.export']
+    //                 }
+    //             },
+    //             {
+    //                 path: '/admin/analytics',
+    //                 name: 'AdminPlatformAnalytics',
+    //                 component: () => import('@/views/admin/PlatformAnalytics.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     requiresSuperAdmin: true,
+    //                     title: 'Platform Analytics'
+    //                 }
+    //             },
+
+    //             // Billing Routes
+    //             // ============================================
+    //             // BILLING ROUTES (Tenant)
+    //             // ============================================
+    //             {
+    //                 path: '/billing',
+    //                 name: 'BillingOverview',
+    //                 component: () => import('@/views/billing/BillingOverview.vue'),
+    //                 meta: { requiresAuth: true, title: 'Billing' }
+    //             },
+    //             {
+    //                 path: '/billing/plans',
+    //                 name: 'BillingPlans',
+    //                 component: () => import('@/views/billing/Plans.vue'),
+    //                 meta: { requiresAuth: true, title: 'Plans' }
+    //             },
+    //             {
+    //                 path: '/billing/usage',
+    //                 name: 'BillingUsage',
+    //                 component: () => import('@/views/billing/Usage.vue'),
+    //                 meta: { requiresAuth: true, title: 'Usage' }
+    //             },
+    //             {
+    //                 path: '/billing/invoices',
+    //                 name: 'BillingInvoices',
+    //                 component: () => import('@/views/billing/Invoices.vue'),
+    //                 meta: { requiresAuth: true, title: 'Invoices' }
+    //             },
+    //             {
+    //                 path: '/billing/invoices/:id',
+    //                 name: 'BillingInvoiceShow',
+    //                 component: () => import('@/views/billing/InvoiceShow.vue'),
+    //                 meta: { requiresAuth: true, title: 'Invoice Details' }
+    //             },
+    //             {
+    //                 path: '/billing/payments',
+    //                 name: 'BillingPayments',
+    //                 component: () => import('@/views/billing/Payments.vue'),
+    //                 meta: { requiresAuth: true, title: 'Payments' }
+    //             },
+    //             // ============================================
+    //             // BILLING ROUTES (Super Admin)
+    //             // ============================================
+    //             {
+    //                 path: '/admin/billing',
+    //                 name: 'AdminBillingDashboard',
+    //                 component: () => import('@/views/admin/billing/BillingDashboard.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Dashboard' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/plans',
+    //                 name: 'AdminBillingPlans',
+    //                 component: () => import('@/views/admin/billing/Plans.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Manage Plans' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/plans/create',
+    //                 name: 'AdminBillingPlanCreate',
+    //                 component: () => import('@/views/admin/billing/PlanCreate.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Create Plan' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/plans/:id/edit',
+    //                 name: 'AdminBillingPlanEdit',
+    //                 component: () => import('@/views/admin/billing/PlanEdit.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Edit Plan' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/subscriptions',
+    //                 name: 'AdminBillingSubscriptions',
+    //                 component: () => import('@/views/admin/billing/Subscriptions.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Subscriptions' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/invoices',
+    //                 name: 'AdminBillingInvoices',
+    //                 component: () => import('@/views/admin/billing/Invoices.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Invoices' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/payments',
+    //                 name: 'AdminBillingPayments',
+    //                 component: () => import('@/views/admin/billing/Payments.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Payments' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/coupons',
+    //                 name: 'AdminBillingCoupons',
+    //                 component: () => import('@/views/admin/billing/Coupons.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Coupons' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/analytics',
+    //                 name: 'AdminBillingAnalytics',
+    //                 component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Analytics' }
+    //             },
+    //             {
+    //                 path: '/billing/checkout/:planId',
+    //                 name: 'BillingCheckout',
+    //                 component: () => import('@/views/billing/Checkout.vue'),
+    //                 meta: { requiresAuth: true, title: 'Checkout' }
+    //             },
+    //             {
+    //                 path: '/billing/success',
+    //                 name: 'BillingSuccess',
+    //                 component: () => import('@/views/billing/CheckoutSuccess.vue'),
+    //                 meta: { requiresAuth: true, title: 'Payment Successful' }
+    //             },
+    //             {
+    //                 path: '/admin/billing/plans/:id/prices',
+    //                 name: 'AdminBillingPlanPrices',
+    //                 component: () => import('@/views/admin/billing/PlanProviderPrices.vue'),
+    //                 meta: { requiresAuth: true, requiresSuperAdmin: true }
+    //             },
+
+    //             {
+    //                 path: '/admin/rbac',
+    //                 name: 'AdminRbac',
+    //                 component: () => import('@/views/admin/rbac/RbacDashboard.vue'),
+    //                 meta: {
+    //                     requiresAuth: true,
+    //                     requiresSuperAdmin: true,
+    //                     permission: 'platform.settings',
+    //                     title: 'Roles & Permissions'
+    //                 }
+    //             }
+    //         ]
+    //     },
+    //     {
+    //         path: '/pages/notfound',
+    //         name: 'notfound',
+    //         component: () => import('@/views/pages/NotFound.vue')
+    //     },
+    //     {
+    //         path: '/auth/access',
+    //         name: 'accessDenied',
+    //         component: () => import('@/views/pages/auth/Access.vue')
+    //     },
+    //     {
+    //         path: '/auth/error',
+    //         name: 'error',
+    //         component: () => import('@/views/pages/auth/Error.vue')
+    //     }
+    // ],
     routes: [
-        {
-            path: '/',
-            name: 'landing',
-            component: () => import('@/views/pages/Landing.vue')
-        },
+        // =====================================================
+        // PUBLIC
+        // =====================================================
+        { path: '/', name: 'landing', component: () => import('@/views/pages/Landing.vue') },
         {
             path: '/login',
             name: 'Login',
             component: () => import('@/views/pages/auth/Login.vue'),
-            meta: {
-                requiresGuest: true,
-                title: 'Login'
-            }
+            meta: { requiresGuest: true, title: 'Login' }
         },
         {
             path: '/register',
             name: 'Register',
             component: () => import('@/views/pages/auth/Register.vue'),
-            meta: {
-                requiresGuest: true,
-                title: 'Register'
-            }
+            meta: { requiresGuest: true, title: 'Register' }
+        },
+        {
+            path: '/403',
+            name: 'Forbidden',
+            component: () => import('@/views/pages/auth/Forbidden.vue'),
+            meta: { title: 'Access Denied' }
         },
         {
             path: '/auth/access',
             name: 'accessDenied',
             component: () => import('@/views/pages/auth/Access.vue'),
-            meta: {
-                requiresGuest: true,
-                title: 'Access Denied'
-            }
+            meta: { requiresGuest: true, title: 'Access Denied' }
         },
         {
             path: '/auth/error',
             name: 'error',
             component: () => import('@/views/pages/auth/Error.vue'),
-            meta: {
-                requiresGuest: true,
-                title: 'Error'
-            }
+            meta: { requiresGuest: true, title: 'Error' }
         },
-        // {
-        //     path: '/setup/create-workspace',
-        //     name: 'CreateWorkspace',
-        //     component: () => import('@/views/pages/setup/CreateWorkspace.vue'),
-        //     meta: {
-        //         requiresAuth: false,
-        //         title: 'Create Workspace'
-        //     }
-        // },
+
+        // =====================================================
+        // AUTHENTICATED (inside AppLayout)
+        // =====================================================
         {
             path: '/dashboard',
             component: AppLayout,
-            meta: {
-                requiresAuth: true
-            },
+            meta: { requiresAuth: true },
             children: [
-                // Protected routes
-                // {
-                //     path: '',
-                //     redirect: '/dashboard'
-                // },
+                // -------------------------------------------------
+                // DASHBOARD
+                // -------------------------------------------------
                 {
                     path: '/dashboard',
                     name: 'Dashboard',
                     component: () => import('@/views/Dashboard.vue'),
-                    meta: { requiresAuth: true }
+                    meta: { requiresAuth: true, permission: 'dashboard.view', title: 'Dashboard' }
                 },
+
+                // -------------------------------------------------
+                // CUSTOMERS
+                // -------------------------------------------------
+                {
+                    path: '/customers',
+                    name: 'Customers',
+                    component: () => import('@/views/customers/CustomerList.vue'),
+                    meta: { requiresAuth: true, permission: 'customers.view', title: 'Customers' }
+                },
+
+                // -------------------------------------------------
+                // CONVERSATIONS
+                // -------------------------------------------------
+                {
+                    path: '/conversations',
+                    name: 'Conversation',
+                    component: () => import('@/views/conversations/ConversationList.vue'),
+                    meta: { requiresAuth: true, permission: 'conversations.view', title: 'Conversations' }
+                },
+                {
+                    path: '/conversations/:id',
+                    name: 'ConversationShow',
+                    component: () => import('@/views/conversations/ConversationShow.vue'),
+                    meta: { requiresAuth: true, permission: 'conversations.view', title: 'Conversation' }
+                },
+
+                // -------------------------------------------------
+                // TICKETS
+                // -------------------------------------------------
+                {
+                    path: '/tickets',
+                    name: 'Tickets',
+                    component: () => import('@/views/tickets/Tickets.vue'),
+                    meta: { requiresAuth: true, permission: 'tickets.view', title: 'Tickets' }
+                },
+
+                // -------------------------------------------------
+                // KNOWLEDGE BASE
+                // -------------------------------------------------
+                {
+                    path: '/knowledge-base',
+                    name: 'KnowledgeBase',
+                    component: () => import('@/views/knowledge-base/KnowledgeBase.vue'),
+                    meta: { requiresAuth: true, permission: 'knowledge_base.view', title: 'Knowledge Base' }
+                },
+                {
+                    path: '/knowledge-base/articles/create',
+                    name: 'ArticleCreate',
+                    component: () => import('@/views/knowledge-base/ArticleCreate.vue'),
+                    meta: { requiresAuth: true, permission: 'knowledge_base.create', title: 'Create Article' }
+                },
+                {
+                    path: '/knowledge-base/articles/:id/edit',
+                    name: 'ArticleEdit',
+                    component: () => import('@/views/knowledge-base/ArticleEdit.vue'),
+                    meta: { requiresAuth: true, permission: 'knowledge_base.update', title: 'Edit Article' }
+                },
+                {
+                    path: '/knowledge-base/articles/:id',
+                    name: 'ArticleShow',
+                    component: () => import('@/views/knowledge-base/ArticleShow.vue'),
+                    meta: { requiresAuth: true, permission: 'knowledge_base.view', title: 'Article Details' }
+                },
+
+                // -------------------------------------------------
+                // AI
+                // -------------------------------------------------
+                {
+                    path: '/settings/ai',
+                    name: 'AISettings',
+                    component: () => import('@/views/settings/AISettings.vue'),
+                    meta: { requiresAuth: true, permission: 'ai.configuration', title: 'AI Settings' }
+                },
+                {
+                    path: '/ai/analytics',
+                    name: 'AIAnalytics',
+                    component: () => import('@/views/ai/AIAnalytics.vue'),
+                    meta: { requiresAuth: true, permission: 'ai.analytics', title: 'AI Analytics' }
+                },
+
+                // -------------------------------------------------
+                // CHAT WIDGETS
+                // -------------------------------------------------
+                {
+                    path: '/settings/chat-widgets',
+                    name: 'ChatWidgets',
+                    component: () => import('@/views/settings/ChatWidgets.vue'),
+                    meta: { requiresAuth: true, permission: 'widgets.view', title: 'Chat Widgets' }
+                },
+
+                // -------------------------------------------------
+                // ANALYTICS
+                // -------------------------------------------------
                 {
                     path: '/analytics',
                     name: 'Analytics',
@@ -83,349 +625,128 @@ const router = createRouter({
                     path: '/analytics/overview',
                     name: 'AnalyticsOverview',
                     component: () => import('@/views/analytics/AnalyticsOverview.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Analytics'
-                        // permissions: ['analytics.view']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.view', title: 'Analytics' }
                 },
                 {
                     path: '/analytics/conversations',
                     name: 'AnalyticsConversations',
                     component: () => import('@/views/analytics/ConversationAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Conversation Analytics'
-                        // permissions: ['analytics.conversations']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.conversations', title: 'Conversation Analytics' }
                 },
                 {
                     path: '/analytics/customers',
                     name: 'AnalyticsCustomers',
                     component: () => import('@/views/analytics/CustomerAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Customer Analytics'
-                        // permissions: ['analytics.customers']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.customers', title: 'Customer Analytics' }
                 },
                 {
                     path: '/analytics/agents',
                     name: 'AnalyticsAgents',
                     component: () => import('@/views/analytics/AgentAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Team Analytics'
-                        // permissions: ['analytics.agents']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.agents', title: 'Team Analytics' }
                 },
                 {
                     path: '/analytics/tickets',
                     name: 'AnalyticsTickets',
                     component: () => import('@/views/analytics/TicketAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Ticket Analytics'
-                        // permissions: ['analytics.tickets']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.tickets', title: 'Ticket Analytics' }
                 },
                 {
                     path: '/analytics/ai',
                     name: 'AnalyticsAI',
                     component: () => import('@/views/analytics/AIAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'AI Analytics'
-                        // permissions: ['analytics.ai']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.ai', title: 'AI Analytics' }
                 },
                 {
                     path: '/analytics/widget',
                     name: 'AnalyticsWidget',
                     component: () => import('@/views/analytics/WidgetAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Widget Analytics'
-                        // permissions: ['analytics.widget']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.widget', title: 'Widget Analytics' }
                 },
                 {
                     path: '/analytics/knowledge-base',
                     name: 'AnalyticsKnowledgeBase',
                     component: () => import('@/views/analytics/KnowledgeBaseAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'KB Analytics'
-                        // permissions: ['analytics.knowledge_base']
-                    }
-                },
-                {
-                    path: '/settings/workspace',
-                    name: 'WorkspaceSettings',
-                    component: () => import('@/views/settings/Workspace.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Workspace Settings'
-                    }
-                },
-                {
-                    path: '/team',
-                    name: 'Team',
-                    redirect: '/team/members'
-                },
-                {
-                    path: '/team/members',
-                    name: 'TeamMembers',
-                    component: () => import('@/views/team/Members.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Team Members'
-                    }
-                },
-                {
-                    path: '/customers',
-                    name: 'Customers',
-                    component: () => import('@/views/customers/CustomerList.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Customers'
-                        // permissions: ['customers.view'],
-                    }
-                },
-                {
-                    path: '/conversations',
-                    name: 'Conversation',
-                    component: () => import('@/views/conversations/ConversationList.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Conversation'
-                        // permissions: ['customers.view'],
-                    }
-                },
-                {
-                    path: '/conversations/:id',
-                    name: 'ConversationShow',
-                    component: () => import('@/views/conversations/ConversationShow.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Conversation',
-                        permissions: ['conversations.view']
-                    }
-                },
-                {
-                    path: '/settings/chat-widgets',
-                    name: 'ChatWidgets',
-                    component: () => import('@/views/settings/ChatWidgets.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Chat Widgets'
-                        // permissions: ['widgets.view']
-                    }
-                },
-                {
-                    path: '/tickets',
-                    name: 'Tickets',
-                    component: () => import('@/views/tickets/Tickets.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Tickets'
-                        // permissions: ['tickets.view']
-                    }
-                },
-                {
-                    path: '/knowledge-base',
-                    name: 'KnowledgeBase',
-                    component: () => import('@/views/knowledge-base/KnowledgeBase.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Knowledge Base'
-                        // permissions: ['knowledge.view']
-                    }
-                },
-                {
-                    path: '/knowledge-base/articles/create',
-                    name: 'ArticleCreate',
-                    component: () => import('@/views/knowledge-base/ArticleCreate.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Create Article'
-                        // permissions: ['knowledge.create']
-                    }
-                },
-                {
-                    path: '/knowledge-base/articles/:id/edit',
-                    name: 'ArticleEdit',
-                    component: () => import('@/views/knowledge-base/ArticleEdit.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Edit Article'
-                        // permissions: ['knowledge.update']
-                    }
-                },
-                {
-                    path: '/knowledge-base/articles/:id',
-                    name: 'ArticleShow',
-                    component: () => import('@/views/knowledge-base/ArticleShow.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Article Details'
-                        // permissions: ['knowledge.view']
-                    }
-                },
-                // AI Routes
-                {
-                    path: '/settings/ai',
-                    name: 'AISettings',
-                    component: () => import('@/views/settings/AISettings.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'AI Settings'
-                        // permissions: ['ai.configure']
-                    }
-                },
-                {
-                    path: '/ai/analytics',
-                    name: 'AIAnalytics',
-                    component: () => import('@/views/ai/AIAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'AI Analytics'
-                        // permissions: ['ai.view']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.knowledge_base', title: 'KB Analytics' }
                 },
                 {
                     path: '/analytics/my',
                     name: 'AnalyticsMy',
                     component: () => import('@/views/analytics/MyAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'My Analytics'
-                        // permissions: ['analytics.view']
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.view', title: 'My Analytics' }
                 },
                 {
                     path: '/analytics/exports',
                     name: 'AnalyticsExports',
                     component: () => import('@/views/analytics/ExportHistory.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        title: 'Export History'
-                        // permissions: ['analytics.export']
-                    }
-                },
-                {
-                    path: '/admin/analytics',
-                    name: 'AdminPlatformAnalytics',
-                    component: () => import('@/views/admin/PlatformAnalytics.vue'),
-                    meta: {
-                        requiresAuth: true,
-                        requiresSuperAdmin: true,
-                        title: 'Platform Analytics'
-                    }
+                    meta: { requiresAuth: true, permission: 'analytics.export', title: 'Export History' }
                 },
 
-                // Billing Routes
-                // ============================================
-                // BILLING ROUTES (Tenant)
-                // ============================================
+                // -------------------------------------------------
+                // WORKSPACE SETTINGS
+                // -------------------------------------------------
+                {
+                    path: '/settings/workspace',
+                    name: 'WorkspaceSettings',
+                    component: () => import('@/views/settings/Workspace.vue'),
+                    meta: { requiresAuth: true, permission: 'workspace.view', title: 'Workspace Settings' }
+                },
+
+                // -------------------------------------------------
+                // TEAM
+                // -------------------------------------------------
+                { path: '/team', name: 'Team', redirect: '/team/members' },
+                {
+                    path: '/team/members',
+                    name: 'TeamMembers',
+                    component: () => import('@/views/team/Members.vue'),
+                    meta: { requiresAuth: true, permission: 'team.view', title: 'Team Members' }
+                },
+
+                // -------------------------------------------------
+                // BILLING (tenant)
+                // -------------------------------------------------
                 {
                     path: '/billing',
                     name: 'BillingOverview',
                     component: () => import('@/views/billing/BillingOverview.vue'),
-                    meta: { requiresAuth: true, title: 'Billing' }
+                    meta: { requiresAuth: true, permission: 'billing.view', title: 'Billing' }
                 },
                 {
                     path: '/billing/plans',
                     name: 'BillingPlans',
                     component: () => import('@/views/billing/Plans.vue'),
-                    meta: { requiresAuth: true, title: 'Plans' }
+                    meta: { requiresAuth: true, permission: 'billing.view', title: 'Plans' }
                 },
                 {
                     path: '/billing/usage',
                     name: 'BillingUsage',
                     component: () => import('@/views/billing/Usage.vue'),
-                    meta: { requiresAuth: true, title: 'Usage' }
+                    meta: { requiresAuth: true, permission: 'billing.view', title: 'Usage' }
                 },
                 {
                     path: '/billing/invoices',
                     name: 'BillingInvoices',
                     component: () => import('@/views/billing/Invoices.vue'),
-                    meta: { requiresAuth: true, title: 'Invoices' }
+                    meta: { requiresAuth: true, permission: 'billing.invoices', title: 'Invoices' }
                 },
                 {
                     path: '/billing/invoices/:id',
                     name: 'BillingInvoiceShow',
                     component: () => import('@/views/billing/InvoiceShow.vue'),
-                    meta: { requiresAuth: true, title: 'Invoice Details' }
+                    meta: { requiresAuth: true, permission: 'billing.invoices', title: 'Invoice Details' }
                 },
                 {
                     path: '/billing/payments',
                     name: 'BillingPayments',
                     component: () => import('@/views/billing/Payments.vue'),
-                    meta: { requiresAuth: true, title: 'Payments' }
-                },
-                // ============================================
-                // BILLING ROUTES (Super Admin)
-                // ============================================
-                {
-                    path: '/admin/billing',
-                    name: 'AdminBillingDashboard',
-                    component: () => import('@/views/admin/billing/BillingDashboard.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Dashboard' }
-                },
-                {
-                    path: '/admin/billing/plans',
-                    name: 'AdminBillingPlans',
-                    component: () => import('@/views/admin/billing/Plans.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Manage Plans' }
-                },
-                {
-                    path: '/admin/billing/plans/create',
-                    name: 'AdminBillingPlanCreate',
-                    component: () => import('@/views/admin/billing/PlanCreate.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Create Plan' }
-                },
-                {
-                    path: '/admin/billing/plans/:id/edit',
-                    name: 'AdminBillingPlanEdit',
-                    component: () => import('@/views/admin/billing/PlanEdit.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Edit Plan' }
-                },
-                {
-                    path: '/admin/billing/subscriptions',
-                    name: 'AdminBillingSubscriptions',
-                    component: () => import('@/views/admin/billing/Subscriptions.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Subscriptions' }
-                },
-                {
-                    path: '/admin/billing/invoices',
-                    name: 'AdminBillingInvoices',
-                    component: () => import('@/views/admin/billing/Invoices.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Invoices' }
-                },
-                {
-                    path: '/admin/billing/payments',
-                    name: 'AdminBillingPayments',
-                    component: () => import('@/views/admin/billing/Payments.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'All Payments' }
-                },
-                {
-                    path: '/admin/billing/coupons',
-                    name: 'AdminBillingCoupons',
-                    component: () => import('@/views/admin/billing/Coupons.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Coupons' }
-                },
-                {
-                    path: '/admin/billing/analytics',
-                    name: 'AdminBillingAnalytics',
-                    component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, title: 'Billing Analytics' }
+                    meta: { requiresAuth: true, permission: 'billing.payments', title: 'Payments' }
                 },
                 {
                     path: '/billing/checkout/:planId',
                     name: 'BillingCheckout',
                     component: () => import('@/views/billing/Checkout.vue'),
-                    meta: { requiresAuth: true, title: 'Checkout' }
+                    meta: { requiresAuth: true, permission: 'billing.view', title: 'Checkout' }
                 },
                 {
                     path: '/billing/success',
@@ -433,134 +754,115 @@ const router = createRouter({
                     component: () => import('@/views/billing/CheckoutSuccess.vue'),
                     meta: { requiresAuth: true, title: 'Payment Successful' }
                 },
+
+                // -------------------------------------------------
+                // PLATFORM (Super Admin only)
+                // -------------------------------------------------
+                {
+                    path: '/admin/analytics',
+                    name: 'AdminPlatformAnalytics',
+                    component: () => import('@/views/admin/PlatformAnalytics.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.analytics', title: 'Platform Analytics' }
+                },
+                {
+                    path: '/admin/billing',
+                    name: 'AdminBillingDashboard',
+                    component: () => import('@/views/admin/billing/BillingDashboard.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Billing Dashboard' }
+                },
+                {
+                    path: '/admin/billing/plans',
+                    name: 'AdminBillingPlans',
+                    component: () => import('@/views/admin/billing/Plans.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Manage Plans' }
+                },
+                {
+                    path: '/admin/billing/plans/create',
+                    name: 'AdminBillingPlanCreate',
+                    component: () => import('@/views/admin/billing/PlanCreate.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Create Plan' }
+                },
+                {
+                    path: '/admin/billing/plans/:id/edit',
+                    name: 'AdminBillingPlanEdit',
+                    component: () => import('@/views/admin/billing/PlanEdit.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Edit Plan' }
+                },
                 {
                     path: '/admin/billing/plans/:id/prices',
                     name: 'AdminBillingPlanPrices',
                     component: () => import('@/views/admin/billing/PlanProviderPrices.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true }
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing' }
+                },
+                {
+                    path: '/admin/billing/subscriptions',
+                    name: 'AdminBillingSubscriptions',
+                    component: () => import('@/views/admin/billing/Subscriptions.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Subscriptions' }
+                },
+                {
+                    path: '/admin/billing/invoices',
+                    name: 'AdminBillingInvoices',
+                    component: () => import('@/views/admin/billing/Invoices.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'All Invoices' }
+                },
+                {
+                    path: '/admin/billing/payments',
+                    name: 'AdminBillingPayments',
+                    component: () => import('@/views/admin/billing/Payments.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'All Payments' }
+                },
+                {
+                    path: '/admin/billing/coupons',
+                    name: 'AdminBillingCoupons',
+                    component: () => import('@/views/admin/billing/Coupons.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Coupons' }
+                },
+                {
+                    path: '/admin/billing/analytics',
+                    name: 'AdminBillingAnalytics',
+                    component: () => import('@/views/admin/billing/BillingAnalytics.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing', title: 'Billing Analytics' }
                 },
 
+                // -------------------------------------------------
+                // RBAC
+                // -------------------------------------------------
                 {
-                    path: '/uikit/formlayout',
-                    name: 'formlayout',
-                    component: () => import('@/views/uikit/FormLayout.vue')
-                },
-                {
-                    path: '/uikit/input',
-                    name: 'input',
-                    component: () => import('@/views/uikit/InputDoc.vue')
-                },
-                {
-                    path: '/uikit/button',
-                    name: 'button',
-                    component: () => import('@/views/uikit/ButtonDoc.vue')
-                },
-                {
-                    path: '/uikit/table',
-                    name: 'table',
-                    component: () => import('@/views/uikit/TableDoc.vue')
-                },
-                {
-                    path: '/uikit/list',
-                    name: 'list',
-                    component: () => import('@/views/uikit/ListDoc.vue')
-                },
-                {
-                    path: '/uikit/tree',
-                    name: 'tree',
-                    component: () => import('@/views/uikit/TreeDoc.vue')
-                },
-                {
-                    path: '/uikit/panel',
-                    name: 'panel',
-                    component: () => import('@/views/uikit/PanelsDoc.vue')
-                },
-
-                {
-                    path: '/uikit/overlay',
-                    name: 'overlay',
-                    component: () => import('@/views/uikit/OverlayDoc.vue')
-                },
-                {
-                    path: '/uikit/media',
-                    name: 'media',
-                    component: () => import('@/views/uikit/MediaDoc.vue')
-                },
-                {
-                    path: '/uikit/message',
-                    name: 'message',
-                    component: () => import('@/views/uikit/MessagesDoc.vue')
-                },
-                {
-                    path: '/uikit/file',
-                    name: 'file',
-                    component: () => import('@/views/uikit/FileDoc.vue')
-                },
-                {
-                    path: '/uikit/menu',
-                    name: 'menu',
-                    component: () => import('@/views/uikit/MenuDoc.vue')
-                },
-                {
-                    path: '/uikit/charts',
-                    name: 'charts',
-                    component: () => import('@/views/uikit/ChartDoc.vue')
-                },
-                {
-                    path: '/uikit/misc',
-                    name: 'misc',
-                    component: () => import('@/views/uikit/MiscDoc.vue')
-                },
-                {
-                    path: '/uikit/timeline',
-                    name: 'timeline',
-                    component: () => import('@/views/uikit/TimelineDoc.vue')
-                },
-                {
-                    path: '/blocks/free',
-                    name: 'blocks',
+                    path: '/admin/rbac',
+                    name: 'AdminRbac',
+                    component: () => import('@/views/admin/rbac/RbacDashboard.vue'),
                     meta: {
-                        breadcrumb: ['Prime Blocks', 'Free Blocks']
-                    },
-                    component: () => import('@/views/utilities/Blocks.vue')
+                        requiresAuth: true,
+                        requiresSuperAdmin: true,
+                        permission: 'platform.settings',
+                        title: 'Roles & Permissions'
+                    }
                 },
-                {
-                    path: '/pages/empty',
-                    name: 'empty',
-                    component: () => import('@/views/pages/Empty.vue')
-                },
-                {
-                    path: '/pages/crud',
-                    name: 'crud',
-                    component: () => import('@/views/pages/Crud.vue')
-                },
-                {
-                    path: '/start/documentation',
-                    name: 'documentation',
-                    component: () => import('@/views/pages/Documentation.vue')
-                }
+
+                // -------------------------------------------------
+                // UI Kit (dev reference — keep public to authenticated)
+                // -------------------------------------------------
+                { path: '/uikit/formlayout', name: 'formlayout', component: () => import('@/views/uikit/FormLayout.vue') },
+                { path: '/uikit/input', name: 'input', component: () => import('@/views/uikit/InputDoc.vue') },
+                { path: '/uikit/button', name: 'button', component: () => import('@/views/uikit/ButtonDoc.vue') },
+                { path: '/uikit/table', name: 'table', component: () => import('@/views/uikit/TableDoc.vue') },
+                { path: '/uikit/list', name: 'list', component: () => import('@/views/uikit/ListDoc.vue') },
+                { path: '/uikit/tree', name: 'tree', component: () => import('@/views/uikit/TreeDoc.vue') },
+                { path: '/uikit/panel', name: 'panel', component: () => import('@/views/uikit/PanelsDoc.vue') },
+                { path: '/uikit/overlay', name: 'overlay', component: () => import('@/views/uikit/OverlayDoc.vue') },
+                { path: '/uikit/media', name: 'media', component: () => import('@/views/uikit/MediaDoc.vue') },
+                { path: '/uikit/message', name: 'message', component: () => import('@/views/uikit/MessagesDoc.vue') },
+                { path: '/uikit/file', name: 'file', component: () => import('@/views/uikit/FileDoc.vue') },
+                { path: '/uikit/menu', name: 'menu', component: () => import('@/views/uikit/MenuDoc.vue') },
+                { path: '/uikit/charts', name: 'charts', component: () => import('@/views/uikit/ChartDoc.vue') },
+                { path: '/uikit/misc', name: 'misc', component: () => import('@/views/uikit/MiscDoc.vue') },
+                { path: '/uikit/timeline', name: 'timeline', component: () => import('@/views/uikit/TimelineDoc.vue') }
             ]
         },
-        // {
-        //     path: '/landing',
-        //     name: 'landing',
-        //     component: () => import('@/views/pages/Landing.vue')
-        // },
-        {
-            path: '/pages/notfound',
-            name: 'notfound',
-            component: () => import('@/views/pages/NotFound.vue')
-        },
-        {
-            path: '/auth/access',
-            name: 'accessDenied',
-            component: () => import('@/views/pages/auth/Access.vue')
-        },
-        {
-            path: '/auth/error',
-            name: 'error',
-            component: () => import('@/views/pages/auth/Error.vue')
-        }
+
+        { path: '/pages/notfound', name: 'notfound', component: () => import('@/views/pages/NotFound.vue') },
+        { path: '/:pathMatch(.*)*', redirect: '/pages/notfound' }
     ],
     scrollBehavior(to, from, savedPosition) {
         if (savedPosition) {
@@ -614,8 +916,8 @@ router.beforeEach(async (to, form, next) => {
         // }
 
         // Check if route requires specific permissions
-        if (to.meta.permissions && isAuthenticated) {
-            const hasAccess = authStore.hasAnyPermission(to.meta.permissions);
+        if (to.meta.permission && isAuthenticated) {
+            const hasAccess = authStore.hasAnyPermission(to.meta.permission);
 
             if (!hasAccess) {
                 toast.error('You do not have permission to access this page');

@@ -26,6 +26,11 @@ class CheckPermission
             ], 401);
         }
 
+        // Super Admin bypasses every permission check.
+        if ($user->isSuperAdmin()) {
+            return $next($request);
+        }
+
         // Check if user has the permission
         if (!$user->hasPermissionTo($permission)) {
             return response()->json([

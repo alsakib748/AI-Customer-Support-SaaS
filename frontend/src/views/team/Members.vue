@@ -1,10 +1,15 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRbacStore } from '@/stores/rbac';
 import { useTeamStore } from '@/stores/team';
 // import { useToast } from 'primevue/usetoast';
+import api from '@/services/api';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+
+const auth = useAuthStore();
+const rbac = useRbacStore();
 
 const planLimit = usePlanLimit();
 
@@ -229,6 +234,47 @@ const getError = (field) => {
     return teamStore.getFieldError(field);
 };
 
+const assignableRoles = computed(() => {
+    const role = auth.role;
+
+    if (role === 'owner') {
+        return [
+            { label: 'Admin', value: 'admin' },
+            { label: 'Manager', value: 'manager' },
+            { label: 'Support Agent', value: 'support_agent' }
+        ];
+    }
+
+    if (role === 'admin') {
+        return [
+            { label: 'Manager', value: 'manager' },
+            { label: 'Support Agent', value: 'support_agent' }
+        ];
+    }
+
+    return [];
+});
+
+const loadMembers = async () => {
+    loading.value = true;
+    try {
+        const { data } = await api.get('/team/members');
+        if (data.success) members.value = data.data;
+    } finally {
+        loading.value = false;
+    }
+};
+
+const changeRole = async (member, newRole) => {
+    try {
+        await api.put(`/team/members/${member.id}/role`, { role: newRole });
+        toast.success('Role updated');
+        loadMembers();
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Failed to update role');
+    }
+};
+
 // ============================================
 // LIFECYCLE
 // ============================================
@@ -240,6 +286,7 @@ onMounted(async () => {
     await teamStore.fetchMembers();
 
     loadData();
+    loadMembers();
     // console.log('Fetch Statistics: ', teamStore.fetchStatistics());
     // console.log('Fetch Departments: ', teamStore.fetchDepartments());
 
@@ -386,6 +433,12 @@ watch(
             <Column field="role_label" header="Role" sortable>
                 <template #body="{ data }">
                     <Tag :value="data.role_label" :severity="data.is_owner ? 'warning' : 'info'" />
+                </template>
+            </Column>
+
+            <Column field="role" header="Role">
+                <template #body="{ data }">
+                    <Select :modelValue="data.role" :options="assignableRoles" optionLabel="label" optionValue="value" :disabled="!auth.hasPermission('team.assign_role')" @update:modelValue="(role) => changeRole(data, role)" />
                 </template>
             </Column>
 
