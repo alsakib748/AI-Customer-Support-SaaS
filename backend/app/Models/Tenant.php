@@ -14,6 +14,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, HasDomains, SoftDeletes, HasFactory;
 
+    public const STATUS_TRIAL = 'trial';
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_SUSPENDED = 'suspended';
+    public const STATUS_ARCHIVED = 'archived';
+    public const STATUS_PROVISIONING = 'provisioning';
+    public const STATUS_PROVISIONING_FAILED = 'provisioning_failed';
+
     // ⭐ IMPORTANT: Force this model to use central database
     protected $connection = 'central';
 
@@ -39,6 +46,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'metadata',
             'trial_ends_at',
             'subscription_ends_at',
+            'suspended_at',
+            'archived_at',
+            'suspension_reason',
+            'provisioned_at',
+            'provisioning_error',
         ];
     }
 
@@ -62,6 +74,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'data',
         'trial_ends_at',
         'subscription_ends_at',
+        'suspended_at',
+        'archived_at',
+        'suspension_reason',
+        'provisioned_at',
+        'provisioning_error',
     ];
 
     protected $casts = [
@@ -71,8 +88,19 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'data'                 => 'json',
         'trial_ends_at'        => 'datetime',
         'subscription_ends_at' => 'datetime',
+        'suspended_at'         => 'datetime',
+        'archived_at'          => 'datetime',
+        'provisioned_at'       => 'datetime',
         'created_at'           => 'datetime',
         'updated_at'           => 'datetime',
+    ];
+
+    protected $appends = [
+        'status_label',
+        'status_color',
+        'is_provisioned',
+        'is_suspended',
+        'is_archived',
     ];
 
     protected static function boot()
@@ -116,9 +144,81 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $this->hasMany(TenantUser::class);
     }
 
+    public function members()
+    {
+        return $this->hasMany(TenantUser::class);
+    }
+
+    public function ownerMembership()
+    {
+        return $this->hasOne(TenantUser::class)->where('role', 'owner');
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class);
+    }
+
+    // ============================================
+    // STATUS ACCESSORS
+    // ============================================
+
+    public function getStatusLabelAttribute(): string
+    {
+        $labels = [
+            self::STATUS_TRIAL             => 'Trial',
+            self::STATUS_ACTIVE            => 'Active',
+            self::STATUS_SUSPENDED         => 'Suspended',
+            self::STATUS_ARCHIVED          => 'Archived',
+            self::STATUS_PROVISIONING      => 'Provisioning',
+            self::STATUS_PROVISIONING_FAILED => 'Provisioning Failed',
+        ];
+
+        return $labels[$this->status] ?? ucfirst(str_replace('_', ' ', (string) $this->status));
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        $colors = [
+            self::STATUS_TRIAL             => 'info',
+            self::STATUS_ACTIVE            => 'success',
+            self::STATUS_SUSPENDED         => 'warning',
+            self::STATUS_ARCHIVED          => 'secondary',
+            self::STATUS_PROVISIONING      => 'warn',
+            self::STATUS_PROVISIONING_FAILED => 'danger',
+        ];
+
+        return $colors[$this->status] ?? 'secondary';
+    }
+
+    public function getIsProvisionedAttribute(): bool
+    {
+        return $this->provisioned_at !== null;
+    }
+
+    public function getIsSuspendedAttribute(): bool
+    {
+        return (bool) $this->suspended_at || $this->status === self::STATUS_SUSPENDED;
+    }
+
+    public function getIsArchivedAttribute(): bool
+    {
+        return (bool) $this->archived_at || $this->status === self::STATUS_ARCHIVED;
+    }
+
+    public function isProvisioning(): bool
+    {
+        return $this->status === self::STATUS_PROVISIONING;
+    }
+
+    public function isProvisioningFailed(): bool
+    {
+        return $this->status === self::STATUS_PROVISIONING_FAILED;
+    }
+
+    public function canLogin(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE || $this->status === self::STATUS_TRIAL;
     }
 
     // Scopes
@@ -127,9 +227,59 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $query->where('status', 'active');
     }
 
+    public function scopeTrial($query)
+    {
+        return $query->where('status', self::STATUS_TRIAL);
+    }
+
+    public function scopeSuspended($query)
+    {
+        return $query->where('status', self::STATUS_SUSPENDED);
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('status', self::STATUS_ARCHIVED);
+    }
+
     public function scopeBySlug($query, $slug)
     {
         return $query->where('slug', $slug);
+    }
+
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeCreatedBetween($query, $from, $to = null)
+    {
+        return $query->whereBetween('created_at', [$from, $to ?? now()]);
+    }
+
+    public function scopeSearch($query, string $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('name', 'ilike', "%{$search}%")
+                ->orWhere('slug', 'ilike', "%{$search}%")
+                ->orWhere('industry', 'ilike', "%{$search}%")
+                ->orWhere('support_email', 'ilike', "%{$search}%")
+                ->orWhereHas('ownerMembership.user', function ($user) use ($search) {
+                    $user->where('first_name', 'ilike', "%{$search}%")
+                        ->orWhere('last_name', 'ilike', "%{$search}%")
+                        ->orWhere('email', 'ilike', "%{$search}%");
+                });
+        });
+    }
+
+    public function scopeWithPlan($query, $planId)
+    {
+        return $query->whereHas('subscriptions', fn ($q) => $q->where('plan_id', $planId));
+    }
+
+    public function scopeWithSubscriptionStatus($query, $status)
+    {
+        return $query->whereHas('subscriptions', fn ($q) => $q->where('status', $status));
     }
 
     // Methods

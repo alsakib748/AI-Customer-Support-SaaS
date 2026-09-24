@@ -99,6 +99,26 @@ class TenantAware
         }
 
         if ($tenant) {
+            // Suspended / archived tenants are blocked for everyone except Super Admin
+            // (who may still use the Manage Tenant context).
+            if ($user && !$user->hasRole('super_admin')) {
+                $forbiddenStatuses = [Tenant::STATUS_SUSPENDED, Tenant::STATUS_ARCHIVED];
+
+                if (in_array($tenant->status, $forbiddenStatuses, true)) {
+                    Log::warning('Tenant access blocked due to status', [
+                        'user_id'   => $user->id,
+                        'tenant_id' => $tenant->id,
+                        'status'    => $tenant->status,
+                        'path'      => $request->path(),
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'This tenant is ' . str_replace('_', ' ', $tenant->status) . ' and cannot be accessed.',
+                    ], 403);
+                }
+            }
+
             $request->attributes->set('current_tenant', $tenant);
             app()->instance('current_tenant', $tenant);
             try {

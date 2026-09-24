@@ -17,7 +17,7 @@ class AuditLogService
     public function log(
         string $action,
         ?string $resourceType = null,
-        ?int $resourceId = null,
+        int|string|null $resourceId = null,
         ?array $oldValues = null,
         ?array $newValues = null,
         ?array $metadata = null
@@ -187,7 +187,7 @@ class AuditLogService
     /**
      * Get audit logs for a resource.
      */
-    public function getResourceLogs(string $resourceType, int $resourceId, int $limit = 100): array
+    public function getResourceLogs(string $resourceType, int|string $resourceId, int $limit = 100): array
     {
         return AuditLog::resource($resourceType, $resourceId)
             ->with('user')

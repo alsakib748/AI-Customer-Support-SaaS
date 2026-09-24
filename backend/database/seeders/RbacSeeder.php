@@ -78,6 +78,20 @@ class RbacSeeder extends Seeder
             'platform.billing.analytics',
             'platform.audit_logs', 'platform.system_health',
             'platform.notifications', 'platform.profile',
+
+            // Tenants module (granular — Super Admin only)
+            'platform.tenants.view',
+            'platform.tenants.create',
+            'platform.tenants.update',
+            'platform.tenants.activate',
+            'platform.tenants.suspend',
+            'platform.tenants.archive',
+            'platform.tenants.restore',
+            'platform.tenants.manage',
+            'platform.tenants.view_members',
+            'platform.tenants.view_usage',
+            'platform.tenants.view_activity',
+            'platform.tenants.transfer_owner',
         ];
 
         foreach ($permissions as $name) {

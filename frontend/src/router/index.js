@@ -846,8 +846,24 @@ const router = createRouter({
                 {
                     path: '/admin/tenants',
                     name: 'AdminTenants',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.tenants', title: 'Tenants' }
+                    component: () => import('@/views/admin/tenants/TenantList.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        requiresSuperAdmin: true,
+                        permission: 'platform.tenants.view',
+                        title: 'Tenants'
+                    }
+                },
+                {
+                    path: '/admin/tenants/:id',
+                    name: 'AdminTenantDetails',
+                    component: () => import('@/views/admin/tenants/TenantDetails.vue'),
+                    meta: {
+                        requiresAuth: true,
+                        requiresSuperAdmin: true,
+                        permission: 'platform.tenants.view',
+                        title: 'Tenant Details'
+                    }
                 },
                 {
                     path: '/admin/users',

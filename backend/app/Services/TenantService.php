@@ -241,6 +241,27 @@ class TenantService
      */
     public function switchTenant(int $userId, string $tenantId): Tenant
     {
+        $user = User::find($userId);
+
+        // Super Admin may switch into any tenant without a permanent membership
+        // (temporary "Manage Tenant" context).
+        if ($user && $user->hasRole('super_admin')) {
+            $tenant = Tenant::find($tenantId);
+
+            if (!$tenant) {
+                throw new \Exception('Tenant not found');
+            }
+
+            if ($tenant->status === Tenant::STATUS_ARCHIVED) {
+                throw new \Exception('This tenant is archived and cannot be managed');
+            }
+
+            $user->update(['current_tenant_id' => $tenantId]);
+            Tenancy::initialize($tenant);
+
+            return $tenant;
+        }
+
         $tenantUser = TenantUser::where('user_id', $userId)
             ->where('tenant_id', $tenantId)
             ->first();
@@ -249,7 +270,7 @@ class TenantService
             throw new \Exception('User does not have access to this tenant');
         }
 
-        $user = User::find($userId);
+        $user = $user ?? User::find($userId);
         $user->update(['current_tenant_id' => $tenantId]);
 
         // Initialize tenant context

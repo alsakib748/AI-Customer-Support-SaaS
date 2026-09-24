@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
+use App\Http\Controllers\Api\V1\Admin\TenantController as AdminTenantController;
+use App\Http\Controllers\Api\V1\Admin\TenantLifecycleController as AdminTenantLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
@@ -508,6 +510,46 @@ Route::prefix('v1/admin/billing')
         Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show']);
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy']);
+    });
+
+
+Route::prefix('v1/admin/tenants')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/', [AdminTenantController::class, 'index'])
+            ->middleware('permission:platform.tenants.view');
+        Route::post('/', [AdminTenantController::class, 'store'])
+            ->middleware('permission:platform.tenants.create');
+        Route::get('/plans', [AdminTenantController::class, 'plans'])
+            ->middleware('permission:platform.tenants.create');
+        Route::get('/{tenant}', [AdminTenantController::class, 'show'])
+            ->middleware('permission:platform.tenants.view');
+        Route::put('/{tenant}', [AdminTenantController::class, 'update'])
+            ->middleware('permission:platform.tenants.update');
+        Route::get('/{tenant}/members', [AdminTenantController::class, 'members'])
+            ->middleware('permission:platform.tenants.view_members');
+        Route::get('/{tenant}/usage', [AdminTenantController::class, 'usage'])
+            ->middleware('permission:platform.tenants.view_usage');
+        Route::get('/{tenant}/activity', [AdminTenantController::class, 'activity'])
+            ->middleware('permission:platform.tenants.view_activity');
+
+        Route::post('/{tenant}/activate', [AdminTenantLifecycleController::class, 'activate'])
+            ->middleware('permission:platform.tenants.activate');
+        Route::post('/{tenant}/suspend', [AdminTenantLifecycleController::class, 'suspend'])
+            ->middleware('permission:platform.tenants.suspend');
+        Route::post('/{tenant}/archive', [AdminTenantLifecycleController::class, 'archive'])
+            ->middleware('permission:platform.tenants.archive');
+        Route::post('/{tenant}/restore', [AdminTenantLifecycleController::class, 'restore'])
+            ->middleware('permission:platform.tenants.restore');
+        Route::post('/{tenant}/retry-provisioning', [AdminTenantLifecycleController::class, 'retryProvisioning'])
+            ->middleware('permission:platform.tenants.activate');
+        Route::post('/{tenant}/transfer-owner', [AdminTenantLifecycleController::class, 'transferOwner'])
+            ->middleware('permission:platform.tenants.transfer_owner');
+
+        Route::post('/{tenant}/manage', [AdminTenantLifecycleController::class, 'manage'])
+            ->middleware('permission:platform.tenants.manage');
+        Route::post('/exit-context', [AdminTenantLifecycleController::class, 'exitContext'])
+            ->middleware('permission:platform.tenants.manage');
     });
 
 

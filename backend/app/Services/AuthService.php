@@ -167,12 +167,27 @@ class AuthService
             $user->assignRole($ownerRole);
 
             // 4. Auto-assign the default plan + trial subscription
-            $this->assignDefaultSubscription($tenant);
+            $plan = $this->assignDefaultSubscription($tenant);
+
+            // 4b. Set trial status when the default plan includes trial days,
+            // otherwise the tenant is active from the start.
+            $tenant->update([
+                'status' => $plan && $plan->trial_days > 0
+                    ? Tenant::STATUS_TRIAL
+                    : Tenant::STATUS_ACTIVE,
+            ]);
 
             // 5. Generate JWT token
             $token = JWTAuth::fromUser($user);
 
+            ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
+                = $this->authContext($user, $tenant->id);
+
             return [
+                'role'        => $role,
+                'roles'       => $roles,
+                'permissions' => $permissions,
+                'scope'       => $scope,
                 'user'   => [
                     'id'                => $user->id,
                     'uuid'              => $user->uuid,
@@ -187,6 +202,8 @@ class AuthService
                     'language'          => $user->language,
                     'is_active'         => $user->is_active,
                     'current_tenant_id' => $user->current_tenant_id,
+                    'permissions'       => $permissions,
+                    'roles'             => $roles,
                 ],
                 'tenant' => [
                     'id'        => $tenant->id,
@@ -235,13 +252,14 @@ class AuthService
 /**
  * Assign the default plan (with trial) to a newly created tenant.
  * Wrapped so a billing failure never blocks registration.
+ * Returns the resolved plan (or null) so the caller can derive the status.
  */
-    protected function assignDefaultSubscription(Tenant $tenant): void
+    protected function assignDefaultSubscription(Tenant $tenant): ?Plan
     {
         try {
             // Idempotency — skip if a subscription already exists
             if ($tenant->subscriptions()->exists()) {
-                return;
+                return $tenant->activeSubscription?->plan;
             }
 
             $plan = Plan::where('is_default', true)
@@ -254,7 +272,7 @@ class AuthService
                 Log::warning('No default plan available for new tenant', [
                     'tenant_id' => $tenant->id,
                 ]);
-                return;
+                return null;
             }
 
             app(SubscriptionService::class)->createSubscription(
@@ -268,12 +286,15 @@ class AuthService
                 'plan_id'   => $plan->id,
                 'plan_slug' => $plan->slug,
             ]);
+
+            return $plan;
         } catch (\Throwable $e) {
             // Never fail registration because of billing
             Log::error('Failed to assign default subscription', [
                 'tenant_id' => $tenant->id,
                 'error'     => $e->getMessage(),
             ]);
+            return null;
         }
     }
 
@@ -559,11 +580,32 @@ class AuthService
     protected function authContext(User $user, ?string $tenantId): array
     {
         $tenantId = $tenantId ?: null;
+
+        // Super admins always operate in platform scope. Scoping their roles to a
+        // tenant team would strip the super_admin role (mirror SetPermissionTeam).
+        if ($user->isSuperAdmin()) {
+            setPermissionsTeamId(null);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            $user->unsetRelation('roles');
+            $user->unsetRelation('permissions');
+
+            $roles = $user->getRoleNames()->values();
+
+            return [
+                'role'        => 'super_admin',
+                'roles'       => $roles->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
+                'scope'       => 'platform',
+            ];
+        }
+
         setPermissionsTeamId($tenantId);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
 
         $roles = $user->getRoleNames()->values();
-        $role  = $roles->contains('super_admin') ? 'super_admin' : $roles->first();
+        $role  = $roles->first();
 
         $permissions = $user->getAllPermissions()->pluck('name')->sort()->values()->all();
 
