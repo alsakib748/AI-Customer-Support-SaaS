@@ -10,6 +10,9 @@ use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\UserRoleController;
+use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
+use App\Http\Controllers\Api\V1\Admin\UserSessionController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -550,6 +553,32 @@ Route::prefix('v1/admin/tenants')
             ->middleware('permission:platform.tenants.manage');
         Route::post('/exit-context', [AdminTenantLifecycleController::class, 'exitContext'])
             ->middleware('permission:platform.tenants.manage');
+    });
+
+
+Route::prefix('v1/admin/users')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/', [UserController::class, 'index'])
+            ->middleware('permission:platform.users.view');
+        Route::post('/', [UserController::class, 'store'])
+            ->middleware('permission:platform.users.create');
+        Route::get('/stats', [UserController::class, 'stats'])
+            ->middleware('permission:platform.users.view');
+        Route::get('/{user}', [UserController::class, 'show'])
+            ->middleware('permission:platform.users.view');
+        Route::put('/{user}', [UserController::class, 'update'])
+            ->middleware('permission:platform.users.update');
+        Route::get('/{user}/memberships', [UserController::class, 'memberships'])
+            ->middleware('permission:platform.users.view_memberships');
+        Route::get('/{user}/activity', [UserController::class, 'activity'])
+            ->middleware('permission:platform.users.view_activity');
+        Route::post('/{user}/activate', [UserLifecycleController::class, 'activate'])
+            ->middleware('permission:platform.users.activate');
+        Route::post('/{user}/suspend', [UserLifecycleController::class, 'suspend'])
+            ->middleware('permission:platform.users.suspend');
+        Route::post('/{user}/revoke-sessions', [UserSessionController::class, 'revokeAll'])
+            ->middleware('permission:platform.users.revoke_sessions');
     });
 
 

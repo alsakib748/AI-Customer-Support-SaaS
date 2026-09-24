@@ -499,11 +499,26 @@ class AuthService
     public function refresh(): string
     {
         try {
-            return JWTAuth::refresh(JWTAuth::getToken());
+            $token = JWTAuth::getToken();
+
+            // A revoked session must not be able to mint new tokens via refresh.
+            try {
+                $payload = JWTAuth::setToken($token)->getPayload();
+                $user    = User::find($payload['sub'] ?? null);
+                if ($user && $user->isSessionRevokedBefore((int) ($payload['iat'] ?? 0))) {
+                    throw new TokenInvalidException('Session revoked. Please login again.');
+                }
+            } catch (TokenInvalidException $e) {
+                throw $e;
+            } catch (JWTException $e) {
+                // Token unreadable — fall through to the normal refresh handling.
+            }
+
+            return JWTAuth::refresh($token);
         } catch (TokenExpiredException $e) {
             throw new \Exception('Token expired. Please login again.');
         } catch (TokenInvalidException $e) {
-            throw new \Exception('Token invalid. Please login again.');
+            throw new \Exception($e->getMessage());
         } catch (JWTException $e) {
             throw new \Exception('Could not refresh token: ' . $e->getMessage());
         }

@@ -868,8 +868,14 @@ const router = createRouter({
                 {
                     path: '/admin/users',
                     name: 'AdminUsers',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    component: () => import('@/views/admin/users/UserList.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.users', title: 'Users' }
+                },
+                {
+                    path: '/admin/users/:id',
+                    name: 'AdminUserDetails',
+                    component: () => import('@/views/admin/users/UserDetails.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.users.view', title: 'User Details' }
                 },
                 {
                     path: '/admin/audit-logs',

@@ -72,6 +72,16 @@ class RbacSeeder extends Seeder
             // Platform (Super Admin only)
             'platform.dashboard', 'platform.tenants', 'platform.users',
             'platform.analytics', 'platform.billing', 'platform.settings',
+
+            // Users module (granular — Super Admin only)
+            'platform.users.view',
+            'platform.users.create',
+            'platform.users.update',
+            'platform.users.activate',
+            'platform.users.suspend',
+            'platform.users.view_memberships',
+            'platform.users.view_activity',
+            'platform.users.revoke_sessions',
             'platform.billing.view', 'platform.billing.plans',
             'platform.billing.subscriptions', 'platform.billing.invoices',
             'platform.billing.payments', 'platform.billing.coupons',

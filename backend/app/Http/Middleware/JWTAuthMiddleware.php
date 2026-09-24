@@ -64,6 +64,23 @@ class JWTAuthMiddleware
             ], 403);
         }
 
+        // Reject tokens issued before the user's sessions were revoked
+        // server-side (see UserSessionService). This makes stateless JWT
+        // revocation work without a token table.
+        try {
+            $payload = JWTAuth::getPayload();
+            if ($user->isSessionRevokedBefore((int) $payload->get('iat'))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your session has been revoked. Please sign in again.',
+                    'error' => 'session_revoked',
+                    'code' => 401
+                ], 401);
+            }
+        } catch (JWTException $e) {
+            // Payload unreadable — let the downstream chain decide.
+        }
+
         auth()->setUser($user);
 
         return $next($request);

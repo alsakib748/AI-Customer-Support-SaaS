@@ -202,6 +202,13 @@ class AuditLog extends Model
             'user_deleted' => 'User Deleted',
             'user_restored' => 'User Restored',
 
+            'user.created' => 'User Created',
+            'user.updated' => 'User Updated',
+            'user.suspended' => 'User Suspended',
+            'user.activated' => 'User Activated',
+            'user.email_changed' => 'User Email Changed',
+            'user.sessions_revoked' => 'Sessions Revoked',
+
             'tenant_created' => 'Tenant Created',
             'tenant_updated' => 'Tenant Updated',
             'tenant_switched' => 'Tenant Switched',
@@ -251,6 +258,13 @@ class AuditLog extends Model
             'user_deleted' => 'danger',
             'user_restored' => 'warning',
 
+            'user.created' => 'success',
+            'user.updated' => 'primary',
+            'user.suspended' => 'danger',
+            'user.activated' => 'success',
+            'user.email_changed' => 'warning',
+            'user.sessions_revoked' => 'warning',
+
             'tenant_created' => 'success',
             'tenant_updated' => 'primary',
             'tenant_switched' => 'info',
@@ -298,6 +312,13 @@ class AuditLog extends Model
             'user_login_failed' => 'alert-circle',
             'user_updated' => 'user-edit',
             'user_deleted' => 'user-x',
+
+            'user.created' => 'user-plus',
+            'user.updated' => 'user-edit',
+            'user.suspended' => 'user-x',
+            'user.activated' => 'user-check',
+            'user.email_changed' => 'at',
+            'user.sessions_revoked' => 'shield',
 
             'tenant_created' => 'building',
             'tenant_updated' => 'building-edit',

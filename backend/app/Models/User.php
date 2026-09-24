@@ -127,6 +127,68 @@ class User extends Authenticatable implements JWTSubject
         return $this->full_name ?: $this->email;
     }
 
+    // Status is derived from is_active — the single authentication gate.
+    // No separate status column is used (see suspend/activate lifecycle).
+    public function getStatusAttribute(): string
+    {
+        return $this->is_active ? 'active' : 'suspended';
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return $this->status === 'active' ? 'Active' : 'Suspended';
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return $this->status === 'active' ? 'success' : 'danger';
+    }
+
+    /**
+     * Platform scope = super_admin role (no tenant membership required).
+     * Tenant scope = a normal user (owner/manager/etc. inside one or more tenants).
+     */
+    public function getScopeAttribute(): string
+    {
+        return $this->isSuperAdmin() ? 'platform' : 'tenant';
+    }
+
+    /**
+     * Read a single value from the preferences JSON column.
+     */
+    public function preference(string $key, $default = null)
+    {
+        $preferences = is_array($this->preferences) ? $this->preferences : [];
+
+        return $preferences[$key] ?? $default;
+    }
+
+    public function setPreference(string $key, $value): void
+    {
+        $preferences          = is_array($this->preferences) ? $this->preferences : [];
+        $preferences[$key]    = $value;
+        $this->preferences    = $preferences;
+    }
+
+    /**
+     * Whether a JWT issued at the given unix timestamp is stale because the
+     * user's sessions were revoked server-side (stored in preferences).
+     */
+    public function isSessionRevokedBefore(int $issuedAt): bool
+    {
+        $revokedAt = $this->preference('sessions_revoked_at');
+
+        if (! $revokedAt) {
+            return false;
+        }
+
+        try {
+            return $issuedAt < \Illuminate\Support\Carbon::parse($revokedAt)->getTimestamp();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     // Scopes
     public function scopeActive($query)
     {

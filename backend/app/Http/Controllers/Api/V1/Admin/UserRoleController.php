@@ -8,14 +8,22 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
+use App\Traits\GuardsSystemUsers;
 
 class UserRoleController extends Controller
 {
+    use GuardsSystemUsers;
+
     /**
      * Assign a role to a user.
      */
     public function assign(Request $request, User $user)
     {
+        $guard = $this->protectSystemUser($user);
+        if ($guard) {
+            return $guard;
+        }
+
         $data = $request->validate([
             'role' => ['required', 'string', 'exists:roles,name'],
         ]);
@@ -60,6 +68,11 @@ class UserRoleController extends Controller
     public function revoke(Request $request, User $user)
     {
         $actor = $request->user();
+
+        $guard = $this->protectSystemUser($user);
+        if ($guard) {
+            return $guard;
+        }
 
         if ($user->id === $actor->id) {
             return response()->json([
