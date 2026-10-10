@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\PlatformIncident;
+use App\Models\SystemSetting;
+use App\Policies\PlatformIncidentPolicy;
+use App\Policies\SystemSettingPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::policy(SystemSetting::class, SystemSettingPolicy::class);
+        Gate::policy(PlatformIncident::class, PlatformIncidentPolicy::class);
     }
 }

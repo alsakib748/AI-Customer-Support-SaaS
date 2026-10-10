@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'track.usage'        => \App\Http\Middleware\TrackUsage::class,
             'billing.rate.limit' => \App\Http\Middleware\BillingRateLimit::class,
             'super.admin'        => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'maintenance.mode'   => \App\Http\Middleware\EnforceMaintenance::class,
             'role'                => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'set.permission.team' => \App\Http\Middleware\SetPermissionTeam::class,
             'role_or_permission'  => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
@@ -30,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withCommands([
         \App\Console\Commands\Billing\BillingStatsCommand::class,
+        \App\Console\Commands\Health\RunHealthChecks::class,
+        \App\Console\Commands\Health\Heartbeat::class,
+        \App\Console\Commands\Health\PruneHealthData::class,
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

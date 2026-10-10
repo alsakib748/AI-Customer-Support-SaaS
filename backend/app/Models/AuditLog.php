@@ -242,6 +242,27 @@ class AuditLog extends Model
             'role_removed' => 'Role Removed',
             'permission_granted' => 'Permission Granted',
             'permission_revoked' => 'Permission Revoked',
+
+            'settings.general.updated' => 'General Settings Updated',
+            'settings.security.updated' => 'Security Settings Updated',
+            'settings.ai.updated' => 'AI Defaults Updated',
+            'settings.email.updated' => 'Email Settings Updated',
+            'settings.integrations.updated' => 'Integration Settings Updated',
+            'settings.operations.updated' => 'Operations Settings Updated',
+            'settings.general.reset' => 'General Settings Reset',
+            'settings.security.reset' => 'Security Settings Reset',
+            'settings.ai.reset' => 'AI Defaults Reset',
+            'settings.email.reset' => 'Email Settings Reset',
+            'settings.integrations.reset' => 'Integration Settings Reset',
+            'settings.operations.reset' => 'Operations Settings Reset',
+            'settings.email_tested' => 'Test Email Sent',
+            'settings.integration_tested' => 'Integration Tested',
+            'settings.maintenance_enabled' => 'Maintenance Mode Enabled',
+            'settings.maintenance_disabled' => 'Maintenance Mode Disabled',
+            'settings.credential_rotated' => 'Credential Rotated',
+            'health.check_run' => 'Health Check Run',
+            'health.incident_acknowledged' => 'Incident Acknowledged',
+            'health.incident_resolved' => 'Incident Resolved',
         ];
 
         return $labels[$action] ?? ucfirst(str_replace('_', ' ', $action));
@@ -298,6 +319,21 @@ class AuditLog extends Model
             'role_removed' => 'danger',
             'permission_granted' => 'primary',
             'permission_revoked' => 'danger',
+
+            'settings.general.updated' => 'primary',
+            'settings.security.updated' => 'warning',
+            'settings.ai.updated' => 'primary',
+            'settings.email.updated' => 'primary',
+            'settings.integrations.updated' => 'primary',
+            'settings.operations.updated' => 'warning',
+            'settings.email_tested' => 'info',
+            'settings.integration_tested' => 'info',
+            'settings.maintenance_enabled' => 'warning',
+            'settings.maintenance_disabled' => 'success',
+            'settings.credential_rotated' => 'warning',
+            'health.check_run' => 'info',
+            'health.incident_acknowledged' => 'info',
+            'health.incident_resolved' => 'success',
         ];
 
         return $colors[$this->action] ?? 'secondary';
@@ -348,6 +384,21 @@ class AuditLog extends Model
 
             'ai_response_generated' => 'bot',
             'ai_escalated' => 'user-plus',
+
+            'settings.general.updated' => 'cog',
+            'settings.security.updated' => 'shield',
+            'settings.ai.updated' => 'sparkles',
+            'settings.email.updated' => 'envelope',
+            'settings.integrations.updated' => 'link',
+            'settings.operations.updated' => 'server',
+            'settings.email_tested' => 'send',
+            'settings.integration_tested' => 'plug',
+            'settings.maintenance_enabled' => 'exclamation-triangle',
+            'settings.maintenance_disabled' => 'check-circle',
+            'settings.credential_rotated' => 'key',
+            'health.check_run' => 'heart-pulse',
+            'health.incident_acknowledged' => 'eye',
+            'health.incident_resolved' => 'check-circle',
         ];
 
         return $icons[$this->action] ?? 'circle';

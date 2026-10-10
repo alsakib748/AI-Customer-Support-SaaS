@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\Admin\UserRoleController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\UserSessionController;
+use App\Http\Controllers\Api\V1\Admin\SystemSettingsController;
+use App\Http\Controllers\Api\V1\Admin\SystemHealthController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -69,7 +71,7 @@ Route::post('/v1/team/invitations/accept/{token}', [InvitationController::class,
 //     Route::get('/conversation', [WidgetController::class, 'getConversation']);
 // });
 
-Route::prefix('v1/widget')->group(function () {
+Route::prefix('v1/widget')->middleware('maintenance.mode')->group(function () {
     Route::post('/bootstrap', [WidgetController::class, 'bootstrap'])
         ->middleware('widget.rate.limit:30,60');
 
@@ -105,7 +107,8 @@ Route::prefix('v1')->group(function () {
 
     // Public Routes - No Authentication Required
     Route::prefix('auth')->group(function () {
-        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/register', [AuthController::class, 'register'])
+            ->middleware('maintenance.mode:registration');
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -126,7 +129,7 @@ Route::prefix('v1')->group(function () {
      });
 
     // Protected Routes - Authentication Required
-    Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team'])->group(function () {
+    Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team', 'maintenance.mode'])->group(function () {
 
         // Tenant Routes
         Route::prefix('tenants')->group(function () {
@@ -637,4 +640,110 @@ Route::prefix('v1/rbac')
             ->middleware('permission:team.assign_role');
         Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke'])
             ->middleware('permission:team.assign_role');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| SYSTEM SETTINGS — Platform control plane (Super Admin only)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/admin/settings')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get   ('/', [SystemSettingsController::class, 'index'])
+            ->middleware('permission:platform.settings.view');
+
+        // General
+        Route::get   ('/general', [SystemSettingsController::class, 'general'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/general', [SystemSettingsController::class, 'updateGeneral'])
+            ->middleware('permission:platform.settings.general');
+
+        // Security
+        Route::get   ('/security', [SystemSettingsController::class, 'security'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/security', [SystemSettingsController::class, 'updateSecurity'])
+            ->middleware('permission:platform.settings.security');
+
+        // AI defaults
+        Route::get   ('/ai', [SystemSettingsController::class, 'ai'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/ai', [SystemSettingsController::class, 'updateAi'])
+            ->middleware('permission:platform.settings.ai');
+
+        // Email
+        Route::get   ('/email', [SystemSettingsController::class, 'email'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/email', [SystemSettingsController::class, 'updateEmail'])
+            ->middleware('permission:platform.settings.email');
+        Route::post  ('/email/test', [SystemSettingsController::class, 'testEmail'])
+            ->middleware('permission:platform.settings.email');
+
+        // Integrations
+        Route::get   ('/integrations', [SystemSettingsController::class, 'integrations'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/integrations', [SystemSettingsController::class, 'updateIntegrations'])
+            ->middleware('permission:platform.settings.integrations');
+        Route::post  ('/integrations/{provider}/test', [SystemSettingsController::class, 'testIntegration'])
+            ->middleware('permission:platform.settings.integrations');
+
+        // Operations
+        Route::get   ('/operations', [SystemSettingsController::class, 'operations'])
+            ->middleware('permission:platform.settings.view');
+        Route::put   ('/operations', [SystemSettingsController::class, 'updateOperations'])
+            ->middleware('permission:platform.settings.operations');
+        Route::get   ('/operations/health', [SystemSettingsController::class, 'health'])
+            ->middleware('permission:platform.settings.view');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| SYSTEM HEALTH — Platform operational monitoring (Super Admin only)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/admin/system-health')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/',
+            [SystemHealthController::class, 'index'])
+            ->middleware('permission:platform.system_health.view');
+
+        Route::get('/checks',
+            [SystemHealthController::class, 'checks'])
+            ->middleware('permission:platform.system_health.view');
+
+        Route::get('/checks/{check}',
+            [SystemHealthController::class, 'showCheck'])
+            ->middleware('permission:platform.system_health.view');
+
+Route::post('/checks/{check}/run',
+              [SystemHealthController::class, 'runCheck'])
+              ->middleware([
+                  'permission:platform.system_health.run',
+                  'throttle:'.config('health.on_demand.rate_limit', '10,1'),
+              ]);
+
+        Route::get('/metrics',
+            [SystemHealthController::class, 'metrics'])
+            ->middleware('permission:platform.system_health.view');
+
+        Route::get('/incidents',
+            [SystemHealthController::class, 'incidents'])
+            ->middleware('permission:platform.system_health.view');
+
+        Route::get('/incidents/{incident}',
+            [SystemHealthController::class, 'showIncident'])
+            ->middleware('permission:platform.system_health.view');
+
+        Route::post('/incidents/{incident}/acknowledge',
+            [SystemHealthController::class, 'acknowledgeIncident'])
+            ->middleware('permission:platform.system_health.manage');
+
+        Route::post('/incidents/{incident}/resolve',
+            [SystemHealthController::class, 'resolveIncident'])
+            ->middleware('permission:platform.system_health.manage');
+
+        Route::get('/events',
+            [SystemHealthController::class, 'events'])
+            ->middleware('permission:platform.system_health.view');
     });

@@ -73,6 +73,15 @@ class RbacSeeder extends Seeder
             'platform.dashboard', 'platform.tenants', 'platform.users',
             'platform.analytics', 'platform.billing', 'platform.settings',
 
+            // System Settings (granular — Super Admin only)
+            'platform.settings.view',
+            'platform.settings.general',
+            'platform.settings.security',
+            'platform.settings.ai',
+            'platform.settings.email',
+            'platform.settings.integrations',
+            'platform.settings.operations',
+
             // Users module (granular — Super Admin only)
             'platform.users.view',
             'platform.users.create',
@@ -87,6 +96,9 @@ class RbacSeeder extends Seeder
             'platform.billing.payments', 'platform.billing.coupons',
             'platform.billing.analytics',
             'platform.audit_logs', 'platform.system_health',
+            'platform.system_health.view',
+            'platform.system_health.run',
+            'platform.system_health.manage',
             'platform.notifications', 'platform.profile',
 
             // Tenants module (granular — Super Admin only)

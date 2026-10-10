@@ -60,3 +60,22 @@ Schedule::command('billing:reconcile')
 Schedule::command('billing:sync-storage')
     ->everySixHours()
     ->appendOutputTo(storage_path('logs/billing.log'));
+
+
+// System health monitoring (each minute)
+Schedule::command('health:check')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/health-check.log'));
+
+// Scheduler + worker liveness heartbeats (each minute)
+Schedule::command('health:heartbeat')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/health-check.log'));
+
+// Retain health data only for the configured windows (daily)
+Schedule::command('health:prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/health-check.log'));

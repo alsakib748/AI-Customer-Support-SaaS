@@ -885,15 +885,83 @@ const router = createRouter({
                 },
                 {
                     path: '/admin/settings',
-                    name: 'AdminSystemSettings',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.settings', title: 'System Settings' }
+                    component: () => import('@/components/admin/settings/SettingsLayout.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.settings', title: 'System Settings' },
+                    children: [
+                        {
+                            path: '',
+                            name: 'AdminSystemSettings',
+                            component: () => import('@/views/admin/settings/Index.vue'),
+                            meta: { title: 'System Settings' }
+                        },
+                        {
+                            path: 'general',
+                            name: 'AdminSettingsGeneral',
+                            component: () => import('@/views/admin/settings/General.vue'),
+                            meta: { title: 'General Settings' }
+                        },
+                        {
+                            path: 'security',
+                            name: 'AdminSettingsSecurity',
+                            component: () => import('@/views/admin/settings/Security.vue'),
+                            meta: { title: 'Security Settings' }
+                        },
+                        {
+                            path: 'ai',
+                            name: 'AdminSettingsAi',
+                            component: () => import('@/views/admin/settings/AiDefaults.vue'),
+                            meta: { title: 'AI Defaults' }
+                        },
+                        {
+                            path: 'email',
+                            name: 'AdminSettingsEmail',
+                            component: () => import('@/views/admin/settings/Email.vue'),
+                            meta: { title: 'Email Settings' }
+                        },
+                        {
+                            path: 'integrations',
+                            name: 'AdminSettingsIntegrations',
+                            component: () => import('@/views/admin/settings/Integrations.vue'),
+                            meta: { title: 'Integrations' }
+                        },
+                        {
+                            path: 'operations',
+                            name: 'AdminSettingsOperations',
+                            component: () => import('@/views/admin/settings/Operations.vue'),
+                            meta: { title: 'Operations' }
+                        }
+                    ]
                 },
                 {
                     path: '/admin/system-health',
-                    name: 'AdminSystemHealth',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.system_health', title: 'System Health' }
+                    component: () => import('@/components/admin/system-health/SystemHealthLayout.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.system_health', title: 'System Health' },
+                    children: [
+                        {
+                            path: '',
+                            name: 'AdminSystemHealth',
+                            component: () => import('@/views/admin/system-health/Index.vue'),
+                            meta: { title: 'System Health' }
+                        },
+                        {
+                            path: 'checks',
+                            name: 'AdminSystemHealthChecks',
+                            component: () => import('@/views/admin/system-health/Checks.vue'),
+                            meta: { title: 'Health Checks' }
+                        },
+                        {
+                            path: 'metrics',
+                            name: 'AdminSystemHealthMetrics',
+                            component: () => import('@/views/admin/system-health/Metrics.vue'),
+                            meta: { title: 'Health Metrics' }
+                        },
+                        {
+                            path: 'incidents/:id',
+                            name: 'AdminSystemHealthIncident',
+                            component: () => import('@/views/admin/system-health/IncidentDetails.vue'),
+                            meta: { title: 'Incident Detail' }
+                        }
+                    ]
                 },
                 {
                     path: '/admin/notifications',

@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Keep the session timezone aligned with the application timezone
+            // (config('app.timezone')) so timestampTz columns round-trip the
+            // exact instant instead of being skewed by the server's local zone.
+            'timezone' => env('DB_TIMEZONE', 'UTC'),
         ],
 
         // ⭐ Central Database Connection (for users, tenants, tenant_user, etc.)
@@ -112,6 +116,7 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'timezone' => env('DB_TIMEZONE', 'UTC'),
         ],
 
         // ⭐ Tenant Database Connection (Stancl handles this)
@@ -127,6 +132,7 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'timezone' => env('DB_TIMEZONE', 'UTC'),
         ],
 
         'sqlsrv' => [
