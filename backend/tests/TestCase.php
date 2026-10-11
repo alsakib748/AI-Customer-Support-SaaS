@@ -4,6 +4,8 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
+use Stancl\Tenancy\Events\TenantCreated;
+use Stancl\Tenancy\Events\TenantDeleted;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -20,5 +22,11 @@ abstract class TestCase extends BaseTestCase
         ]);
 
         DB::purge('central');
+
+        // Stancl: never provision real tenant databases (and never drop them)
+        // from tests. Registration tests create central Tenant rows only, which
+        // is exactly what the onboarding logic under test touches.
+        $this->app->make('events')->forget(TenantCreated::class);
+        $this->app->make('events')->forget(TenantDeleted::class);
     }
 }

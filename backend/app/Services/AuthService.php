@@ -31,92 +31,13 @@ class AuthService
     }
 
     /**
-     * Register a new user with default tenant
+     * Register a new user with a default tenant.
+     *
+     * Tenant::create() provisions a tenant DATABASE (stancl jobs run
+     * synchronously here). PostgreSQL does not allow CREATE DATABASE inside a
+     * transaction block, so the flow runs OUTSIDE a DB::transaction and relies
+     * on the compensating cleanup below instead.
      */
-    // public function register(array $data): array
-    // {
-    //     $validator = Validator::make($data, [
-    //         'first_name' => 'required|string|max:100',
-    //         'last_name' => 'required|string|max:100',
-    //         'username' => 'string|unique:users',
-    //         'email' => 'required|email|unique:users',
-    //         'password' => 'required|string|min:8|confirmed',
-    //         'phone' => 'nullable|string|max:20',
-    //         'timezone' => 'nullable|string|timezone',
-    //         'company_name' => 'nullable|string|max:255',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         throw new ValidationException($validator);
-    //     }
-
-    //     // try {
-    //     // Create user
-    //     $user = User::create([
-    //         'first_name' => $data['first_name'],
-    //         'last_name' => $data['last_name'],
-    //         'username' => $data['username'],
-    //         'email' => $data['email'],
-    //         'password' => Hash::make($data['password']),
-    //         'phone' => $data['phone'] ?? null,
-    //         'company_name' => $data['company_name'] ?? null,
-    //         'timezone' => $data['timezone'] ?? 'UTC',
-    //         'uuid' => (string) Str::uuid(),
-    //     ]);
-
-    //     // Create default tenant
-
-    //     $tenant = $this->createTenant($user, $data);
-
-    //     // 4. Assign owner role
-    //     $ownerRole = Role::firstOrCreate([
-    //         'name' => 'owner',
-    //         'guard_name' => 'api',
-    //     ]);
-    //     $user->assignRole($ownerRole);
-
-    //     // Generate JWT token
-    //     $token = JWTAuth::fromUser($user);
-
-    //     // DB::commit();
-
-    //     return [
-    //         'user' => [
-    //             'id' => $user->id,
-    //             'uuid' => $user->uuid,
-    //             'first_name' => $user->first_name,
-    //             'last_name' => $user->last_name,
-    //             'full_name' => $user->full_name,
-    //             'username' => $user->username,
-    //             'email' => $user->email,
-    //             'phone' => $user->phone,
-    //             'avatar' => $user->avatar,
-    //             'timezone' => $user->timezone,
-    //             'language' => $user->language,
-    //             'is_active' => $user->is_active,
-    //             'current_tenant_id' => $user->current_tenant_id,
-    //         ],
-    //         'tenant' => [
-    //             'id' => $tenant->id,
-    //             'name' => $tenant->name,
-    //             'slug' => $tenant->slug,
-    //             'subdomain' => $tenant->subdomain,
-    //             'domain' => $tenant->domain,
-    //             'logo_url' => $tenant->logo_url,
-    //             'status' => $tenant->status,
-    //         ],
-    //         'token' => $token,
-    //     ];
-    //     // } catch (Exception $e) {
-    //     //     DB::rollBack();
-    //     //     Log::error('Registration failed', [
-    //     //         'email' => $data['email'] ?? null,
-    //     //         'error' => $e->getMessage(),
-    //     //     ]);
-    //     //     throw $e;
-    //     // }
-    // }
-
     public function register(array $data): array
     {
         $validator = Validator::make($data, [
@@ -159,12 +80,21 @@ class AuthService
             // 2. Create default tenant
             $tenant = $this->createTenant($user, $data);
 
-            // 3. Assign owner role
+            // 3. Assign owner role, scoped to the new tenant team. This flow
+            // runs outside the tenant.aware/set.permission.team middleware, so
+            // the Spatie team must be set explicitly for the assignment (and the
+            // auth context below) to resolve the role inside this tenant.
+            setPermissionsTeamId($tenant->id);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+
             $ownerRole = Role::firstOrCreate([
                 'name'       => 'owner',
                 'guard_name' => 'api',
             ]);
             $user->assignRole($ownerRole);
+
+            setPermissionsTeamId(null);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             // 4. Auto-assign the default plan + trial subscription
             $plan = $this->assignDefaultSubscription($tenant);
@@ -211,7 +141,7 @@ class AuthService
                     'slug'      => $tenant->slug,
                     'subdomain' => $tenant->subdomain,
                     'domain'    => $tenant->domain,
-                    'logo'      => $tenant->logo,
+                    'logo_url'  => $tenant->logo_url,
                     'status'    => $tenant->status,
                 ],
                 'token'  => $token,
