@@ -264,6 +264,18 @@ trait InteractsWithCentralSchema
             $table->softDeletes();
         });
 
+        Schema::connection('central')->create('coupon_redemptions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('coupon_id')->nullable();
+            $table->string('tenant_id');
+            $table->unsignedBigInteger('subscription_id')->nullable();
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->string('currency', 3)->default('USD');
+            $table->json('metadata')->nullable();
+            $table->timestamp('redeemed_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::connection('central')->create('payments', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();

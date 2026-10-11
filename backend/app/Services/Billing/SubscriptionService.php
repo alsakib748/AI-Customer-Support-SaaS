@@ -53,8 +53,15 @@ class SubscriptionService
         Tenant $tenant,
         Plan $plan,
         string $billingCycle = 'monthly',
-        ?Coupon $coupon = null
+        ?Coupon $coupon = null,
+        bool $allowPaid = false
     ): Subscription {
+        if (! $plan->isFree() && ! $allowPaid) {
+            throw new \RuntimeException(
+                'Paid plans must be activated through verified checkout, not direct creation.'
+            );
+        }
+
         return DB::transaction(function () use ($tenant, $plan, $billingCycle, $coupon) {
             $now         = now();
             $isTrialing  = $plan->trial_days > 0;

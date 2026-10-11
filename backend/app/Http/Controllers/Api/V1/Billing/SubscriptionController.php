@@ -113,6 +113,17 @@ class SubscriptionController extends Controller
             $plan         = $this->planService->getPlan($validated['plan_id']);
             $billingCycle = $validated['billing_cycle'] ?? 'monthly';
 
+            // Paid plans must never be activated from client-supplied data:
+            // they require a verified provider checkout / webhook. Only free
+            // plans may be created directly.
+            if (! $plan->isFree()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Paid plans must be purchased through checkout.',
+                    'code'    => 'checkout_required',
+                ], 422);
+            }
+
             $coupon = null;
             if (! empty($validated['coupon_code'])) {
                 $coupon = Coupon::byCode($validated['coupon_code'])->first();
