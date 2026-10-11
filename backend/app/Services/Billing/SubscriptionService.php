@@ -47,6 +47,40 @@ class SubscriptionService
     }
 
     /**
+     * Get the subscription that currently entitles the tenant to access.
+     *
+     * Unlike getActiveSubscription(), this also honours the past-due grace
+     * window and paid-through access for subscriptions cancelled at period end.
+     */
+    public function getEntitlingSubscription(string $tenantId): ?Subscription
+    {
+        $graceDays = (int) config('billing.grace_period.past_due_days', 3);
+        $graceCutoff = now()->subDays($graceDays);
+
+        return Subscription::forTenant($tenantId)
+            ->with(['plan'])
+            ->where(function ($query) use ($graceCutoff) {
+                $query->whereIn('status', ['trialing', 'active'])
+                    ->orWhere(function ($q) {
+                        // Cancelled but still inside the already-paid period.
+                        $q->where('status', 'cancelled')
+                            ->whereNotNull('ends_at')
+                            ->where('ends_at', '>', now());
+                    })
+                    ->orWhere(function ($q) use ($graceCutoff) {
+                        // Past due but still within the grace window.
+                        $q->where('status', 'past_due')
+                            ->where(function ($qq) use ($graceCutoff) {
+                                $qq->whereNull('current_period_ends_at')
+                                    ->orWhere('current_period_ends_at', '>', $graceCutoff);
+                            });
+                    });
+            })
+            ->latest()
+            ->first();
+    }
+
+    /**
      * Create a new subscription
      */
     public function createSubscription(

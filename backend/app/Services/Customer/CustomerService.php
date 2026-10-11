@@ -13,9 +13,11 @@ class CustomerService
 {
     protected $tenant;
     protected $tenantId;
+    protected ?\App\Services\Billing\BillingLimitService $limits;
 
-    public function __construct(Request $request)
+    public function __construct(Request $request, \App\Services\Billing\BillingLimitService $limits)
     {
+        $this->limits = $limits;
         // Try multiple ways to get the tenant
         $tenant = null;
 
@@ -218,9 +220,7 @@ class CustomerService
 
         $tenantId = $this->getTenantId();
 
-        // $limits->enforce($tenantId, 'customers.max', 1);
-
-        // dd($data);
+        $this->limits->enforce($this->tenant, 'customers.max', 1);
 
         $customerData = [
             'uuid' => (string) Str::uuid(),

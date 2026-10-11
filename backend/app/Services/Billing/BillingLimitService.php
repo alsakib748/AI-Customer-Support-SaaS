@@ -31,7 +31,7 @@ class BillingLimitService
      */
     public function check(Tenant $tenant, string $feature, int $requested = 1): array
     {
-        $subscription = $this->subscriptions->getActiveSubscription($tenant->id);
+        $subscription = $this->subscriptions->getEntitlingSubscription($tenant->id);
 
         if (!$subscription) {
             return $this->deny(
@@ -108,7 +108,7 @@ class BillingLimitService
 
     public function canUseFeature(Tenant $tenant, string $feature): bool
     {
-        $subscription = $this->subscriptions->getActiveSubscription($tenant->id);
+        $subscription = $this->subscriptions->getEntitlingSubscription($tenant->id);
 
         if (!$subscription || !$subscription->plan) {
             return false;

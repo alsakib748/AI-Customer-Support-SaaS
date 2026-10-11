@@ -99,6 +99,22 @@ trait InteractsWithCentralSchema
             $table->softDeletes();
         });
 
+        Schema::connection('central')->create('tenant_invitations', function (Blueprint $table) {
+            $table->id();
+            $table->string('tenant_id');
+            $table->unsignedBigInteger('invited_by')->nullable();
+            $table->string('email');
+            $table->string('role')->default('agent');
+            $table->string('department')->nullable();
+            $table->string('token')->unique();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('accepted_at')->nullable();
+            $table->timestamp('revoked_at')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
         Schema::connection('central')->create('permissions', function (Blueprint $table) {
             $table->id();
             $table->string('name');
