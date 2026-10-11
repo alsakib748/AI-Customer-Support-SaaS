@@ -966,14 +966,23 @@ const router = createRouter({
                 {
                     path: '/admin/notifications',
                     name: 'AdminNotifications',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    component: () => import('@/views/admin/notifications/Index.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.notifications', title: 'Notifications' }
                 },
                 {
                     path: '/admin/profile',
                     name: 'AdminProfile',
-                    component: () => import('@/views/admin/profile/Profile.vue'),
-                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.profile', title: 'My Profile' }
+                    redirect: '/profile'
+                },
+
+                // -------------------------------------------------
+                // PROFILE (all roles: owner, admin, manager, agent, super_admin)
+                // -------------------------------------------------
+                {
+                    path: '/profile',
+                    name: 'Profile',
+                    component: () => import('@/views/profile/Profile.vue'),
+                    meta: { requiresAuth: true, title: 'My Profile' }
                 },
 
                 // -------------------------------------------------

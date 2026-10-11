@@ -79,3 +79,9 @@ Schedule::command('health:prune')
     ->dailyAt('03:30')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/health-check.log'));
+
+// Prune read platform notifications past the retention window (daily)
+Schedule::command('notifications:prune')
+    ->dailyAt('03:45')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/notifications.log'));

@@ -17,12 +17,14 @@ class EventServiceProvider extends ServiceProvider
         ],
         \App\Events\Billing\SubscriptionCancelled::class => [
             \App\Listeners\Billing\SendSubscriptionCancelledNotification::class,
+            \App\Listeners\Notifications\NotifySubscriptionCancelled::class,
         ],
         \App\Events\Billing\SubscriptionRenewed::class => [
             \App\Listeners\Billing\SendSubscriptionRenewedNotification::class,
         ],
         \App\Events\Billing\SubscriptionExpired::class => [
             \App\Listeners\Billing\SendSubscriptionExpiredNotification::class,
+            \App\Listeners\Notifications\NotifySubscriptionExpired::class,
         ],
         \App\Events\Billing\TrialEndingSoon::class => [
             \App\Listeners\Billing\SendTrialEndingNotification::class,
@@ -38,6 +40,33 @@ class EventServiceProvider extends ServiceProvider
 ],
         \App\Events\Billing\PaymentFailed::class => [
             \App\Listeners\Billing\SendPaymentFailedNotification::class,
+            \App\Listeners\Notifications\NotifyPaymentFailed::class,
+        ],
+
+        // ===== PLATFORM NOTIFICATIONS =====
+        \App\Events\Health\PlatformIncidentOpened::class => [
+            \App\Listeners\Notifications\NotifyPlatformIncidentOpened::class,
+        ],
+        \App\Events\Health\PlatformIncidentResolved::class => [
+            \App\Listeners\Notifications\NotifyPlatformIncidentResolved::class,
+        ],
+        \App\Events\Tenant\TenantActivated::class => [
+            \App\Listeners\Notifications\NotifyTenantActivated::class,
+        ],
+        \App\Events\Tenant\TenantSuspended::class => [
+            \App\Listeners\Notifications\NotifyTenantSuspended::class,
+        ],
+        \App\Events\Tenant\TenantRestored::class => [
+            \App\Listeners\Notifications\NotifyTenantRestored::class,
+        ],
+        \App\Events\Tenant\TenantProvisioningCompleted::class => [
+            \App\Listeners\Notifications\NotifyTenantProvisioningCompleted::class,
+        ],
+        \App\Events\Tenant\TenantProvisioningFailed::class => [
+            \App\Listeners\Notifications\NotifyTenantProvisioningFailed::class,
+        ],
+        \App\Events\Tenant\TenantArchived::class => [
+            \App\Listeners\Notifications\NotifyTenantArchived::class,
         ],
 
         // ===== DOMAIN → USAGE TRACKING =====

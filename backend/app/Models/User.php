@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -56,7 +58,7 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    protected $appends = ['full_name', 'display_name'];
+    protected $appends = ['full_name', 'display_name', 'avatar_url'];
 
     // JWT Methods
     public function getJWTIdentifier()
@@ -125,6 +127,23 @@ class User extends Authenticatable implements JWTSubject
     public function getDisplayNameAttribute()
     {
         return $this->full_name ?: $this->email;
+    }
+
+    /**
+     * Public URL for the stored avatar. The `avatar` column holds a relative
+     * storage path (e.g. "avatars/foo.jpg"); full URLs are returned as-is.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (Str::startsWith($this->avatar, ['http://', 'https://'])) {
+            return $this->avatar;
+        }
+
+        return Storage::disk('public')->url($this->avatar);
     }
 
     // Status is derived from is_active — the single authentication gate.

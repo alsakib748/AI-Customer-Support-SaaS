@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Health;
 
+use App\Events\Health\PlatformIncidentOpened;
+use App\Events\Health\PlatformIncidentResolved;
 use App\Health\DTOs\HealthCheckResult;
 use App\Health\Enums\HealthStatus;
 use App\Health\Enums\IncidentSeverity;
@@ -12,6 +14,7 @@ use App\Models\PlatformIncidentEvent;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -22,6 +25,10 @@ class IncidentDetectionServiceTest extends TestCase
         parent::setUp();
         Cache::flush();
         config(['cache.default' => 'array']);
+
+        // Notification fan-out is verified separately; keep this suite focused
+        // on incident detection/lifecycle.
+        Event::fake([PlatformIncidentOpened::class, PlatformIncidentResolved::class]);
 
         Schema::connection('central')->create('users', function (Blueprint $table) {
             $table->id();

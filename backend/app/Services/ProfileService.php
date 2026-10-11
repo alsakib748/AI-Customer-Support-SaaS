@@ -22,8 +22,10 @@ class ProfileService
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'full_name' => $user->full_name,
+            'username' => $user->username,
             'email' => $user->email,
             'phone' => $user->phone,
+            'company_name' => $user->company_name,
             'avatar_url' => $user->avatar_url,
             'timezone' => $user->timezone,
             'language' => $user->language,
@@ -44,7 +46,9 @@ class ProfileService
         $validator = Validator::make($data, [
             'first_name' => 'sometimes|string|max:100',
             'last_name' => 'sometimes|string|max:100',
+            'username' => 'sometimes|nullable|string|max:100|unique:users,username,' . $user->id,
             'phone' => 'nullable|string|max:20',
+            'company_name' => 'nullable|string|max:255',
             'timezone' => 'nullable|string|timezone',
             'language' => 'nullable|string|in:en,bn,es,fr,de,ja,zh',
             'preferences' => 'nullable|array',
@@ -81,16 +85,21 @@ class ProfileService
         }
 
         // Delete old avatar
-        if ($user->avatar_url) {
-            $oldPath = str_replace('/storage/', '', $user->avatar_url);
-            Storage::disk('public')->delete($oldPath);
+        if ($user->avatar) {
+            $oldPath = Str::startsWith($user->avatar, ['http://', 'https://'])
+                ? str_replace('/storage/', '', parse_url($user->avatar, PHP_URL_PATH) ?? '')
+                : $user->avatar;
+
+            if ($oldPath && ! Str::startsWith($oldPath, ['http://', 'https://'])) {
+                Storage::disk('public')->delete($oldPath);
+            }
         }
 
         // Store new avatar
         $path = $file->store('avatars', 'public');
-        $url = Storage::url($path);
+        $url = Storage::disk('public')->url($path);
 
-        $user->update(['avatar_url' => $url]);
+        $user->update(['avatar' => $path]);
 
         return $url;
     }

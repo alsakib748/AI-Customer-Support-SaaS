@@ -2,6 +2,8 @@
 
 namespace App\Health\Services;
 
+use App\Events\Health\PlatformIncidentOpened;
+use App\Events\Health\PlatformIncidentResolved;
 use App\Health\DTOs\HealthCheckResult;
 use App\Health\Enums\IncidentSeverity;
 use App\Health\Enums\IncidentStatus;
@@ -61,6 +63,8 @@ class IncidentDetectionService
         ]);
 
         $this->recordEvent($incident, PlatformIncidentEvent::EVENT_RESOLVED, $actorId);
+
+        PlatformIncidentResolved::dispatch($incident);
 
         return $incident->refresh();
     }
@@ -132,6 +136,9 @@ class IncidentDetectionService
             ]);
 
             $this->recordEvent($incident, PlatformIncidentEvent::EVENT_OPENED, null);
+
+            PlatformIncidentOpened::dispatch($incident);
+
             return;
         }
 

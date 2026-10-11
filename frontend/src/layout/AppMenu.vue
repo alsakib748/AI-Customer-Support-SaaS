@@ -196,6 +196,21 @@ const tenantModel = () => [
                 permission: 'workspace.view'
             }
         ]
+    },
+    {
+        label: 'Account',
+        items: [
+            {
+                label: 'My Profile',
+                icon: 'pi pi-fw pi-user',
+                to: '/profile'
+            },
+            {
+                label: 'Logout',
+                icon: 'pi pi-fw pi-sign-out',
+                command: () => auth.logout()
+            }
+        ]
     }
 ];
 
@@ -332,8 +347,7 @@ const platformModel = () => [
             {
                 label: 'My Profile',
                 icon: 'pi pi-user',
-                to: '/admin/profile',
-                permission: 'platform.profile'
+                to: '/profile'
             },
             {
                 label: 'Logout',

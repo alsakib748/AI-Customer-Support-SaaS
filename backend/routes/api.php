@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\UserRoleController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\UserSessionController;
+use App\Http\Controllers\Api\V1\Admin\PlatformNotificationController;
 use App\Http\Controllers\Api\V1\Admin\SystemSettingsController;
 use App\Http\Controllers\Api\V1\Admin\SystemHealthController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Api\V1\Analytics\OverviewController;
 use App\Http\Controllers\Api\V1\Analytics\TicketAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\WidgetAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Billing\InvoiceController;
 use App\Http\Controllers\Api\V1\Billing\PaymentController;
 use App\Http\Controllers\Api\V1\Billing\PlanController;
@@ -48,7 +50,7 @@ use App\Http\Controllers\Api\V1\Ticket\TicketCommentController;
 use App\Http\Controllers\Api\V1\Ticket\TicketController;
 use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
-use App\Models\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/user', function (Request $request) {
@@ -125,6 +127,14 @@ Route::prefix('v1')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/change-password', [AuthController::class, 'changePassword']);
             Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+        });
+
+        // Profile Routes — available to every authenticated role
+        // (super_admin, owner, admin, manager, support_agent)
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'show']);
+            Route::put('/', [ProfileController::class, 'update']);
+            Route::post('/avatar', [ProfileController::class, 'updateAvatar']);
         });
      });
 
@@ -746,4 +756,37 @@ Route::post('/checks/{check}/run',
         Route::get('/events',
             [SystemHealthController::class, 'events'])
             ->middleware('permission:platform.system_health.view');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| NOTIFICATIONS — Platform notification center (Super Admin only)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/admin/notifications')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/',
+            [PlatformNotificationController::class, 'index'])
+            ->middleware('permission:platform.notifications');
+
+        Route::get('/unread-count',
+            [PlatformNotificationController::class, 'unreadCount'])
+            ->middleware('permission:platform.notifications');
+
+        Route::post('/mark-all-read',
+            [PlatformNotificationController::class, 'markAllAsRead'])
+            ->middleware('permission:platform.notifications');
+
+        Route::patch('/{notification}/read',
+            [PlatformNotificationController::class, 'markAsRead'])
+            ->middleware('permission:platform.notifications');
+
+        Route::patch('/{notification}/unread',
+            [PlatformNotificationController::class, 'markAsUnread'])
+            ->middleware('permission:platform.notifications');
+
+        Route::delete('/{notification}',
+            [PlatformNotificationController::class, 'destroy'])
+            ->middleware('permission:platform.notifications');
     });

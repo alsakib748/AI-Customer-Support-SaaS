@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         \App\Console\Commands\Health\RunHealthChecks::class,
         \App\Console\Commands\Health\Heartbeat::class,
         \App\Console\Commands\Health\PruneHealthData::class,
+        \App\Console\Commands\Notifications\PruneNotifications::class,
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
