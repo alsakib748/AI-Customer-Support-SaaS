@@ -238,16 +238,20 @@ class InvoiceController extends Controller
                 ], 404);
             }
 
-            // If PDF URL exists, redirect
+            // If a provider-hosted PDF exists, redirect to it.
             if ($invoice->invoice_pdf_url) {
                 return redirect($invoice->invoice_pdf_url);
             }
 
-            // Generate PDF (implement with a PDF library)
-            return response()->json([
-                'success' => false,
-                'message' => 'PDF not available for this invoice.',
-            ], 404);
+            // Otherwise render the invoice to PDF ourselves.
+            $pdf = $this->service->renderPdf($invoice);
+
+            $filename = ($invoice->invoice_number ?: 'invoice-'.$invoice->id).'.pdf';
+
+            return response($pdf, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to download invoice:', ['error' => $e->getMessage()]);

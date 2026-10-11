@@ -322,4 +322,29 @@ class InvoiceService
         ];
     }
 
+    /**
+     * Render an invoice to PDF bytes.
+     *
+     * Uses dompdf directly (framework-agnostic) so no external service is
+     * required and the generated document is deterministic for tests.
+     */
+    public function renderPdf(Invoice $invoice): string
+    {
+        $invoice->loadMissing(['tenant', 'subscription.plan', 'payments']);
+
+        $html = view('billing.invoice-pdf', ['invoice' => $invoice])->render();
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return $dompdf->output();
+    }
+
 }
