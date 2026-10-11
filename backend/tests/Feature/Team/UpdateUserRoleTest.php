@@ -188,10 +188,62 @@ class UpdateUserRoleTest extends TestCase
         $this->assertSame(false, $response->getData(true)['success']);
     }
 
+    public function test_controller_allows_a_role_change_within_the_current_tenant(): void
+    {
+        $this->actingAs($this->owner);
+        app()->instance('current_tenant', Tenant::find($this->tenantId));
+
+        $request = Request::create('/', 'PUT', ['role' => 'viewer']);
+
+        $response = app(TenantController::class)->updateUserRole($request, $this->tenantId, $this->member->id);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('viewer', $response->getData(true)['data']['new_role']);
+    }
+
+    public function test_controller_blocks_cross_tenant_role_changes(): void
+    {
+        $otherTenantId = (string) Str::uuid();
+
+        Tenant::create([
+            'id' => $otherTenantId,
+            'name' => 'Other Corp',
+            'slug' => 'other',
+            'status' => 'active',
+        ]);
+
+        $victim = $this->createUser('victim@example.test');
+
+        TenantUser::create([
+            'tenant_id' => $otherTenantId,
+            'user_id' => $victim->id,
+            'role' => 'agent',
+            'accepted_at' => now(),
+        ]);
+
+        // Actor manages the current tenant only.
+        $this->actingAs($this->owner);
+        app()->instance('current_tenant', Tenant::find($this->tenantId));
+
+        $request = Request::create('/', 'PUT', ['role' => 'admin']);
+
+        $response = app(TenantController::class)->updateUserRole($request, $otherTenantId, $victim->id);
+
+        $this->assertSame(403, $response->getStatusCode());
+        $this->assertSame(false, $response->getData(true)['success']);
+
+        $this->assertSame(
+            'agent',
+            TenantUser::where('tenant_id', $otherTenantId)->where('user_id', $victim->id)->value('role'),
+            'a member of another tenant must not be modified'
+        );
+    }
+
     protected function tearDown(): void
     {
         setPermissionsTeamId(null);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+        app()->forgetInstance('current_tenant');
 
         parent::tearDown();
     }

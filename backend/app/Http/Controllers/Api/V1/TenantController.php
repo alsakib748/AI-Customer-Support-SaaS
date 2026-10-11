@@ -291,6 +291,23 @@ class TenantController extends Controller
      */
     public function updateUserRole(Request $request, $tenantId, $userId)
     {
+        // Cross-tenant guard: the route carries a tenant id, but authorization is
+        // evaluated against the CURRENT tenant (resolved by TenantAware from the
+        // X-Tenant-ID header / current_tenant_id). Without this check an actor
+        // with team.assign_role in tenant A could mutate a member's role in any
+        // other tenant by passing their id in the URL. Super admins bypass.
+        $actor = auth()->user();
+        $currentTenant = app()->bound('current_tenant') ? app('current_tenant') : null;
+
+        if ($actor && ! $actor->isSuperAdmin()) {
+            if (! $currentTenant || (string) $currentTenant->id !== (string) $tenantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this workspace.',
+                ], 403);
+            }
+        }
+
         try {
             $validated = $request->validate([
                 'role' => 'required|string|in:admin,manager,agent,viewer',
