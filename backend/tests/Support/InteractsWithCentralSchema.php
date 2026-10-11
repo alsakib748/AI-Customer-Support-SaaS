@@ -275,6 +275,7 @@ trait InteractsWithCentralSchema
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->unique('stripe_invoice_id');
         });
 
         Schema::connection('central')->create('coupon_redemptions', function (Blueprint $table) {
@@ -317,6 +318,8 @@ trait InteractsWithCentralSchema
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->unique(['provider', 'provider_payment_id']);
+            $table->unique(['provider', 'provider_invoice_id']);
         });
 
         Schema::connection('central')->create('payment_webhook_events', function (Blueprint $table) {
@@ -325,10 +328,13 @@ trait InteractsWithCentralSchema
             $table->string('provider_event_id', 191);
             $table->string('event_type', 100)->nullable();
             $table->string('status', 30)->default('received');
+            $table->unsignedInteger('attempts')->default(0);
             $table->json('payload');
             $table->json('normalized_payload')->nullable();
             $table->text('error_message')->nullable();
+            $table->text('last_error')->nullable();
             $table->timestamp('processed_at')->nullable();
+            $table->timestamp('received_at')->nullable();
             $table->timestamps();
             $table->unique(['provider', 'provider_event_id']);
         });

@@ -33,7 +33,7 @@ class WebhookController extends Controller
 
         $event = $gateway->parseWebhook($payload, $headers);
 
-        // Idempotency
+        // Idempotency: a single row per provider event.
         $record = PaymentWebhookEvent::firstOrCreate(
             [
                 'provider'          => $provider,
@@ -44,15 +44,19 @@ class WebhookController extends Controller
                 'status'             => 'received',
                 'payload'            => $event['raw'],
                 'normalized_payload' => $event,
+                'received_at'        => now(),
             ]
         );
 
-        if ($record->wasRecentlyCreated || $record->status === 'received') {
+        // Atomically claim the event so concurrent deliveries cannot both enqueue
+        // work. Only the caller that flips "received" -> "processing" dispatches.
+        if ($record->claimForProcessing()) {
             ProcessBillingWebhookJob::dispatch($record->id);
         } else {
             Log::info('Duplicate webhook ignored', [
                 'provider' => $provider,
                 'event_id' => $event['provider_event_id'],
+                'status'   => $record->status,
             ]);
         }
 
