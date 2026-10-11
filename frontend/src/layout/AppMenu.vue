@@ -148,6 +148,12 @@ const tenantModel = () => [
                 icon: 'pi pi-fw pi-slack',
                 to: '/team/members',
                 permission: 'team.view'
+            },
+            {
+                label: 'Invitations',
+                icon: 'pi pi-fw pi-envelope',
+                to: '/team/invitations',
+                permission: 'team.view'
             }
         ]
     },

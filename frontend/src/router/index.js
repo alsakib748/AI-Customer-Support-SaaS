@@ -532,6 +532,24 @@ const router = createRouter({
                     component: () => import('@/views/customers/CustomerList.vue'),
                     meta: { requiresAuth: true, permission: 'customers.view', title: 'Customers' }
                 },
+                {
+                    path: '/customers/create',
+                    name: 'CustomerCreate',
+                    component: () => import('@/views/customers/CustomerCreate.vue'),
+                    meta: { requiresAuth: true, permission: 'customers.create', title: 'Create Customer' }
+                },
+                {
+                    path: '/customers/:id/edit',
+                    name: 'CustomerEdit',
+                    component: () => import('@/views/customers/CustomerEdit.vue'),
+                    meta: { requiresAuth: true, permission: 'customers.update', title: 'Edit Customer' }
+                },
+                {
+                    path: '/customers/:id',
+                    name: 'CustomerShow',
+                    component: () => import('@/views/customers/CustomerShow.vue'),
+                    meta: { requiresAuth: true, permission: 'customers.view', title: 'Customer Details' }
+                },
 
                 // -------------------------------------------------
                 // CONVERSATIONS
@@ -701,6 +719,12 @@ const router = createRouter({
                     name: 'TeamMembers',
                     component: () => import('@/views/team/Members.vue'),
                     meta: { requiresAuth: true, permission: 'team.view', title: 'Team Members' }
+                },
+                {
+                    path: '/team/invitations',
+                    name: 'TeamInvitations',
+                    component: () => import('@/views/team/Invitations.vue'),
+                    meta: { requiresAuth: true, permission: 'team.view', title: 'Team Invitations' }
                 },
 
                 // -------------------------------------------------
