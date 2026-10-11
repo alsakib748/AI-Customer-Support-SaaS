@@ -176,6 +176,19 @@ trait InteractsWithCentralSchema
             $table->timestamps();
         });
 
+        Schema::connection('central')->create('plan_provider_prices', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('plan_id');
+            $table->string('provider', 50);
+            $table->string('billing_cycle', 20);
+            $table->string('currency', 3)->default('USD');
+            $table->string('provider_price_id');
+            $table->decimal('amount', 10, 2)->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+        });
+
         Schema::connection('central')->create('subscriptions', function (Blueprint $table) {
             $table->id();
             $table->string('uuid')->nullable();

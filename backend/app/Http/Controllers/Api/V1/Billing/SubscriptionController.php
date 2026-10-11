@@ -197,7 +197,54 @@ class SubscriptionController extends Controller
                 ], 400);
             }
 
-            $subscription = $this->service->upgrade($subscription, $newPlan);
+            // A paid upgrade must be billed for real. Locally-managed (free)
+            // subscriptions go through checkout; provider-managed subscriptions
+            // are changed at the provider with proration before we switch locally.
+            if (! $subscription->isProviderManaged()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This plan change must be completed through checkout.',
+                    'code'    => 'checkout_required',
+                ], 422);
+            }
+
+            $provider = $subscription->provider;
+            $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+
+            if (! $priceId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected plan is not available with the current payment provider.',
+                    'code'    => 'provider_price_missing',
+                ], 422);
+            }
+
+            try {
+                $this->gateways->driver($provider)->changeSubscription(
+                    $subscription->provider_subscription_id,
+                    [
+                        'provider_price_id'  => $priceId,
+                        'proration_behavior' => 'create_prorations',
+                        'metadata'           => ['tenant_id' => $tenant->id],
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::error('Provider plan change failed', [
+                    'subscription_id' => $subscription->id,
+                    'error'           => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to change the plan with the payment provider. Please try again.',
+                    'code'    => 'provider_change_failed',
+                ], 422);
+            }
+
+            $subscription->update(['provider_price_id' => $priceId]);
+
+            // The provider issues the proration invoice; do not double-bill locally.
+            $subscription = $this->service->upgrade($subscription, $newPlan, createProrationInvoice: false);
 
             return (new SubscriptionResource($subscription))
                 ->additional([
@@ -254,8 +301,56 @@ class SubscriptionController extends Controller
             if ($newPlan->price_monthly >= $subscription->plan->price_monthly) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'New plan must be a downgrade. Use upgrade endpoint for upgrades.',
+                    'message' => 'New plan must be a downgrade. Use downgrade endpoint for downgrades.',
                 ], 400);
+            }
+
+            // Provider-managed subscriptions must have the change registered with
+            // the provider so the next invoice reflects the new (lower) price.
+            if ($subscription->isProviderManaged()) {
+                if ($newPlan->isFree()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Downgrading to a free plan requires cancelling the subscription at period end.',
+                        'code'    => 'cancel_required',
+                    ], 422);
+                }
+
+                $provider = $subscription->provider;
+                $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+
+                if (! $priceId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The selected plan is not available with the current payment provider.',
+                        'code'    => 'provider_price_missing',
+                    ], 422);
+                }
+
+                try {
+                    // No proration: the lower price applies from the next cycle.
+                    $this->gateways->driver($provider)->changeSubscription(
+                        $subscription->provider_subscription_id,
+                        [
+                            'provider_price_id'  => $priceId,
+                            'proration_behavior' => 'none',
+                            'metadata'           => ['tenant_id' => $tenant->id],
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('Provider plan change failed', [
+                        'subscription_id' => $subscription->id,
+                        'error'           => $e->getMessage(),
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unable to change the plan with the payment provider. Please try again.',
+                        'code'    => 'provider_change_failed',
+                    ], 422);
+                }
+
+                $subscription->update(['provider_price_id' => $priceId]);
             }
 
             $subscription = $this->service->downgrade($subscription, $newPlan);
@@ -660,6 +755,14 @@ class SubscriptionController extends Controller
                 'message' => 'Failed to verify checkout: ' . $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Resolve the provider price id for a plan/cycle, or null when unavailable.
+     */
+    protected function resolveProviderPrice(\App\Models\Plan $plan, string $provider, string $cycle): ?string
+    {
+        return $plan->providerPrice($provider, $cycle, $plan->currency ?? 'USD')?->provider_price_id;
     }
 
 }

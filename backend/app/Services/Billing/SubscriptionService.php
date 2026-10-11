@@ -113,9 +113,9 @@ class SubscriptionService
     /**
      * Upgrade subscription
      */
-    public function upgrade(Subscription $subscription, Plan $newPlan): Subscription
+    public function upgrade(Subscription $subscription, Plan $newPlan, bool $createProrationInvoice = true): Subscription
     {
-        return DB::transaction(function () use ($subscription, $newPlan) {
+        return DB::transaction(function () use ($subscription, $newPlan, $createProrationInvoice) {
             $oldPlan = $subscription->plan;
 
             // Calculate prorated amount
@@ -124,8 +124,9 @@ class SubscriptionService
             // Switch plan
             $subscription->switchPlan($newPlan);
 
-            // Create proration invoice if needed
-            if ($prorationAmount > 0) {
+            // Create proration invoice if needed. Skipped when the provider is
+            // authoritative for billing (it issues its own proration invoice).
+            if ($createProrationInvoice && $prorationAmount > 0) {
                 $this->invoiceService->createProrationInvoice($subscription, $prorationAmount);
             }
 
