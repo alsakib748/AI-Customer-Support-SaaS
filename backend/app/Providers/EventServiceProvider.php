@@ -2,6 +2,53 @@
 
 namespace App\Providers;
 
+use App\Events\AI\AIResponseGenerated;
+use App\Events\Billing\InvoicePaid;
+use App\Events\Billing\PaymentCompleted;
+use App\Events\Billing\PaymentFailed;
+use App\Events\Billing\PaymentSucceeded;
+use App\Events\Billing\SubscriptionCancelled;
+use App\Events\Billing\SubscriptionCreated;
+use App\Events\Billing\SubscriptionExpired;
+use App\Events\Billing\SubscriptionRenewed;
+use App\Events\Billing\SubscriptionUpgraded;
+use App\Events\Billing\TrialEndingSoon;
+use App\Events\Conversation\ConversationCreated;
+use App\Events\Health\PlatformIncidentOpened;
+use App\Events\Health\PlatformIncidentResolved;
+use App\Events\KnowledgeBase\ArticleCreated;
+use App\Events\Message\MessageCreated;
+use App\Events\Tenant\TenantActivated;
+use App\Events\Tenant\TenantArchived;
+use App\Events\Tenant\TenantProvisioningCompleted;
+use App\Events\Tenant\TenantProvisioningFailed;
+use App\Events\Tenant\TenantRestored;
+use App\Events\Tenant\TenantSuspended;
+use App\Listeners\Ai\EnforceAiBillingLimit;
+use App\Listeners\Billing\SendInvoicePaidNotification;
+use App\Listeners\Billing\SendPaymentCompletedNotification;
+use App\Listeners\Billing\SendPaymentFailedNotification;
+use App\Listeners\Billing\SendPaymentSucceededNotification;
+use App\Listeners\Billing\SendSubscriptionCancelledNotification;
+use App\Listeners\Billing\SendSubscriptionCreatedNotification;
+use App\Listeners\Billing\SendSubscriptionExpiredNotification;
+use App\Listeners\Billing\SendSubscriptionRenewedNotification;
+use App\Listeners\Billing\SendSubscriptionUpgradedNotification;
+use App\Listeners\Billing\SendTrialEndingNotification;
+use App\Listeners\Billing\SendWelcomeTrialNotification;
+use App\Listeners\Billing\TrackUsageOnDomainEvent;
+use App\Listeners\Message\ProcessMessageWithAI;
+use App\Listeners\Notifications\NotifyPaymentFailed;
+use App\Listeners\Notifications\NotifyPlatformIncidentOpened;
+use App\Listeners\Notifications\NotifyPlatformIncidentResolved;
+use App\Listeners\Notifications\NotifySubscriptionCancelled;
+use App\Listeners\Notifications\NotifySubscriptionExpired;
+use App\Listeners\Notifications\NotifyTenantActivated;
+use App\Listeners\Notifications\NotifyTenantArchived;
+use App\Listeners\Notifications\NotifyTenantProvisioningCompleted;
+use App\Listeners\Notifications\NotifyTenantProvisioningFailed;
+use App\Listeners\Notifications\NotifyTenantRestored;
+use App\Listeners\Notifications\NotifyTenantSuspended;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -19,84 +66,84 @@ class EventServiceProvider extends ServiceProvider
      */
     protected $listen = [
         // ===== BILLING LIFECYCLE =====
-        \App\Events\Billing\SubscriptionCreated::class => [
-            \App\Listeners\Billing\SendSubscriptionCreatedNotification::class,
-            \App\Listeners\Billing\SendWelcomeTrialNotification::class,
+        SubscriptionCreated::class => [
+            SendSubscriptionCreatedNotification::class,
+            SendWelcomeTrialNotification::class,
         ],
-        \App\Events\Billing\SubscriptionUpgraded::class => [
-            \App\Listeners\Billing\SendSubscriptionUpgradedNotification::class,
+        SubscriptionUpgraded::class => [
+            SendSubscriptionUpgradedNotification::class,
         ],
-        \App\Events\Billing\SubscriptionCancelled::class => [
-            \App\Listeners\Billing\SendSubscriptionCancelledNotification::class,
-            \App\Listeners\Notifications\NotifySubscriptionCancelled::class,
+        SubscriptionCancelled::class => [
+            SendSubscriptionCancelledNotification::class,
+            NotifySubscriptionCancelled::class,
         ],
-        \App\Events\Billing\SubscriptionRenewed::class => [
-            \App\Listeners\Billing\SendSubscriptionRenewedNotification::class,
+        SubscriptionRenewed::class => [
+            SendSubscriptionRenewedNotification::class,
         ],
-        \App\Events\Billing\SubscriptionExpired::class => [
-            \App\Listeners\Billing\SendSubscriptionExpiredNotification::class,
-            \App\Listeners\Notifications\NotifySubscriptionExpired::class,
+        SubscriptionExpired::class => [
+            SendSubscriptionExpiredNotification::class,
+            NotifySubscriptionExpired::class,
         ],
-        \App\Events\Billing\TrialEndingSoon::class => [
-            \App\Listeners\Billing\SendTrialEndingNotification::class,
+        TrialEndingSoon::class => [
+            SendTrialEndingNotification::class,
         ],
-        \App\Events\Billing\InvoicePaid::class => [
-            \App\Listeners\Billing\SendInvoicePaidNotification::class,
+        InvoicePaid::class => [
+            SendInvoicePaidNotification::class,
         ],
-        \App\Events\Billing\PaymentCompleted::class => [
-            \App\Listeners\Billing\SendPaymentCompletedNotification::class,
+        PaymentCompleted::class => [
+            SendPaymentCompletedNotification::class,
         ],
-        \App\Events\Billing\PaymentSucceeded::class => [
-            \App\Listeners\Billing\SendPaymentSucceededNotification::class,
+        PaymentSucceeded::class => [
+            SendPaymentSucceededNotification::class,
         ],
-        \App\Events\Billing\PaymentFailed::class => [
-            \App\Listeners\Billing\SendPaymentFailedNotification::class,
-            \App\Listeners\Notifications\NotifyPaymentFailed::class,
+        PaymentFailed::class => [
+            SendPaymentFailedNotification::class,
+            NotifyPaymentFailed::class,
         ],
 
         // ===== PLATFORM NOTIFICATIONS =====
-        \App\Events\Health\PlatformIncidentOpened::class => [
-            \App\Listeners\Notifications\NotifyPlatformIncidentOpened::class,
+        PlatformIncidentOpened::class => [
+            NotifyPlatformIncidentOpened::class,
         ],
-        \App\Events\Health\PlatformIncidentResolved::class => [
-            \App\Listeners\Notifications\NotifyPlatformIncidentResolved::class,
+        PlatformIncidentResolved::class => [
+            NotifyPlatformIncidentResolved::class,
         ],
-        \App\Events\Tenant\TenantActivated::class => [
-            \App\Listeners\Notifications\NotifyTenantActivated::class,
+        TenantActivated::class => [
+            NotifyTenantActivated::class,
         ],
-        \App\Events\Tenant\TenantSuspended::class => [
-            \App\Listeners\Notifications\NotifyTenantSuspended::class,
+        TenantSuspended::class => [
+            NotifyTenantSuspended::class,
         ],
-        \App\Events\Tenant\TenantRestored::class => [
-            \App\Listeners\Notifications\NotifyTenantRestored::class,
+        TenantRestored::class => [
+            NotifyTenantRestored::class,
         ],
-        \App\Events\Tenant\TenantProvisioningCompleted::class => [
-            \App\Listeners\Notifications\NotifyTenantProvisioningCompleted::class,
+        TenantProvisioningCompleted::class => [
+            NotifyTenantProvisioningCompleted::class,
         ],
-        \App\Events\Tenant\TenantProvisioningFailed::class => [
-            \App\Listeners\Notifications\NotifyTenantProvisioningFailed::class,
+        TenantProvisioningFailed::class => [
+            NotifyTenantProvisioningFailed::class,
         ],
-        \App\Events\Tenant\TenantArchived::class => [
-            \App\Listeners\Notifications\NotifyTenantArchived::class,
+        TenantArchived::class => [
+            NotifyTenantArchived::class,
         ],
 
         // ===== MESSAGE → AI PIPELINE =====
-        \App\Events\Message\MessageCreated::class => [
-            \App\Listeners\Message\ProcessMessageWithAI::class,
-            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        MessageCreated::class => [
+            ProcessMessageWithAI::class,
+            TrackUsageOnDomainEvent::class,
         ],
 
         // ===== DOMAIN → USAGE TRACKING =====
-        \App\Events\Conversation\ConversationCreated::class => [
-            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        ConversationCreated::class => [
+            TrackUsageOnDomainEvent::class,
         ],
-        \App\Events\KnowledgeBase\ArticleCreated::class => [
-            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        ArticleCreated::class => [
+            TrackUsageOnDomainEvent::class,
         ],
 
         // ===== AI BILLING ENFORCEMENT =====
-        \App\Events\AI\AIResponseGenerated::class => [
-            \App\Listeners\Ai\EnforceAiBillingLimit::class,
+        AIResponseGenerated::class => [
+            EnforceAiBillingLimit::class,
         ],
     ];
 
@@ -107,5 +154,18 @@ class EventServiceProvider extends ServiceProvider
     public function shouldDiscoverEvents(): bool
     {
         return false;
+    }
+
+    /**
+     * The framework's base EventServiceProvider is always registered by
+     * Application::configure() and already wires up the email verification
+     * listener once. Because this provider extends that base class, leaving the
+     * default behaviour would register SendEmailVerificationNotification twice
+     * (Base provider + this subclass), causing duplicate verification emails.
+     * The base provider owns this listener; this subclass must not repeat it.
+     */
+    protected function configureEmailVerification()
+    {
+        //
     }
 }

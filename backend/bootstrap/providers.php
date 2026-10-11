@@ -1,10 +1,15 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\BillingServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\PaymentServiceProvider;
+use App\Providers\TenancyServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\BillingServiceProvider::class,
-    App\Providers\EventServiceProvider::class,
-    App\Providers\PaymentServiceProvider::class,
-    App\Providers\TenancyServiceProvider::class,
-    App\Providers\PaymentServiceProvider::class,
+    AppServiceProvider::class,
+    BillingServiceProvider::class,
+    EventServiceProvider::class,
+    PaymentServiceProvider::class,
+    TenancyServiceProvider::class,
 ];
