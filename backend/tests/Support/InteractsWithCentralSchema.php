@@ -181,14 +181,29 @@ trait InteractsWithCentralSchema
             $table->string('uuid')->nullable();
             $table->string('tenant_id');
             $table->unsignedBigInteger('plan_id');
+            $table->string('provider', 50)->nullable();
+            $table->string('provider_customer_id')->nullable();
+            $table->string('provider_subscription_id')->nullable();
+            $table->string('provider_price_id')->nullable();
             $table->string('status')->default('active');
             $table->string('billing_cycle')->default('monthly');
             $table->timestamp('trial_starts_at')->nullable();
             $table->timestamp('trial_ends_at')->nullable();
             $table->timestamp('starts_at')->nullable();
             $table->timestamp('ends_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->timestamp('paused_at')->nullable();
+            $table->timestamp('resumed_at')->nullable();
             $table->boolean('auto_renew')->default(true);
+            $table->boolean('cancel_at_period_end')->default(false);
             $table->timestamp('next_billing_at')->nullable();
+            $table->timestamp('last_billing_at')->nullable();
+            $table->timestamp('current_period_starts_at')->nullable();
+            $table->timestamp('current_period_ends_at')->nullable();
+            $table->string('stripe_subscription_id')->nullable();
+            $table->string('stripe_customer_id')->nullable();
+            $table->string('paypal_subscription_id')->nullable();
+            $table->json('metadata')->nullable();
             $table->unsignedBigInteger('ai_used')->default(0);
             $table->unsignedBigInteger('ai_limit')->nullable();
             $table->unsignedBigInteger('agents_used')->default(0);
@@ -201,6 +216,96 @@ trait InteractsWithCentralSchema
             $table->unsignedBigInteger('conversations_limit')->nullable();
             $table->timestamps();
             $table->softDeletes();
+        });
+
+        Schema::connection('central')->create('subscription_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('subscription_id');
+            $table->string('type');
+            $table->string('name');
+            $table->string('slug');
+            $table->text('description')->nullable();
+            $table->integer('quantity')->default(1);
+            $table->decimal('unit_price', 10, 2)->default(0);
+            $table->decimal('total_price', 10, 2)->default(0);
+            $table->string('stripe_item_id')->nullable();
+            $table->string('stripe_price_id')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('central')->create('invoices', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('tenant_id');
+            $table->unsignedBigInteger('subscription_id')->nullable();
+            $table->string('invoice_number', 50)->unique();
+            $table->decimal('subtotal', 10, 2)->default(0);
+            $table->decimal('tax_amount', 10, 2)->default(0);
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('total', 10, 2)->default(0);
+            $table->string('currency', 3)->default('USD');
+            $table->string('status', 30)->default('draft');
+            $table->timestamp('due_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->string('payment_method')->nullable();
+            $table->string('payment_provider')->nullable();
+            $table->string('transaction_id')->nullable();
+            $table->timestamp('period_starts_at')->nullable();
+            $table->timestamp('period_ends_at')->nullable();
+            $table->string('stripe_invoice_id')->nullable();
+            $table->string('paypal_invoice_id')->nullable();
+            $table->string('invoice_pdf_url')->nullable();
+            $table->string('hosted_invoice_url')->nullable();
+            $table->json('line_items')->nullable();
+            $table->json('metadata')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::connection('central')->create('payments', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('tenant_id');
+            $table->unsignedBigInteger('invoice_id')->nullable();
+            $table->unsignedBigInteger('subscription_id')->nullable();
+            $table->string('payment_id', 255)->unique();
+            $table->decimal('amount', 10, 2);
+            $table->string('currency', 3)->default('USD');
+            $table->string('status', 30)->default('pending');
+            $table->string('provider', 50);
+            $table->string('provider_payment_id')->nullable();
+            $table->string('provider_invoice_id')->nullable();
+            $table->string('provider_subscription_id')->nullable();
+            $table->string('payment_method', 50);
+            $table->string('last_four', 4)->nullable();
+            $table->string('card_brand')->nullable();
+            $table->string('stripe_payment_intent_id')->nullable();
+            $table->string('stripe_charge_id')->nullable();
+            $table->string('paypal_transaction_id')->nullable();
+            $table->decimal('refunded_amount', 10, 2)->default(0);
+            $table->timestamp('refunded_at')->nullable();
+            $table->text('refund_reason')->nullable();
+            $table->json('metadata')->nullable();
+            $table->text('failure_reason')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::connection('central')->create('payment_webhook_events', function (Blueprint $table) {
+            $table->id();
+            $table->string('provider', 50);
+            $table->string('provider_event_id', 191);
+            $table->string('event_type', 100)->nullable();
+            $table->string('status', 30)->default('received');
+            $table->json('payload');
+            $table->json('normalized_payload')->nullable();
+            $table->text('error_message')->nullable();
+            $table->timestamp('processed_at')->nullable();
+            $table->timestamps();
+            $table->unique(['provider', 'provider_event_id']);
         });
 
         Schema::connection('central')->create('audit_logs', function (Blueprint $table) {

@@ -41,6 +41,8 @@ class SyncSubscriptionFromProviderJob implements ShouldQueue
             $remoteStatus = $remote['status'] ?? null;
             $localStatus = $this->mapStatus($remoteStatus);
 
+            $previousStatus = $subscription->status;
+
             $updates = ['status' => $localStatus];
 
             if (!empty($remote['current_period_start'])) {
@@ -59,7 +61,7 @@ class SyncSubscriptionFromProviderJob implements ShouldQueue
 
             Log::info('Subscription synced from provider', [
                 'subscription_id' => $subscription->id,
-                'old_status'      => $subscription->getOriginal('status'),
+                'old_status'      => $previousStatus,
                 'new_status'      => $localStatus,
             ]);
         } catch (\Throwable $e) {

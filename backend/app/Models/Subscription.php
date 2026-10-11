@@ -323,6 +323,21 @@ class Subscription extends Model
         return $this->status === 'past_due';
     }
 
+    public function isProviderManaged(): bool
+    {
+        return !empty($this->provider) && !empty($this->provider_subscription_id);
+    }
+
+    public function markCancelledAtPeriodEnd(): self
+    {
+        $this->update([
+            'cancel_at_period_end' => true,
+            'auto_renew'           => false,
+        ]);
+
+        return $this;
+    }
+
     public function canUpgrade(): bool
     {
         return $this->is_active;
