@@ -543,7 +543,26 @@ class SubscriptionController extends Controller
 
             $session = $this->gateways->driver($provider)->retrieveCheckoutSession($validated['session_id']);
 
-            if (($session['status'] ?? null) !== 'complete') {
+            // Bind the session to this tenant when the provider echoes our metadata.
+            $sessionTenantId = $session['metadata']['tenant_id'] ?? null;
+
+            if ($sessionTenantId !== null && (string) $sessionTenantId !== (string) $tenant->id) {
+                Log::warning('Checkout session tenant mismatch', [
+                    'tenant_id'         => $tenant->id,
+                    'session_tenant_id' => $sessionTenantId,
+                    'provider'          => $provider,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This checkout session does not belong to your workspace.',
+                ], 403);
+            }
+
+            // Providers report "done" differently (Stripe: complete, PayPal: COMPLETED/APPROVED).
+            $status = strtolower((string) ($session['status'] ?? ''));
+
+            if (! in_array($status, ['complete', 'completed', 'approved'], true)) {
                 return response()->json([
                     'success' => true,
                     'data'    => [
@@ -568,6 +587,48 @@ class SubscriptionController extends Controller
             }
 
             if ($subscription->status === 'pending') {
+                // Never trust the redirect alone: validate the charged amount and
+                // currency against the plan before activating. Trials charge nothing.
+                $plan           = $subscription->plan;
+                $isTrialing     = (int) ($plan?->trial_days ?? 0) > 0;
+                $expectedAmount = $plan?->getPriceForCycle($subscription->billing_cycle) ?? 0.0;
+                $chargedAmount  = $session['amount_total'] ?? null;
+                $chargedCurrency = $session['currency'] !== null ? strtoupper((string) $session['currency']) : null;
+                $expectedCurrency = $plan?->currency !== null ? strtoupper((string) $plan->currency) : null;
+
+                if (! $isTrialing && $expectedAmount > 0) {
+                    if ($chargedAmount === null
+                        || abs((float) $chargedAmount - (float) $expectedAmount) > 0.01) {
+                        Log::warning('Checkout amount mismatch', [
+                            'tenant_id' => $tenant->id,
+                            'provider'  => $provider,
+                            'expected'  => $expectedAmount,
+                            'charged'   => $chargedAmount,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'The amount charged does not match the selected plan.',
+                            'code'    => 'amount_mismatch',
+                        ], 422);
+                    }
+                }
+
+                if ($expectedCurrency !== null && $chargedCurrency !== null && $chargedCurrency !== $expectedCurrency) {
+                    Log::warning('Checkout currency mismatch', [
+                        'tenant_id' => $tenant->id,
+                        'provider'  => $provider,
+                        'expected'  => $expectedCurrency,
+                        'charged'   => $chargedCurrency,
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The currency charged does not match the selected plan.',
+                        'code'    => 'currency_mismatch',
+                    ], 422);
+                }
+
                 $subscription = $this->service->completePendingCheckout($subscription, [
                     'provider_subscription_id' => $session['provider_subscription_id'],
                     'provider_customer_id'     => $session['provider_customer_id'],

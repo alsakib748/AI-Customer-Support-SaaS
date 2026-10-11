@@ -240,6 +240,12 @@ class StripeGateway implements PaymentGateway
             return [
                 'status'                   => $session->status,
                 'session_id'               => $session->id,
+                'mode'                     => $session->mode ?? null,
+                'payment_status'           => $session->payment_status ?? null,
+                'amount_total'             => isset($session->amount_total)
+                    ? $session->amount_total / 100
+                    : null,
+                'currency'                 => $session->currency ?? null,
                 'provider_subscription_id' => $subscriptionId,
                 'provider_payment_id'      => $paymentIntentId,
                 'provider_customer_id'     => $session->customer,
