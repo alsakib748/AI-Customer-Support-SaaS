@@ -155,32 +155,26 @@ class BillingLimitService
     protected function current(Tenant $tenant, string $feature): int
 {
     return match ($feature) {
-        // Agents = accepted members + pending invitations
+        // Agents = accepted members + pending invitations (central DB)
         'agents.max' => $this->countAgents($tenant),
 
-        // Customers
-        'customers.max' => Customer::where('tenant_id', $tenant->id)->count(),
+        // Tenant-scoped resources live in the tenant database and are already
+        // isolated per tenant by the connection — do NOT filter by tenant_id
+        // (those tables have no such column).
+        'customers.max' => $this->safeCount(fn () => Customer::count()),
 
-        // Widgets
-        'widgets.max' => ChatWidget::where('tenant_id', $tenant->id)->count(),
+        'widgets.max' => $this->safeCount(fn () => ChatWidget::count()),
 
-        // Knowledge Base articles
-        'kb.articles.max' => KnowledgeBaseArticle::where('tenant_id', $tenant->id)->count(),
+        'kb.articles.max' => $this->safeCount(fn () => KnowledgeBaseArticle::count()),
 
         // Conversations this month
-        'conversations.monthly' => Conversation::where('tenant_id', $tenant->id)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->count(),
+        'conversations.monthly' => $this->safeCount(fn () => Conversation::where('created_at', '>=', now()->startOfMonth())->count()),
 
         // AI requests this month
-        'ai.requests.monthly' => AIUsage::where('tenant_id', $tenant->id)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->count(),
+        'ai.requests.monthly' => $this->safeCount(fn () => AIUsage::where('created_at', '>=', now()->startOfMonth())->count()),
 
         // AI tokens this month
-        'ai.tokens.monthly' => (int) AIUsage::where('tenant_id', $tenant->id)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->sum('tokens_used'),
+        'ai.tokens.monthly' => $this->safeCount(fn () => (int) AIUsage::where('created_at', '>=', now()->startOfMonth())->sum('total_tokens')),
 
         default => 0,
     };

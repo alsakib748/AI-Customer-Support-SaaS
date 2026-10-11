@@ -3,7 +3,9 @@
 namespace App\Jobs\AI;
 
 use App\Ai\Services\AIService;
+use App\Exceptions\PlanLimitExceededException;
 use App\Models\Tenant\Message;
+use App\Services\Billing\BillingLimitService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -46,6 +48,23 @@ class ProcessCustomerMessage implements ShouldQueue
         Tenancy::initialize($tenant);
 
         try {
+            // Hard pre-flight gate: refuse to spend AI tokens once the tenant is
+            // out of quota. This runs before the provider is ever called so an
+            // over-limit tenant never incurs cost.
+            try {
+                app(BillingLimitService::class)->enforce($tenant, 'ai.requests.monthly', 1);
+            } catch (PlanLimitExceededException $e) {
+                Log::warning('AI request blocked by billing limit', [
+                    'message_id' => $this->messageId,
+                    'tenant_id'  => $this->tenantId,
+                    'code'       => $e->errorCode,
+                    'data'       => $e->errorData,
+                ]);
+
+                // Nothing was spent — do not retry, do not escalate.
+                return;
+            }
+
             $message = $this->message = Message::findOrFail($this->messageId);
             $aiService = app(AIService::class);
 
@@ -56,7 +75,7 @@ class ProcessCustomerMessage implements ShouldQueue
 
             $result = $aiService->processMessage($message);
 
-            if (!$result['success']) {
+            if (!$result['success'] && empty($result['skipped'])) {
                 Log::warning('AI processing failed', [
                     'message_id' => $message->id,
                     'reason' => $result['message'] ?? 'Unknown error',

@@ -2,10 +2,21 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
+    /**
+     * The application's event → listener mappings.
+     *
+     * This is the SINGLE source of truth for event wiring. Automatic event
+     * discovery is disabled in bootstrap/app.php (->withEvents(discover: false))
+     * so every listener is registered exactly once — including object-typed
+     * listeners such as TrackUsageOnDomainEvent and EnforceAiBillingLimit which
+     * discovery could never resolve on its own.
+     *
+     * @var array<class-string, array<int, class-string>>
+     */
     protected $listen = [
         // ===== BILLING LIFECYCLE =====
         \App\Events\Billing\SubscriptionCreated::class => [
@@ -36,8 +47,8 @@ class EventServiceProvider extends ServiceProvider
             \App\Listeners\Billing\SendPaymentCompletedNotification::class,
         ],
         \App\Events\Billing\PaymentSucceeded::class => [
-    \App\Listeners\Billing\SendPaymentSucceededNotification::class,
-],
+            \App\Listeners\Billing\SendPaymentSucceededNotification::class,
+        ],
         \App\Events\Billing\PaymentFailed::class => [
             \App\Listeners\Billing\SendPaymentFailedNotification::class,
             \App\Listeners\Notifications\NotifyPaymentFailed::class,
@@ -69,43 +80,32 @@ class EventServiceProvider extends ServiceProvider
             \App\Listeners\Notifications\NotifyTenantArchived::class,
         ],
 
-        // ===== DOMAIN → USAGE TRACKING =====
-        \App\Events\Messages\MessageCreated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Conversations\ConversationStarted::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Customers\CustomerCreated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Team\AgentCreated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Widgets\WidgetCreated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\KnowledgeBase\ArticleCreated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Ai\AiResponseGenerated::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
-        \App\Events\Ai\AiResponseGenerated::class => [
-    \App\Listeners\Ai\EnforceAiBillingLimit::class,
-],
-        \App\Events\Ai\AiTokensConsumed::class => [\App\Listeners\Billing\TrackUsageOnDomainEvent::class],
+        // ===== MESSAGE → AI PIPELINE =====
+        \App\Events\Message\MessageCreated::class => [
+            \App\Listeners\Message\ProcessMessageWithAI::class,
+            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        ],
 
-        // ===== AI LIMIT ENFORCEMENT =====
-        \App\Events\Ai\AiRequestCreated::class => [
+        // ===== DOMAIN → USAGE TRACKING =====
+        \App\Events\Conversation\ConversationCreated::class => [
+            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        ],
+        \App\Events\KnowledgeBase\ArticleCreated::class => [
+            \App\Listeners\Billing\TrackUsageOnDomainEvent::class,
+        ],
+
+        // ===== AI BILLING ENFORCEMENT =====
+        \App\Events\AI\AIResponseGenerated::class => [
             \App\Listeners\Ai\EnforceAiBillingLimit::class,
         ],
     ];
 
+    /**
+     * Event discovery is disabled in bootstrap/app.php; this provider owns all
+     * registrations explicitly.
+     */
     public function shouldDiscoverEvents(): bool
     {
         return false;
-    }
-
-    /**
-     * Register services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
-    /**
-     * Bootstrap services.
-     */
-    public function boot(): void
-    {
-        //
     }
 }
