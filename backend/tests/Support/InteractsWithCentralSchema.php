@@ -355,6 +355,20 @@ trait InteractsWithCentralSchema
             $table->unique(['provider', 'provider_event_id']);
         });
 
+        Schema::connection('central')->create('billing_reminders', function (Blueprint $table) {
+            $table->id();
+            $table->string('tenant_id');
+            $table->unsignedBigInteger('subscription_id');
+            $table->string('type', 20);
+            $table->unsignedInteger('days_before');
+            $table->string('period_key', 40);
+            $table->string('status', 20)->default('sent');
+            $table->json('metadata')->nullable();
+            $table->timestamp('sent_at')->nullable();
+            $table->timestamps();
+            $table->unique(['subscription_id', 'type', 'days_before', 'period_key'], 'billing_reminders_unique');
+        });
+
         Schema::connection('central')->create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->nullable();
