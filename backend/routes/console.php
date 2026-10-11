@@ -18,7 +18,6 @@ Schedule::command('widget:cleanup-sessions --soft --days=7')
     ->weekly()
     ->appendOutputTo(storage_path('logs/widget-cleanup.log'));
 
-
 // Process subscription renewals daily
 // Process renewals and expirations daily at 1 AM
 Schedule::command('billing:process --renew --expire')
@@ -55,12 +54,6 @@ Schedule::command('billing:reconcile')
     ->dailyAt('02:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/billing.log'));
-
-// Sync storage usage every 6 hours
-Schedule::command('billing:sync-storage')
-    ->everySixHours()
-    ->appendOutputTo(storage_path('logs/billing.log'));
-
 
 // System health monitoring (each minute)
 Schedule::command('health:check')

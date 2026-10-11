@@ -4,17 +4,13 @@ namespace App\Http\Controllers\Api\V1\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\Billing\ProcessBillingWebhookJob;
-use App\Jobs\Billing\ProcessPaymentWebhook;
 use App\Models\PaymentWebhookEvent;
 use App\Payments\PaymentGatewayManager;
-use App\Services\Billing\StripeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
-    protected StripeService $stripeService;
-
     public function __construct(
         protected PaymentGatewayManager $gateways,
     ) {
@@ -37,7 +33,7 @@ class WebhookController extends Controller
 
         $event = $gateway->parseWebhook($payload, $headers);
 
-        // Idempotency
+        // Idempotency: a single row per provider event.
         $record = PaymentWebhookEvent::firstOrCreate(
             [
                 'provider'          => $provider,
@@ -48,15 +44,19 @@ class WebhookController extends Controller
                 'status'             => 'received',
                 'payload'            => $event['raw'],
                 'normalized_payload' => $event,
+                'received_at'        => now(),
             ]
         );
 
-        if ($record->wasRecentlyCreated || $record->status === 'received') {
+        // Atomically claim the event so concurrent deliveries cannot both enqueue
+        // work. Only the caller that flips "received" -> "processing" dispatches.
+        if ($record->claimForProcessing()) {
             ProcessBillingWebhookJob::dispatch($record->id);
         } else {
             Log::info('Duplicate webhook ignored', [
                 'provider' => $provider,
                 'event_id' => $event['provider_event_id'],
+                'status'   => $record->status,
             ]);
         }
 
@@ -90,40 +90,4 @@ class WebhookController extends Controller
             default => 'unknown',
         };
     }
-
-    /**
-     * Handle Stripe webhook
-     */
-    // public function stripe(Request $request)
-    // {
-    //     $payload = $request->getContent();
-    //     $signature = $request->header('Stripe-Signature');
-
-    //     if (!$this->stripeService->verifyWebhook($payload, $signature)) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Invalid signature.',
-    //         ], 400);
-    //     }
-
-    //     $event = json_decode($payload, true);
-
-    //     // Process async
-    //     ProcessPaymentWebhook::dispatch('stripe', $event);
-
-    //     return response()->json(['received' => true]);
-    // }
-
-    /**
-     * Handle PayPal webhook
-     */
-    // public function paypal(Request $request)
-    // {
-    //     $payload = $request->all();
-
-    //     // Process async
-    //     ProcessPaymentWebhook::dispatch('paypal', $payload);
-
-    //     return response()->json(['received' => true]);
-    // }
 }

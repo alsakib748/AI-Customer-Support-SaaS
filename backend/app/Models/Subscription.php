@@ -323,6 +323,56 @@ class Subscription extends Model
         return $this->status === 'past_due';
     }
 
+    public function isProviderManaged(): bool
+    {
+        return !empty($this->provider) && !empty($this->provider_subscription_id);
+    }
+
+    /**
+     * A past_due subscription still grants access during the configured grace
+     * period (measured from the end of the last paid period).
+     */
+    public function pastDueWithinGrace(): bool
+    {
+        if ($this->status !== 'past_due') {
+            return false;
+        }
+
+        $days  = (int) config('billing.grace_period.past_due_days', 3);
+        $since = $this->current_period_ends_at ?? $this->updated_at ?? $this->created_at;
+
+        return $since !== null && $since->copy()->addDays($days)->isFuture();
+    }
+
+    /**
+     * Whether this subscription still entitles the tenant to access.
+     *
+     * Active/trialing always do; cancelled subscriptions keep access until the
+     * end of the already-paid period; past-due ones during the grace window.
+     */
+    public function grantsAccess(): bool
+    {
+        if (in_array($this->status, ['trialing', 'active'], true)) {
+            return true;
+        }
+
+        if ($this->status === 'cancelled') {
+            return $this->ends_at !== null && $this->ends_at->isFuture();
+        }
+
+        return $this->pastDueWithinGrace();
+    }
+
+    public function markCancelledAtPeriodEnd(): self
+    {
+        $this->update([
+            'cancel_at_period_end' => true,
+            'auto_renew'           => false,
+        ]);
+
+        return $this;
+    }
+
     public function canUpgrade(): bool
     {
         return $this->is_active;

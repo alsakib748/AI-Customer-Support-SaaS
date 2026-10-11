@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Billing;
 
+use App\Models\PlanProviderPrice;
 use App\Models\Subscription;
 use App\Payments\PaymentGatewayManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -38,29 +39,76 @@ class SyncSubscriptionFromProviderJob implements ShouldQueue
             $gateway = $gateways->driver($subscription->provider);
             $remote = $gateway->getSubscription($subscription->provider_subscription_id);
 
-            $remoteStatus = $remote['status'] ?? null;
-            $localStatus = $this->mapStatus($remoteStatus);
+            $previousStatus = $subscription->status;
 
-            $updates = ['status' => $localStatus];
+            $updates = ['status' => $this->mapStatus($remote['status'] ?? null)];
 
             if (!empty($remote['current_period_start'])) {
                 $updates['current_period_starts_at'] = \Carbon\Carbon::createFromTimestamp(
-                    $remote['current_period_start']
+                    (int) $remote['current_period_start']
                 );
             }
+
             if (!empty($remote['current_period_end'])) {
-                $updates['current_period_ends_at'] = \Carbon\Carbon::createFromTimestamp(
-                    $remote['current_period_end']
-                );
-                $updates['next_billing_at'] = $updates['current_period_ends_at'];
+                $endsAt = \Carbon\Carbon::createFromTimestamp((int) $remote['current_period_end']);
+                $updates['current_period_ends_at'] = $endsAt;
+                $updates['next_billing_at']       = $endsAt;
+                $updates['ends_at']               = $endsAt;
+            }
+
+            if (array_key_exists('cancel_at_period_end', $remote)) {
+                $updates['cancel_at_period_end'] = (bool) $remote['cancel_at_period_end'];
+            }
+
+            if (!empty($remote['trial_start'])) {
+                $updates['trial_starts_at'] = \Carbon\Carbon::createFromTimestamp((int) $remote['trial_start']);
+            }
+
+            if (!empty($remote['trial_end'])) {
+                $updates['trial_ends_at'] = \Carbon\Carbon::createFromTimestamp((int) $remote['trial_end']);
+            }
+
+            if (!empty($remote['canceled_at'])) {
+                $updates['cancelled_at'] = \Carbon\Carbon::createFromTimestamp((int) $remote['canceled_at']);
+            }
+
+            // Keep the local plan in sync when the provider reports a different price.
+            $remotePriceId = data_get($remote, 'items.data.0.price.id');
+
+            if ($remotePriceId && $remotePriceId !== $subscription->provider_price_id) {
+                $providerPrice = PlanProviderPrice::query()
+                    ->where('provider', $subscription->provider)
+                    ->where('provider_price_id', $remotePriceId)
+                    ->first();
+
+                if ($providerPrice) {
+                    $updates['provider_price_id'] = $remotePriceId;
+
+                    if ((int) $providerPrice->plan_id !== (int) $subscription->plan_id) {
+                        $updates['plan_id'] = $providerPrice->plan_id;
+                    }
+                } else {
+                    Log::warning('Synced subscription references an unknown provider price', [
+                        'subscription_id' => $subscription->id,
+                        'provider'        => $subscription->provider,
+                        'provider_price_id' => $remotePriceId,
+                    ]);
+                }
+            }
+
+            $changed = $this->onlyChanged($subscription, $updates);
+
+            if (empty($changed)) {
+                return;
             }
 
             $subscription->update($updates);
 
             Log::info('Subscription synced from provider', [
                 'subscription_id' => $subscription->id,
-                'old_status'      => $subscription->getOriginal('status'),
-                'new_status'      => $localStatus,
+                'old_status'      => $previousStatus,
+                'new_status'      => $updates['status'] ?? $previousStatus,
+                'changed'         => array_keys($changed),
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to sync subscription', [
@@ -69,6 +117,30 @@ class SyncSubscriptionFromProviderJob implements ShouldQueue
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Drop no-op values so a re-run never writes identical data.
+     *
+     * @return array<string, mixed>
+     */
+    protected function onlyChanged(Subscription $subscription, array $updates): array
+    {
+        $changed = [];
+
+        foreach ($updates as $key => $value) {
+            $current = $subscription->getAttribute($key);
+
+            $equal = $value instanceof \DateTimeInterface
+                ? (optional($current)?->getTimestamp() === $value->getTimestamp())
+                : $current == $value;
+
+            if (! $equal) {
+                $changed[$key] = $value;
+            }
+        }
+
+        return $changed;
     }
 
     protected function mapStatus(?string $remoteStatus): string

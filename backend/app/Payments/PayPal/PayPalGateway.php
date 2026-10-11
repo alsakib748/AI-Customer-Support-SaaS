@@ -162,14 +162,19 @@ class PayPalGateway implements PaymentGateway
         // PayPal has no "checkout session"; the order capture is the closest equivalent.
         $order = $this->request('GET', "/v2/checkout/orders/{$sessionId}");
 
+        $unit = $order['purchase_units'][0] ?? [];
+        $amount = $unit['amount'] ?? ($unit['payments']['captures'][0]['amount'] ?? []);
+
         return [
             'status'                   => $order['status'] ?? null,
             'session_id'               => $sessionId,
+            'payment_status'           => $order['status'] ?? null,
+            'amount_total'             => isset($amount['value']) ? (float) $amount['value'] : null,
+            'currency'                 => $amount['currency_code'] ?? null,
             'provider_subscription_id' => null,
             'provider_payment_id'      => $order['purchase_units'][0]['payments']['captures'][0]['id'] ?? null,
             'provider_customer_id'     => null,
             'metadata'                 => [],
-            'raw'                      => $order,
         ];
     }
 

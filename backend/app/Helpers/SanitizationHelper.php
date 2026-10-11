@@ -18,19 +18,4 @@ class SanitizationHelper
         $purifier = new HTMLPurifier($config);
         return $purifier->purify($html);
     }
-
-    public function isProviderManaged(): bool
-{
-    return !empty($this->provider) && !empty($this->provider_subscription_id);
-}
-
-public function markCancelledAtPeriodEnd(): self
-{
-    $this->update([
-        'cancel_at_period_end' => true,
-        'auto_renew'           => false,
-    ]);
-    return $this;
-}
-
 }

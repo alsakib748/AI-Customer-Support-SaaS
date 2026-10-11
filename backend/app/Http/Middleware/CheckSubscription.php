@@ -29,32 +29,23 @@ class CheckSubscription
             return $next($request);
         }
 
-        $subscription = $this->service->getActiveSubscription($tenant->id);
+        $subscription = $this->service->getEntitlingSubscription($tenant->id);
 
-        // No subscription - allow access to billing only
+        // No entitling subscription - allow access to billing only
         if (! $subscription) {
             if ($this->isBillingRoute($request)) {
                 return $next($request);
             }
 
-            return response()->json([
-                'success'     => false,
-                'message'     => 'No active subscription. Please choose a plan.',
-                'code'        => 'no_subscription',
-                'redirect_to' => '/billing',
-            ], 402);
-        }
-
-        // Subscription expired
-        if ($subscription->is_expired) {
-            if ($this->isBillingRoute($request)) {
-                return $next($request);
-            }
+            $existing = $this->service->getSubscription($tenant->id);
+            $expired  = $existing && ! $existing->grantsAccess();
 
             return response()->json([
                 'success'     => false,
-                'message'     => 'Your subscription has expired. Please renew.',
-                'code'        => 'subscription_expired',
+                'message'     => $expired
+                    ? 'Your subscription has expired. Please renew.'
+                    : 'No active subscription. Please choose a plan.',
+                'code'        => $expired ? 'subscription_expired' : 'no_subscription',
                 'redirect_to' => '/billing',
             ], 402);
         }

@@ -31,25 +31,14 @@ class ProcessBillingWebhookJob implements ShouldQueue
      */
     public function handle(BillingWebhookService $processor): void
     {
-        \Log::info('ProcessBillingWebhookJob START', [
-        'webhook_event_id' => $this->webhookEventId,
-    ]);
         $record = PaymentWebhookEvent::find($this->webhookEventId);
 
-        if (!$record) {
-        \Log::warning('ProcessBillingWebhookJob: record not found', [
-            'id' => $this->webhookEventId,
-        ]);
-        return;
-    }
-
-    \Log::info('ProcessBillingWebhookJob: record found', [
-        'id'       => $record->id,
-        'provider' => $record->provider,
-        'type'     => $record->event_type,
-        'status'   => $record->status,
-        'has_normalized' => !empty($record->normalized_payload),
-    ]);
+        if (! $record) {
+            Log::warning('ProcessBillingWebhookJob: record not found', [
+                'id' => $this->webhookEventId,
+            ]);
+            return;
+        }
 
         if ($record->isProcessed()) {
             Log::info('Webhook already processed — skipping', ['id' => $record->id]);
@@ -66,15 +55,13 @@ class ProcessBillingWebhookJob implements ShouldQueue
 
             $processor->process($normalized);
 
-            \Log::info('ProcessBillingWebhookJob: service returned, marking processed');
-
             $record->markAsProcessed();
-
-            \Log::info('ProcessBillingWebhookJob: DONE');
         } catch (\Throwable $e) {
             $record->markAsFailed($e->getMessage());
             Log::error('Webhook processing failed', [
                 'webhook_id' => $record->id,
+                'provider'   => $record->provider,
+                'event_type' => $record->event_type,
                 'error'      => $e->getMessage(),
             ]);
             throw $e;

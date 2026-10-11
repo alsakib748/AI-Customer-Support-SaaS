@@ -10,6 +10,8 @@ use App\Models\Tenant\AIUsage;
 use App\Models\Tenant\AILog;
 use App\Ai\Agents\CustomerSupportAgent;
 use App\Ai\Tools\SearchKnowledgeBaseTool;
+use App\Events\AI\AIResponseGenerated;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -29,26 +31,33 @@ class AIService
      */
     public function processMessage(Message $message): array
     {
+        $conversation = $message->conversation;
+        $customer = $conversation->customer;
+
+        // Check if AI is enabled
+        if (!$this->configuration->enabled || !$this->configuration->auto_reply_enabled) {
+            return ['success' => false, 'skipped' => true, 'message' => 'AI is disabled for this tenant.'];
+        }
+
+        // Check if AI already responded to this message
+        if ($this->hasAIResponse($message)) {
+            return ['success' => false, 'skipped' => true, 'message' => 'AI already responded to this message.'];
+        }
+
+        // Check if conversation is escalated
+        if ($conversation->escalated ?? false) {
+            return ['success' => false, 'skipped' => true, 'message' => 'Conversation is escalated to human agent.'];
+        }
+
+        // Atomically claim this message for AI processing. The unique index on
+        // ai_usage(message_id, operation) guarantees that only one worker — even
+        // across concurrent queue workers — proceeds to call the AI provider.
+        $claim = $this->claimProcessing($message, $conversation);
+        if (!$claim) {
+            return ['success' => false, 'skipped' => true, 'message' => 'AI processing already claimed for this message.'];
+        }
+
         try {
-            // Check if AI is enabled
-            if (!$this->configuration->enabled || !$this->configuration->auto_reply_enabled) {
-                return ['success' => false, 'message' => 'AI is disabled for this tenant.'];
-            }
-
-            // Load conversation and customer
-            $conversation = $message->conversation;
-            $customer = $conversation->customer;
-
-            // Check if AI already responded to this message
-            if ($this->hasAIResponse($message)) {
-                return ['success' => false, 'message' => 'AI already responded to this message.'];
-            }
-
-            // Check if conversation is escalated
-            if ($conversation->escalated ?? false) {
-                return ['success' => false, 'message' => 'Conversation is escalated to human agent.'];
-            }
-
             // Build context
             $context = $this->buildContext($conversation, $customer);
 
@@ -69,8 +78,8 @@ class AIService
             // Log the AI execution
             $this->logAIExecution($message, $response, $duration);
 
-            // Track usage
-            $this->trackUsage($message, $response);
+            // Record usage against the claim row
+            $this->recordUsage($claim, $response);
 
             // Store AI response as message
             if ($response['success'] && isset($response['content'])) {
@@ -78,6 +87,14 @@ class AIService
 
                 // Update conversation last message
                 $conversation->update(['last_message_at' => now()]);
+
+                // Notify listeners (billing audit / observability)
+                event(new AIResponseGenerated($conversation, $aiMessage, [
+                    'provider' => 'gemini',
+                    'model' => $this->configuration->model,
+                    'usage' => $response['usage'] ?? [],
+                    'original_message_id' => $message->id,
+                ]));
 
                 return [
                     'success' => true,
@@ -92,9 +109,16 @@ class AIService
                 ];
             }
 
+            // Provider returned a non-success payload — release the claim so a
+            // retry can attempt processing again.
+            $this->releaseClaim($claim);
+
             return $response;
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Release the claim so the job can retry.
+            $this->releaseClaim($claim);
+
             Log::error('AI processing failed:', [
                 'message_id' => $message->id,
                 'error' => $e->getMessage(),
@@ -105,6 +129,49 @@ class AIService
                 'success' => false,
                 'message' => 'AI processing failed: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Atomically claim a customer message for AI processing.
+     *
+     * Backed by the unique index on ai_usage(message_id, operation): if another
+     * worker already claimed the message, the insert violates the constraint and
+     * we return null instead of processing it twice.
+     */
+    protected function claimProcessing(Message $message, Conversation $conversation): ?AIUsage
+    {
+        try {
+            return AIUsage::create([
+                'conversation_id' => $conversation->id,
+                'message_id'      => $message->id,
+                'provider'        => 'gemini',
+                'model'           => $this->configuration->model,
+                'operation'       => 'chat',
+                'input_tokens'    => 0,
+                'output_tokens'   => 0,
+                'total_tokens'    => 0,
+                'estimated_cost'  => 0,
+                'metadata'        => ['status' => 'processing'],
+            ]);
+        } catch (QueryException $e) {
+            Log::info('AI message already claimed for processing', [
+                'message_id' => $message->id,
+            ]);
+
+            return null;
+        }
+    }
+
+    protected function releaseClaim(AIUsage $claim): void
+    {
+        try {
+            $claim->delete();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to release AI claim', [
+                'claim_id' => $claim->id,
+                'error'    => $e->getMessage(),
+            ]);
         }
     }
 
@@ -287,38 +354,34 @@ class AIService
     }
 
     /**
-     * Track AI usage
+     * Record token usage against the claim row created by claimProcessing().
      */
-    protected function trackUsage(Message $message, array $response): void
+    protected function recordUsage(AIUsage $claim, array $response): void
     {
         try {
             $usage = $response['usage'] ?? [];
-            $inputTokens = $usage['prompt_tokens'] ?? 0;
-            $outputTokens = $usage['completion_tokens'] ?? 0;
-            $totalTokens = $usage['total_tokens'] ?? 0;
+            $inputTokens = (int) ($usage['prompt_tokens'] ?? 0);
+            $outputTokens = (int) ($usage['completion_tokens'] ?? 0);
+            $totalTokens = (int) ($usage['total_tokens'] ?? 0);
 
             // Gemini pricing (approximate)
             $inputCost = ($inputTokens / 1000000) * 0.075; // $0.075 per 1M tokens
             $outputCost = ($outputTokens / 1000000) * 0.30; // $0.30 per 1M tokens
             $estimatedCost = $inputCost + $outputCost;
 
-            AIUsage::create([
-                'conversation_id' => $message->conversation_id,
-                'message_id' => $message->id,
-                'provider' => 'gemini',
-                'model' => $this->configuration->model,
-                'operation' => 'chat',
-                'input_tokens' => $inputTokens,
-                'output_tokens' => $outputTokens,
-                'total_tokens' => $totalTokens,
+            $claim->update([
+                'input_tokens'   => $inputTokens,
+                'output_tokens'  => $outputTokens,
+                'total_tokens'   => $totalTokens,
                 'estimated_cost' => $estimatedCost,
-                'metadata' => [
-                    'success' => $response['success'] ?? false,
+                'metadata'       => [
+                    'status'        => ($response['success'] ?? false) ? 'completed' : 'failed',
+                    'success'       => $response['success'] ?? false,
                     'finish_reason' => $response['finish_reason'] ?? null,
                 ],
             ]);
-        } catch (\Exception $e) {
-            Log::warning('Failed to track AI usage:', ['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to record AI usage:', ['error' => $e->getMessage()]);
         }
     }
 }

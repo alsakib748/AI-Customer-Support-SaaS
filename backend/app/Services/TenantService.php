@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Stancl\Tenancy\Facades\Tenancy;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class TenantService
 {
@@ -417,8 +418,12 @@ class TenantService
             throw new \Exception('User not found in this tenant');
         }
 
+        // Capture the current role BEFORE mutating the model, otherwise
+        // getOriginal() returns the freshly-saved value.
+        $oldRole = $tenantUser->role;
+
         // Don't change owner role
-        if ($tenantUser->role === 'owner' && $newRole !== 'owner') {
+        if ($oldRole === 'owner' && $newRole !== 'owner') {
             $ownerCount = TenantUser::where('tenant_id', $tenantId)
                 ->where('role', 'owner')
                 ->count();
@@ -428,19 +433,29 @@ class TenantService
             }
         }
 
-        $tenantUser->update(['role' => $newRole]);
+        // Spatie roles are team-scoped: switch the permissions team to this
+        // tenant so syncRoles() targets the correct team, then restore it.
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($tenantId);
 
-        // Update Spatie role
-        $user = User::find($userId);
-        $role = Role::firstOrCreate([
-            'name' => $newRole,
-            'guard_name' => 'api',
-        ]);
-        $user->syncRoles([$role]);
+        try {
+            $tenantUser->update(['role' => $newRole]);
+
+            $user = User::find($userId);
+            $role = Role::firstOrCreate([
+                'name' => $newRole,
+                'guard_name' => 'api',
+            ]);
+            $user->syncRoles([$role]);
+
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
 
         return [
             'user_id' => $userId,
-            'old_role' => $tenantUser->getOriginal('role'),
+            'old_role' => $oldRole,
             'new_role' => $newRole,
         ];
     }

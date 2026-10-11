@@ -27,10 +27,6 @@ class ReconcileBillingCommand extends Command
             $this->info('✓ Reconciliation dispatched');
         }
 
-        $this->info('✓ Reconciliation dispatched');
-
-
         return self::SUCCESS;
     }
-
 }

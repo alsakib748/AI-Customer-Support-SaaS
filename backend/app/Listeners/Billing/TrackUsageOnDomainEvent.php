@@ -2,6 +2,8 @@
 
 namespace App\Listeners\Billing;
 
+use App\Events\Conversation\ConversationCreated;
+use App\Events\KnowledgeBase\ArticleCreated;
 use App\Events\Message\MessageCreated;
 use App\Services\Billing\UsageTracker;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,14 +14,9 @@ class TrackUsageOnDomainEvent
 {
     /** @var array<class-string, array{metric:string, amount_field:string}> */
     protected array $map = [
-        \App\Events\Messages\MessageCreated::class => ['metric' => 'messages', 'amount_field' => 'count'],
-        \App\Events\Conversations\ConversationStarted::class => ['metric' => 'conversations', 'amount_field' => 'count'],
-        \App\Events\Customers\CustomerCreated::class => ['metric' => 'customers', 'amount_field' => 'count'],
-        \App\Events\Team\AgentCreated::class => ['metric' => 'agents', 'amount_field' => 'count'],
-        \App\Events\Widgets\WidgetCreated::class => ['metric' => 'widgets', 'amount_field' => 'count'],
-        \App\Events\KnowledgeBase\ArticleCreated::class => ['metric' => 'kb_articles', 'amount_field' => 'count'],
-        \App\Events\Ai\AiResponseGenerated::class => ['metric' => 'ai_requests', 'amount_field' => 'count'],
-        \App\Events\Ai\AiTokensConsumed::class => ['metric' => 'ai_tokens', 'amount_field' => 'tokens'],
+        MessageCreated::class      => ['metric' => 'messages', 'amount_field' => 'count'],
+        ConversationCreated::class => ['metric' => 'conversations', 'amount_field' => 'count'],
+        ArticleCreated::class      => ['metric' => 'kb_articles', 'amount_field' => 'count'],
     ];
 
     /**
@@ -52,6 +49,7 @@ class TrackUsageOnDomainEvent
         $tenantId = data_get($event, 'tenant.id')
             ?? data_get($event, 'tenantId')
             ?? data_get($event, 'tenant_id')
+            ?? optional(tenancy()->tenant)->id
             ?? optional(app('current_tenant'))->id;
 
         if (!$tenantId) {

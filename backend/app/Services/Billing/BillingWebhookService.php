@@ -51,6 +51,10 @@ class BillingWebhookService
             $invoice = $this->createInvoiceFromEvent($subscription, $event);
         }
 
+        // The provider is the source of truth for what was charged, but flag any
+        // divergence from our plan pricing so it can be investigated.
+        $this->reconcileAmount($event, $invoice, $subscription);
+
         $payment = Payment::updateOrCreate(
             [
                 'provider'          => $event['provider'],
@@ -99,6 +103,47 @@ class BillingWebhookService
         }
     }
 
+    /**
+     * Compare the charged amount with the plan price and log divergence.
+     */
+    protected function reconcileAmount(array $event, ?Invoice $invoice, ?Subscription $subscription): void
+    {
+        $plan = $subscription?->plan;
+
+        if (! $plan || $plan->isFree()) {
+            return;
+        }
+
+        $expected = $plan->getPriceForCycle($subscription->billing_cycle);
+        $charged  = $event['amount'] ?? null;
+
+        if ($charged === null || $expected <= 0) {
+            return;
+        }
+
+        if (abs((float) $charged - (float) $expected) > 0.01) {
+            Log::warning('Webhook amount does not match plan price', [
+                'provider'        => $event['provider'] ?? null,
+                'subscription_id' => $subscription->id,
+                'plan_id'         => $plan->id,
+                'expected'        => $expected,
+                'charged'         => $charged,
+            ]);
+
+            if ($invoice) {
+                $invoice->update([
+                    'metadata' => array_merge($invoice->metadata ?? [], [
+                        'amount_mismatch' => [
+                            'expected' => $expected,
+                            'charged'  => $charged,
+                            'at'       => now()->toISOString(),
+                        ],
+                    ]),
+                ]);
+            }
+        }
+    }
+
     protected function createInvoiceFromEvent(Subscription $subscription, array $event): ?Invoice
     {
         $plan      = $subscription->plan;
@@ -107,10 +152,9 @@ class BillingWebhookService
         $provider  = $event['provider'];
         $usePaypal = $provider === 'paypal';
 
-        return Invoice::create([
+        $attributes = [
             'tenant_id'         => $subscription->tenant_id,
             'subscription_id'   => $subscription->id,
-            'invoice_number'    => $this->invoices->generateInvoiceNumber(),
             'subtotal'          => $amount,
             'tax_amount'        => 0,
             'discount_amount'   => 0,
@@ -130,7 +174,18 @@ class BillingWebhookService
                 'total'       => $amount,
             ]],
             'metadata'          => $event['metadata'] ?? [],
-        ]) ?: null;
+        ];
+
+        // Keyed on the provider invoice id when present so a retried webhook
+        // cannot create a second invoice.
+        if (! empty($event['provider_invoice_id'])) {
+            return Invoice::firstOrCreate(
+                [$usePaypal ? 'paypal_invoice_id' : 'stripe_invoice_id' => $event['provider_invoice_id']],
+                array_merge(['invoice_number' => $this->invoices->generateInvoiceNumber()], $attributes)
+            );
+        }
+
+        return Invoice::create(array_merge(['invoice_number' => $this->invoices->generateInvoiceNumber()], $attributes));
     }
 
     protected function periodFromMetadata(array $event, string $key): ?\Illuminate\Support\Carbon
@@ -148,9 +203,12 @@ class BillingWebhookService
     {
         $subscription = $this->findSubscription($event);
 
-         $reason = $event['metadata']['failure_reason'] ?? 'Provider reported failure';
+        // Key on the provider ids so a retried delivery updates the same row.
+        $key = ! empty($event['provider_payment_id'])
+            ? ['provider' => $event['provider'], 'provider_payment_id' => $event['provider_payment_id']]
+            : ['provider' => $event['provider'], 'provider_invoice_id' => $event['provider_invoice_id']];
 
-        $payment = Payment::create([
+        $payment = Payment::updateOrCreate($key, [
             'tenant_id'               => $subscription?->tenant_id,
             'subscription_id'         => $subscription?->id,
             'provider'                => $event['provider'],

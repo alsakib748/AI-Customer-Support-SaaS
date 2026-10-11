@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Billing;
 
+use App\Models\BillingReminder;
 use App\Models\Subscription;
 use App\Notifications\Billing\TrialEndingNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -40,12 +41,29 @@ class SendTrialEndingReminder implements ShouldQueue
                 ->get();
 
             foreach ($subscriptions as $subscription) {
+                $periodKey = $subscription->trial_ends_at
+                    ? $subscription->trial_ends_at->toDateString()
+                    : 'unknown';
+
+                // Atomically claim the reminder so repeat runs never double-send.
+                if (! BillingReminder::claim($subscription->tenant_id, $subscription->id, 'trial', $daysBefore, $periodKey)) {
+                    Log::info('Trial ending reminder already sent', [
+                        'subscription_id' => $subscription->id,
+                        'days_before'     => $daysBefore,
+                        'period_key'      => $periodKey,
+                    ]);
+                    continue;
+                }
+
                 try {
                     $owner = $subscription->tenant->getOwner();
                     if ($owner) {
                         $owner->notify(new TrialEndingNotification($subscription, $daysBefore));
                     }
                 } catch (\Exception $e) {
+                    // Release the claim so a later run can retry delivery.
+                    BillingReminder::release($subscription->id, 'trial', $daysBefore, $periodKey);
+
                     Log::error('Failed to send trial reminder', [
                         'subscription_id' => $subscription->id,
                         'error' => $e->getMessage(),

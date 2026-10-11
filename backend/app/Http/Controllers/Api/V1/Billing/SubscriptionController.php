@@ -113,6 +113,17 @@ class SubscriptionController extends Controller
             $plan         = $this->planService->getPlan($validated['plan_id']);
             $billingCycle = $validated['billing_cycle'] ?? 'monthly';
 
+            // Paid plans must never be activated from client-supplied data:
+            // they require a verified provider checkout / webhook. Only free
+            // plans may be created directly.
+            if (! $plan->isFree()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Paid plans must be purchased through checkout.',
+                    'code'    => 'checkout_required',
+                ], 422);
+            }
+
             $coupon = null;
             if (! empty($validated['coupon_code'])) {
                 $coupon = Coupon::byCode($validated['coupon_code'])->first();
@@ -186,7 +197,54 @@ class SubscriptionController extends Controller
                 ], 400);
             }
 
-            $subscription = $this->service->upgrade($subscription, $newPlan);
+            // A paid upgrade must be billed for real. Locally-managed (free)
+            // subscriptions go through checkout; provider-managed subscriptions
+            // are changed at the provider with proration before we switch locally.
+            if (! $subscription->isProviderManaged()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This plan change must be completed through checkout.',
+                    'code'    => 'checkout_required',
+                ], 422);
+            }
+
+            $provider = $subscription->provider;
+            $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+
+            if (! $priceId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected plan is not available with the current payment provider.',
+                    'code'    => 'provider_price_missing',
+                ], 422);
+            }
+
+            try {
+                $this->gateways->driver($provider)->changeSubscription(
+                    $subscription->provider_subscription_id,
+                    [
+                        'provider_price_id'  => $priceId,
+                        'proration_behavior' => 'create_prorations',
+                        'metadata'           => ['tenant_id' => $tenant->id],
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::error('Provider plan change failed', [
+                    'subscription_id' => $subscription->id,
+                    'error'           => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to change the plan with the payment provider. Please try again.',
+                    'code'    => 'provider_change_failed',
+                ], 422);
+            }
+
+            $subscription->update(['provider_price_id' => $priceId]);
+
+            // The provider issues the proration invoice; do not double-bill locally.
+            $subscription = $this->service->upgrade($subscription, $newPlan, createProrationInvoice: false);
 
             return (new SubscriptionResource($subscription))
                 ->additional([
@@ -243,8 +301,56 @@ class SubscriptionController extends Controller
             if ($newPlan->price_monthly >= $subscription->plan->price_monthly) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'New plan must be a downgrade. Use upgrade endpoint for upgrades.',
+                    'message' => 'New plan must be a downgrade. Use downgrade endpoint for downgrades.',
                 ], 400);
+            }
+
+            // Provider-managed subscriptions must have the change registered with
+            // the provider so the next invoice reflects the new (lower) price.
+            if ($subscription->isProviderManaged()) {
+                if ($newPlan->isFree()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Downgrading to a free plan requires cancelling the subscription at period end.',
+                        'code'    => 'cancel_required',
+                    ], 422);
+                }
+
+                $provider = $subscription->provider;
+                $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+
+                if (! $priceId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The selected plan is not available with the current payment provider.',
+                        'code'    => 'provider_price_missing',
+                    ], 422);
+                }
+
+                try {
+                    // No proration: the lower price applies from the next cycle.
+                    $this->gateways->driver($provider)->changeSubscription(
+                        $subscription->provider_subscription_id,
+                        [
+                            'provider_price_id'  => $priceId,
+                            'proration_behavior' => 'none',
+                            'metadata'           => ['tenant_id' => $tenant->id],
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('Provider plan change failed', [
+                        'subscription_id' => $subscription->id,
+                        'error'           => $e->getMessage(),
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unable to change the plan with the payment provider. Please try again.',
+                        'code'    => 'provider_change_failed',
+                    ], 422);
+                }
+
+                $subscription->update(['provider_price_id' => $priceId]);
             }
 
             $subscription = $this->service->downgrade($subscription, $newPlan);
@@ -532,7 +638,26 @@ class SubscriptionController extends Controller
 
             $session = $this->gateways->driver($provider)->retrieveCheckoutSession($validated['session_id']);
 
-            if (($session['status'] ?? null) !== 'complete') {
+            // Bind the session to this tenant when the provider echoes our metadata.
+            $sessionTenantId = $session['metadata']['tenant_id'] ?? null;
+
+            if ($sessionTenantId !== null && (string) $sessionTenantId !== (string) $tenant->id) {
+                Log::warning('Checkout session tenant mismatch', [
+                    'tenant_id'         => $tenant->id,
+                    'session_tenant_id' => $sessionTenantId,
+                    'provider'          => $provider,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This checkout session does not belong to your workspace.',
+                ], 403);
+            }
+
+            // Providers report "done" differently (Stripe: complete, PayPal: COMPLETED/APPROVED).
+            $status = strtolower((string) ($session['status'] ?? ''));
+
+            if (! in_array($status, ['complete', 'completed', 'approved'], true)) {
                 return response()->json([
                     'success' => true,
                     'data'    => [
@@ -557,6 +682,48 @@ class SubscriptionController extends Controller
             }
 
             if ($subscription->status === 'pending') {
+                // Never trust the redirect alone: validate the charged amount and
+                // currency against the plan before activating. Trials charge nothing.
+                $plan           = $subscription->plan;
+                $isTrialing     = (int) ($plan?->trial_days ?? 0) > 0;
+                $expectedAmount = $plan?->getPriceForCycle($subscription->billing_cycle) ?? 0.0;
+                $chargedAmount  = $session['amount_total'] ?? null;
+                $chargedCurrency = $session['currency'] !== null ? strtoupper((string) $session['currency']) : null;
+                $expectedCurrency = $plan?->currency !== null ? strtoupper((string) $plan->currency) : null;
+
+                if (! $isTrialing && $expectedAmount > 0) {
+                    if ($chargedAmount === null
+                        || abs((float) $chargedAmount - (float) $expectedAmount) > 0.01) {
+                        Log::warning('Checkout amount mismatch', [
+                            'tenant_id' => $tenant->id,
+                            'provider'  => $provider,
+                            'expected'  => $expectedAmount,
+                            'charged'   => $chargedAmount,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'The amount charged does not match the selected plan.',
+                            'code'    => 'amount_mismatch',
+                        ], 422);
+                    }
+                }
+
+                if ($expectedCurrency !== null && $chargedCurrency !== null && $chargedCurrency !== $expectedCurrency) {
+                    Log::warning('Checkout currency mismatch', [
+                        'tenant_id' => $tenant->id,
+                        'provider'  => $provider,
+                        'expected'  => $expectedCurrency,
+                        'charged'   => $chargedCurrency,
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The currency charged does not match the selected plan.',
+                        'code'    => 'currency_mismatch',
+                    ], 422);
+                }
+
                 $subscription = $this->service->completePendingCheckout($subscription, [
                     'provider_subscription_id' => $session['provider_subscription_id'],
                     'provider_customer_id'     => $session['provider_customer_id'],
@@ -588,6 +755,14 @@ class SubscriptionController extends Controller
                 'message' => 'Failed to verify checkout: ' . $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Resolve the provider price id for a plan/cycle, or null when unavailable.
+     */
+    protected function resolveProviderPrice(\App\Models\Plan $plan, string $provider, string $cycle): ?string
+    {
+        return $plan->providerPrice($provider, $cycle, $plan->currency ?? 'USD')?->provider_price_id;
     }
 
 }

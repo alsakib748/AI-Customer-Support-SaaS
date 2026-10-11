@@ -139,7 +139,7 @@ Route::prefix('v1')->group(function () {
      });
 
     // Protected Routes - Authentication Required
-    Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team', 'maintenance.mode'])->group(function () {
+    Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team', 'maintenance.mode', 'check.subscription'])->group(function () {
 
         // Tenant Routes
         Route::prefix('tenants')->group(function () {

@@ -47,14 +47,55 @@ class SubscriptionService
     }
 
     /**
+     * Get the subscription that currently entitles the tenant to access.
+     *
+     * Unlike getActiveSubscription(), this also honours the past-due grace
+     * window and paid-through access for subscriptions cancelled at period end.
+     */
+    public function getEntitlingSubscription(string $tenantId): ?Subscription
+    {
+        $graceDays = (int) config('billing.grace_period.past_due_days', 3);
+        $graceCutoff = now()->subDays($graceDays);
+
+        return Subscription::forTenant($tenantId)
+            ->with(['plan'])
+            ->where(function ($query) use ($graceCutoff) {
+                $query->whereIn('status', ['trialing', 'active'])
+                    ->orWhere(function ($q) {
+                        // Cancelled but still inside the already-paid period.
+                        $q->where('status', 'cancelled')
+                            ->whereNotNull('ends_at')
+                            ->where('ends_at', '>', now());
+                    })
+                    ->orWhere(function ($q) use ($graceCutoff) {
+                        // Past due but still within the grace window.
+                        $q->where('status', 'past_due')
+                            ->where(function ($qq) use ($graceCutoff) {
+                                $qq->whereNull('current_period_ends_at')
+                                    ->orWhere('current_period_ends_at', '>', $graceCutoff);
+                            });
+                    });
+            })
+            ->latest()
+            ->first();
+    }
+
+    /**
      * Create a new subscription
      */
     public function createSubscription(
         Tenant $tenant,
         Plan $plan,
         string $billingCycle = 'monthly',
-        ?Coupon $coupon = null
+        ?Coupon $coupon = null,
+        bool $allowPaid = false
     ): Subscription {
+        if (! $plan->isFree() && ! $allowPaid) {
+            throw new \RuntimeException(
+                'Paid plans must be activated through verified checkout, not direct creation.'
+            );
+        }
+
         return DB::transaction(function () use ($tenant, $plan, $billingCycle, $coupon) {
             $now         = now();
             $isTrialing  = $plan->trial_days > 0;
@@ -106,9 +147,9 @@ class SubscriptionService
     /**
      * Upgrade subscription
      */
-    public function upgrade(Subscription $subscription, Plan $newPlan): Subscription
+    public function upgrade(Subscription $subscription, Plan $newPlan, bool $createProrationInvoice = true): Subscription
     {
-        return DB::transaction(function () use ($subscription, $newPlan) {
+        return DB::transaction(function () use ($subscription, $newPlan, $createProrationInvoice) {
             $oldPlan = $subscription->plan;
 
             // Calculate prorated amount
@@ -117,8 +158,9 @@ class SubscriptionService
             // Switch plan
             $subscription->switchPlan($newPlan);
 
-            // Create proration invoice if needed
-            if ($prorationAmount > 0) {
+            // Create proration invoice if needed. Skipped when the provider is
+            // authoritative for billing (it issues its own proration invoice).
+            if ($createProrationInvoice && $prorationAmount > 0) {
                 $this->invoiceService->createProrationInvoice($subscription, $prorationAmount);
             }
 
