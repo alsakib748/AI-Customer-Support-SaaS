@@ -1,7 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import { useRbacStore } from '@/stores/rbac';
 import { useTeamStore } from '@/stores/team';
 // import { useToast } from 'primevue/usetoast';
 import api from '@/services/api';
@@ -9,7 +8,6 @@ import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
 
 const auth = useAuthStore();
-const rbac = useRbacStore();
 
 const planLimit = usePlanLimit();
 
@@ -241,14 +239,16 @@ const assignableRoles = computed(() => {
         return [
             { label: 'Admin', value: 'admin' },
             { label: 'Manager', value: 'manager' },
-            { label: 'Support Agent', value: 'support_agent' }
+            { label: 'Support Agent', value: 'agent' },
+            { label: 'Viewer', value: 'viewer' }
         ];
     }
 
     if (role === 'admin') {
         return [
             { label: 'Manager', value: 'manager' },
-            { label: 'Support Agent', value: 'support_agent' }
+            { label: 'Support Agent', value: 'agent' },
+            { label: 'Viewer', value: 'viewer' }
         ];
     }
 
@@ -266,8 +266,14 @@ const loadMembers = async () => {
 };
 
 const changeRole = async (member, newRole) => {
+    const tenantId = member.tenant?.id || auth.currentTenantId;
+    if (!tenantId) {
+        toast.error('Unable to determine the workspace for this member');
+        return;
+    }
+
     try {
-        await api.put(`/team/members/${member.id}/role`, { role: newRole });
+        await api.put(`/tenants/${tenantId}/users/${member.user_id}/role`, { role: newRole });
         toast.success('Role updated');
         loadMembers();
     } catch (e) {
@@ -438,7 +444,7 @@ watch(
 
             <Column field="role" header="Role">
                 <template #body="{ data }">
-                    <Select :modelValue="data.role" :options="assignableRoles" optionLabel="label" optionValue="value" :disabled="!auth.hasPermission('team.assign_role')" @update:modelValue="(role) => changeRole(data, role)" />
+                    <Select :modelValue="data.role" :options="assignableRoles" optionLabel="label" optionValue="value" :disabled="data.is_owner || !auth.hasPermission('team.assign_role')" @update:modelValue="(role) => changeRole(data, role)" />
                 </template>
             </Column>
 

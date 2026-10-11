@@ -281,4 +281,52 @@ class TenantController extends Controller
         }
     }
 
+    /**
+     * Update a team member's role within a tenant.
+     *
+     * @param Request $request
+     * @param string $tenantId
+     * @param int $userId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateUserRole(Request $request, $tenantId, $userId)
+    {
+        try {
+            $validated = $request->validate([
+                'role' => 'required|string|in:admin,manager,agent,viewer',
+            ]);
+
+            $result = $this->tenantService->updateUserRole(
+                $tenantId,
+                (int) $userId,
+                $validated['role']
+            );
+
+            $this->auditLogService->log(
+                'user_role_updated',
+                'user',
+                (int) $userId,
+                ['role' => $result['old_role']],
+                ['role' => $result['new_role'], 'tenant_id' => $tenantId]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User role updated successfully',
+                'data' => $result,
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
 }
