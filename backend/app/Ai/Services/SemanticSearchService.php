@@ -7,6 +7,7 @@ namespace App\Ai\Services;
 use App\Ai\Exceptions\EmbeddingException;
 use App\Models\Tenant\KnowledgeBaseArticle;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SemanticSearchService
 {
@@ -106,12 +107,14 @@ class SemanticSearchService
     protected function keywordSearchFallback(string $query, int $limit = 5): array
     {
         try {
+            $term = '%'.Str::lower($query).'%';
+
             $articles = KnowledgeBaseArticle::published()
                 ->whereIn('visibility', ['ai', 'public'])
-                ->where(function ($q) use ($query) {
-                    $q->where('title', 'ILIKE', "%{$query}%")
-                        ->orWhere('content', 'ILIKE', "%{$query}%")
-                        ->orWhere('excerpt', 'ILIKE', "%{$query}%");
+                ->where(function ($q) use ($term) {
+                    $q->whereRaw('LOWER(title) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(content) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(excerpt) LIKE ?', [$term]);
                 })
                 ->limit($limit)
                 ->get();

@@ -15,6 +15,7 @@ use App\Models\Tenant\KnowledgeBaseCategory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class KnowledgeBaseArticleService
@@ -85,9 +86,10 @@ class KnowledgeBaseArticleService
     {
         return KnowledgeBaseArticle::publishedAndEligible()
             ->where(function ($q) use ($query) {
-                $q->where('title', 'ILIKE', "%{$query}%")
-                    ->orWhere('excerpt', 'ILIKE', "%{$query}%")
-                    ->orWhere('content', 'ILIKE', "%{$query}%");
+                $term = '%'.Str::lower($query).'%';
+                $q->whereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(excerpt) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(content) LIKE ?', [$term]);
             })
             ->limit(10)
             ->get()
