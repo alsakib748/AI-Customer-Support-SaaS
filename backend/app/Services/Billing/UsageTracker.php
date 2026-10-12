@@ -1,13 +1,16 @@
 <?php
+
 // app/Services/Billing/UsageTracker.php
 
 namespace App\Services\Billing;
 
 use App\Models\Subscription;
-use App\Models\UsageRecord;
 use App\Models\Tenant;
+use App\Models\UsageRecord;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class UsageTracker
 {
@@ -25,11 +28,12 @@ class UsageTracker
         try {
             $subscription = $this->getSubscription($tenantId);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 Log::warning('No subscription found for usage tracking', [
                     'tenant_id' => $tenantId,
                     'type' => $type,
                 ]);
+
                 return;
             }
 
@@ -69,7 +73,7 @@ class UsageTracker
     {
         $subscription = $this->getSubscription($tenantId);
 
-        if (!$subscription) {
+        if (! $subscription) {
             return true; // No subscription = no access
         }
 
@@ -83,7 +87,7 @@ class UsageTracker
     {
         $subscription = $this->getSubscription($tenantId);
 
-        if (!$subscription) {
+        if (! $subscription) {
             return 0;
         }
 
@@ -105,7 +109,7 @@ class UsageTracker
         return Cache::remember("subscription_usage:{$tenantId}", self::CACHE_TTL, function () use ($tenantId) {
             $subscription = $this->getSubscription($tenantId);
 
-            if (!$subscription) {
+            if (! $subscription) {
                 return [];
             }
 
@@ -148,7 +152,7 @@ class UsageTracker
     {
         $subscription = $this->getSubscription($tenantId);
 
-        if (!$subscription) {
+        if (! $subscription) {
             return 0;
         }
 
@@ -164,11 +168,30 @@ class UsageTracker
     {
         $subscription = $this->getSubscription($tenantId);
 
-        if (!$subscription) {
+        if (! $subscription) {
             return;
         }
 
+        $tenant = Tenant::find($tenantId);
+
+        if (! $tenant) {
+            Log::warning('Storage usage sync skipped: tenant not found', [
+                'tenant_id' => $tenantId,
+            ]);
+
+            return;
+        }
+
+        // Tenant content lives in the tenant's own database, so the tenant
+        // connection must be pointed at it before measuring.
+        $startedTenancy = false;
+
         try {
+            if (! tenancy()->initialized) {
+                Tenancy::initialize($tenant);
+                $startedTenancy = true;
+            }
+
             $bytes = $this->calculateStorageBytes($tenantId);
 
             $subscription->update(['storage_used' => $bytes]);
@@ -184,20 +207,37 @@ class UsageTracker
                 'tenant_id' => $tenantId,
                 'error' => $e->getMessage(),
             ]);
+        } finally {
+            if ($startedTenancy && tenancy()->initialized) {
+                Tenancy::end();
+            }
         }
     }
 
+    /**
+     * Total bytes of the tenant's stored documents.
+     *
+     * Knowledge base articles live in the tenant database, which is already
+     * isolated per tenant, so there is no tenant_id column to filter on.
+     * Byte length is measured in PHP so it is exact on every database driver
+     * (SQL LENGTH counts characters on SQLite/PostgreSQL, not bytes).
+     */
     protected function calculateStorageBytes(string $tenantId): int
     {
-        // Wire this to actual storage metrics (S3, local disk, DB size, etc.)
-        // Example placeholder — replace with real calculation.
         $total = 0;
 
-        // Documents
-        $total += (int) \DB::connection('tenant')
+        DB::connection('tenant')
             ->table('knowledge_base_articles')
-            ->where('tenant_id', $tenantId)
-            ->sum('file_size');
+            ->select('id', 'title', 'excerpt', 'content')
+            ->whereNull('deleted_at')
+            ->orderBy('id')
+            ->chunk(200, function ($articles) use (&$total) {
+                foreach ($articles as $article) {
+                    $total += strlen((string) $article->title)
+                        + strlen((string) $article->excerpt)
+                        + strlen((string) $article->content);
+                }
+            });
 
         return $total;
     }
@@ -208,8 +248,9 @@ class UsageTracker
     public function resetMonthlyUsage(string $tenantId): void
     {
         $subscription = $this->getSubscription($tenantId);
-        if (!$subscription)
+        if (! $subscription) {
             return;
+        }
 
         $subscription->resetUsage();
 
