@@ -9,6 +9,8 @@ use App\Events\AI\AIResponseGenerated;
 use App\Models\Tenant\AIConfiguration;
 use App\Models\Tenant\Conversation;
 use App\Models\Tenant\Message;
+use App\Models\Tenant\QuotaReservation;
+use App\Services\Billing\BillingLimitService;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -21,6 +23,7 @@ class AIStreamingService
     public function __construct(
         GeminiService $geminiService,
         protected AiUsageRecorder $recorder,
+        protected BillingLimitService $billing,
     ) {
         $this->configuration = AIConfiguration::first() ?? AIConfiguration::getDefault();
         $this->geminiService = $geminiService;
@@ -29,9 +32,9 @@ class AIStreamingService
     /**
      * Stream AI response
      */
-    public function streamResponse(Conversation $conversation, Message $message): StreamedResponse
+    public function streamResponse(Conversation $conversation, Message $message, ?QuotaReservation $reservation = null): StreamedResponse
     {
-        return response()->stream(function () use ($conversation, $message) {
+        return response()->stream(function () use ($conversation, $message, $reservation) {
             $startTime = microtime(true);
             $fullResponse = '';
             $chunksReceived = 0;
@@ -147,6 +150,10 @@ class AIStreamingService
                         'original_message_id' => $message->id,
                     ]));
                 }
+
+                // Usage is now recorded against the tenant, so the atomic quota
+                // reservation can be released.
+                $this->billing->release($reservation);
             }
         }, 200, [
             'Cache-Control' => 'no-cache',

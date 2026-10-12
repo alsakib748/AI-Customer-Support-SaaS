@@ -17,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 class AIStreamController extends Controller
 {
     protected AIStreamingService $streamingService;
+
     protected AIService $aiService;
 
     public function __construct(
@@ -30,15 +31,9 @@ class AIStreamController extends Controller
     /**
      * Stream AI response
      */
-    public function stream(Request $request, Conversation $conversation, Message $message,BillingLimitService $limits,)
+    public function stream(Request $request, Conversation $conversation, Message $message, BillingLimitService $limits)
     {
         try {
-
-            // ============================================
-            // 1. ENFORCE BILLING LIMITS FIRST
-            // ============================================
-            $tenant = app('current_tenant');
-            $limits->enforce($tenant, 'ai.requests.monthly', 1);
 
             // Verify message belongs to conversation
             if ($message->conversation_id !== $conversation->id) {
@@ -49,7 +44,7 @@ class AIStreamController extends Controller
             }
 
             // AI can respond to messages from customers or agents.
-            if (!in_array($message->sender_type, ['customer', 'agent'], true)) {
+            if (! in_array($message->sender_type, ['customer', 'agent'], true)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Only customer or agent messages can be streamed.',
@@ -58,7 +53,7 @@ class AIStreamController extends Controller
 
             // Check if AI is enabled
             $config = AIConfiguration::first();
-            if (!$config || !$config->enabled) {
+            if (! $config || ! $config->enabled) {
                 return response()->json([
                     'success' => false,
                     'message' => 'AI is not enabled.',
@@ -66,7 +61,7 @@ class AIStreamController extends Controller
             }
 
             // Check if streaming is enabled
-            if (!$config->streaming_enabled) {
+            if (! $config->streaming_enabled) {
                 return response()->json([
                     'success' => false,
                     'message' => 'AI streaming is not enabled.',
@@ -86,26 +81,30 @@ class AIStreamController extends Controller
                 'message_id' => $message->id,
             ]);
 
-            return $this->streamingService->streamResponse($conversation, $message);
+            // Atomic quota reservation immediately before spending provider
+            // tokens. The reservation is released once the stream finishes.
+            $tenant = app('current_tenant');
+            $reservation = $limits->reserveOrThrow($tenant, 'ai.requests.monthly', 1);
 
-        }catch (PlanLimitExceededException $e) {
-        //  Structured 403 — frontend shows "upgrade" prompt
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage(),
-            'code'    => $e->errorCode,
-            'data'    => $e->errorData,
-        ], 403);
+            return $this->streamingService->streamResponse($conversation, $message, $reservation);
 
-       } catch (ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed.',
-            'errors'  => $e->errors(),
-        ], 422);
+        } catch (PlanLimitExceededException $e) {
+            //  Structured 403 — frontend shows "upgrade" prompt
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code' => $e->errorCode,
+                'data' => $e->errorData,
+            ], 403);
 
-       }
-         catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
             Log::error('Streaming error:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -113,7 +112,7 @@ class AIStreamController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Streaming error: ' . $e->getMessage(),
+                'message' => 'Streaming error: '.$e->getMessage(),
             ], 500);
         }
     }
