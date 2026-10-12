@@ -1,6 +1,6 @@
 # Phase 5 — Automated Test Matrix
 
-Status: **WS4 (billing + payment surface)**
+Status: **WS5 (public chat widget)**
 Owner: Phase 5 automated testing strategy
 Branch: `test/phase-5-automated-suite`
 
@@ -47,6 +47,7 @@ workstream lands.
 | AI usage/health/analytics/logs API (new) | `Feature/Ai/AIUsageApiTest` (7) | P1 |
 | Subscription lifecycle API (new) | `Feature/Billing/SubscriptionLifecycleApiTest` (20) | P0 |
 | Invoices / payments API (new) | `Feature/Billing/InvoicePaymentApiTest` (12) | P1 |
+| Public widget API (new) | `Feature/Widget/PublicWidgetApiTest` (15) | P0 |
 | Billing / entitlement | `Feature/Billing/*` (service/controller level) | P0 |
 | AI pipeline / quota | `Feature/Ai/*` (9 files) | P0 |
 | Audit log API | `Feature/Audit/AuditLogApiTest` | P0 |
@@ -74,8 +75,8 @@ workstream lands.
 | WS4 | Stripe webhook signature + idempotency | Covered. | P0 |
 | WS4 | Subscription lifecycle API (cancel/resume/change) | Covered at HTTP level by `SubscriptionLifecycleApiTest` (current/store/cancel/resume/validate-coupon/providers/upgrade/downgrade/checkout). | P0 |
 | WS4 | Invoices / payments HTTP surface | Covered by `InvoicePaymentApiTest` (index/statistics/show/download, cross-tenant isolation). | P1 |
-| WS5 | Public widget session bootstrap + message ingestion | No coverage. | P0 |
-| WS5 | Widget rate limiting / tenant resolution from embed key | No coverage. | P0 |
+| WS5 | Public widget session bootstrap + message ingestion | Covered by `PublicWidgetApiTest` (bootstrap config/origin/404/422, message + conversation read, rate limit). Session bootstrap is blocked by a P0 defect (see below). | P0 |
+| WS5 | Widget rate limiting / tenant resolution from embed key | Covered: `widget.rate.limit` returns 429 past the limit; tenant resolved from widget key and session token. | P0 |
 | WS6 | Analytics aggregation endpoints | No coverage. | P1 |
 | WS6 | Export jobs (CSV/PDF) tenant scoping | Partial (customer CSV, invoice PDF). | P1 |
 | WS6 | Audit side-effect assertions (no write on denial) | Partial. | P0 |
@@ -89,7 +90,8 @@ workstream lands.
   **261 passed / 873 assertions** after WS1 (auth + permission matrix);
   **289 passed / 972 assertions** after WS2 (conversations / messages / tickets);
   **319 passed / 1103 assertions** after WS3 (knowledge base / AI surface);
-  **351 passed / 1229 assertions** after WS4 (subscription lifecycle + invoices/payments).
+  **351 passed / 1229 assertions** after WS4 (subscription lifecycle + invoices/payments);
+  **366 passed / 1313 assertions** after WS5 (public widget API).
 - Pint: repo-wide `--test` fails on 485 pre-existing files → CI scopes pint to
   changed files only.
 - Frontend: `npx eslint src` → 3 pre-existing problems
@@ -116,6 +118,14 @@ workstream lands.
 - `POST /subscription/validate-coupon` validates inline inside a
   `catch (\Exception)`, so a missing `code` surfaces as **500** instead of 422
   (`ValidationException` extends `Exception`). A test records this.
+- **P0 — the public widget session endpoint is broken.**
+  `WidgetController::session()` reads `app('current_tenant')` *before* it
+  resolves the widget/tenant. On the public `v1/widget` route nothing binds
+  `current_tenant`, so `BillingLimitService::enforce(Tenant $tenant, ...)`
+  receives `null` and raises a `TypeError`; the handler's `catch (\Exception)`
+  does not catch `Error`, so `POST /v1/widget/session` returns **500** for every
+  request. A test records this. (Widget reads via a session token still work
+  because those handlers resolve the tenant before touching `current_tenant`.)
 
 ## Test-harness quirks
 
@@ -130,6 +140,11 @@ workstream lands.
 - Billing tests set `database.default = central` (billing models are central and
   `exists:plans,id` resolves the default connection), and the central schema
   slice now includes a minimal `coupons` table for the coupon endpoints.
+- Widget tests point the tenant connection at the tenant file but deliberately
+  do **not** bind `current_tenant`, mirroring the public route (the controller
+  must resolve the tenant itself). Stancl's database bootstrapper is disabled,
+  so controller-side `Tenancy::initialize()` does not switch connections; a
+  single active tenant keeps the pointed connection authoritative.
 
 ## Conventions for new tests
 
