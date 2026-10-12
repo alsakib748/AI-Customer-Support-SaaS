@@ -1,6 +1,6 @@
 # Phase 5 — Automated Test Matrix
 
-Status: **WS6 (analytics, exports, notifications, audit)**
+Status: **WS7 (CI gate, PostgreSQL-tagged tests, frontend lint/build)**
 Owner: Phase 5 automated testing strategy
 Branch: `test/phase-5-automated-suite`
 
@@ -83,8 +83,8 @@ workstream lands.
 | WS6 | Analytics aggregation endpoints | PostgreSQL-only SQL; route RBAC covered by `AnalyticsRbacTest`; aggregation correctness deferred to PostgreSQL-gated CI (WS7). | P1 |
 | WS6 | Export jobs (CSV/PDF) tenant scoping | Covered by `AnalyticsExportApiTest` (store/index/download, cross-tenant and cross-user isolation). | P1 |
 | WS6 | Audit side-effect assertions (no write on denial) | Partial: a notification cross-user read is asserted side-effect free; audit rows are not yet asserted on every denial. | P0 |
-| WS7 | Frontend unit/E2E (auth, widget, team accept) | No frontend test framework exists. | P1 |
-| WS7 | CI gate scoping pint to changed files; eslint baseline | Repo-wide pint fails (pre-existing, 485 files). | P1 |
+| WS7 | Frontend unit/E2E (auth, widget, team accept) | No frontend test framework exists; not introduced in Phase 5. | P1 |
+| WS7 | CI gate scoping pint to changed files; eslint baseline | Implemented in `.github/workflows/ci.yml`: backend job (phpunit, scoped pint), frontend job (scoped eslint on changed files, `npm run build`). Repo-wide pint (485 files) and repo-wide eslint (51 problems) are pre-existing and not gated. | P1 |
 
 ## Baseline (rolls up per workstream)
 
@@ -98,10 +98,38 @@ workstream lands.
   **384 passed / 1358 assertions** after WS6 (analytics exports + RBAC + tenant notifications).
 - Pint: repo-wide `--test` fails on 485 pre-existing files → CI scopes pint to
   changed files only.
-- Frontend: `npx eslint src` → 3 pre-existing problems
+- Frontend (WS7): the three JS lint problems
   (`services/streamingService.js:215`, `stores/billing.js:1496`,
-  `stores/systemSettings.js:90`); no test runner configured.
-- `npm run build` passes.
+  `stores/systemSettings.js:90`) are fixed. Repo-wide
+  `eslint . --ext .vue,.js,.jsx,.cjs,.mjs` still reports **51 pre-existing
+  problems (26 errors, 25 warnings)** across `.vue`/`.js` files (unused
+  imports/vars, `no-empty`, `no-undef`, `no-prototype-builtins`, a template
+  parse error in `views/admin/billing/Subscriptions.vue`); CI therefore lints
+  **changed files only**. No frontend test runner is configured.
+- `npm run build` passes (`vite build`, ~15s).
+- CI (WS7): `.github/workflows/ci.yml` — backend job runs the full PHPUnit suite
+  and scoped pint on changed PHP files; frontend job runs scoped eslint on
+  changed files and `npm run build`. A `backend-postgres` job is scaffolded for
+  `@group postgres` tests and runs only when the `ENABLE_POSTGRES_CI` repository
+  variable is `true`. No test is tagged `@group postgres` yet, so the PostgreSQL
+  job is a no-op until PG-specific coverage is authored.
+
+## CI gating (WS7)
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+| Job | Runs | Blocks merge |
+| --- | --- | --- |
+| `backend` | `composer install`, full PHPUnit suite (SQLite `:memory:`), scoped `pint --test` on PHP files changed vs the base ref. | Yes (P0 suite). |
+| `frontend` | `npm ci`, scoped `eslint` on changed `.js/.vue` files, `npm run build`. | Yes. |
+| `backend-postgres` | `@group postgres` tests against a `postgres:16` service. Gated behind the repo variable `ENABLE_POSTGRES_CI=true` (no tagged tests exist yet). | Not yet (scaffold). |
+
+- Scoped lint/pint keeps the pre-existing repo-wide debt from blocking merges
+  while still gating every change. `frontend/package.json` also exposes a
+  non-fixing `lint:ci` script for local full-repo checks.
+- PostgreSQL-only behaviour (locking, vector search, `ILIKE`, analytics
+  aggregation SQL) **must** be validated via `@group postgres` tests in the
+  `backend-postgres` job; SQLite results are never sole evidence for those paths.
 
 ## Known defects captured by tags/tests (not fixed — documented)
 
