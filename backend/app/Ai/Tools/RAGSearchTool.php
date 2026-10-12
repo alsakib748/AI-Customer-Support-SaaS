@@ -3,11 +3,7 @@
 namespace App\Ai\Tools;
 
 use App\Ai\Services\SemanticSearchService;
-use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
-use Laravel\Ai\Contracts\Tool;
-use Laravel\Ai\Tools\Request;
-use Stringable;
 
 class RAGSearchTool extends BaseTool
 {
@@ -48,7 +44,7 @@ class RAGSearchTool extends BaseTool
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to search knowledge base.');
             }
 
@@ -73,7 +69,8 @@ class RAGSearchTool extends BaseTool
 
         } catch (\Exception $e) {
             Log::error('RAG search failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to perform RAG search: ' . $e->getMessage());
+
+            return $this->error('Failed to perform RAG search.');
         }
     }
 
