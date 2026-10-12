@@ -1,6 +1,6 @@
 # Phase 5 — Automated Test Matrix
 
-Status: **WS0 (audit + infrastructure)**
+Status: **WS2 (core support workflows landed)**
 Owner: Phase 5 automated testing strategy
 Branch: `test/phase-5-automated-suite`
 
@@ -36,6 +36,11 @@ workstream lands.
 | Registration / onboarding | `Feature/Auth/RegistrationTest` (10 tests) | P0 |
 | Tenant provisioning | `Feature/Tenant/TenantProvisioningTest` (8) | P0 |
 | Tenant isolation (new) | `Feature/Tenancy/TenantIsolationTest` (6) | P0 |
+| Authentication (new) | `Feature/Auth/LoginTest` (11), `SessionLifecycleTest` (7) | P0 |
+| Permission matrix per route (new) | `Feature/Auth/TenantPermissionMatrixTest` (4) | P0 |
+| Conversations (new) | `Feature/Support/ConversationLifecycleTest` (10) | P1 |
+| Messages / notes (new) | `Feature/Support/MessageThreadTest` (8) | P1 |
+| Tickets / comments (new) | `Feature/Support/TicketLifecycleTest` (10) | P1 |
 | Billing / entitlement | `Feature/Billing/*` (12 files) | P0 |
 | AI pipeline / quota | `Feature/Ai/*` (9 files) | P0 |
 | Audit log API | `Feature/Audit/AuditLogApiTest` | P0 |
@@ -70,16 +75,25 @@ workstream lands.
 | WS7 | Frontend unit/E2E (auth, widget, team accept) | No frontend test framework exists. | P1 |
 | WS7 | CI gate scoping pint to changed files; eslint baseline | Repo-wide pint fails (pre-existing, 485 files). | P1 |
 
-## Baseline (recorded before WS1)
+## Baseline (rolls up per workstream)
 
 - Backend: `vendor/bin/phpunit` → 233 passed / 763 assertions (exit 0) before WS0;
-  **239 passed / 779 assertions** after the WS0 harness + isolation tests.
+  **239 passed / 779 assertions** after WS0 (harness + isolation tests);
+  **261 passed / 873 assertions** after WS1 (auth + permission matrix);
+  **289 passed / 972 assertions** after WS2 (conversations / messages / tickets).
 - Pint: repo-wide `--test` fails on 485 pre-existing files → CI scopes pint to
   changed files only.
 - Frontend: `npx eslint src` → 3 pre-existing problems
   (`services/streamingService.js:215`, `stores/billing.js:1496`,
   `stores/systemSettings.js:90`); no test runner configured.
 - `npm run build` passes.
+
+## Known test-harness quirks
+
+- `MessageCollection` returns its own `meta` array **and** Laravel appends the
+  paginator meta under the same key, so `meta.total` is `[total, total]`. Assert
+  on `data` counts for message index responses instead of `meta.total`.
+- Ticket numbers are prefixed `TKT-{year}-{seq}` (not `TICK-`).
 
 ## Conventions for new tests
 
