@@ -71,7 +71,6 @@ return [
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
             'block_for' => null,
             'after_commit' => false,
-            'queue' => env('REDIS_QUEUE', 'default'),
         ],
 
         'deferred' => [
@@ -104,7 +103,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('QUEUE_DB_CONNECTION', env('DB_CONNECTION')),
         'table' => 'job_batches',
     ],
 
@@ -123,7 +122,7 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('QUEUE_DB_CONNECTION', env('DB_CONNECTION')),
         'table' => 'failed_jobs',
     ],
 

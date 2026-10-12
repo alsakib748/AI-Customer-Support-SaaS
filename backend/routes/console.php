@@ -11,11 +11,13 @@ Artisan::command('inspire', function () {
 // Run daily at 2 AM
 Schedule::command('widget:cleanup-sessions --days=30')
     ->dailyAt('02:00')
+    ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/widget-cleanup.log'));
 
 // Run weekly soft cleanup
 Schedule::command('widget:cleanup-sessions --soft --days=7')
     ->weekly()
+    ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/widget-cleanup.log'));
 
 // Process subscription renewals daily
