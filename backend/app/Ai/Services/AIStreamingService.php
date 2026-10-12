@@ -1,8 +1,11 @@
 <?php
+
 // app/Ai/Services/AIStreamingService.php
 
 namespace App\Ai\Services;
 
+use App\Ai\Tools\SearchKnowledgeBaseTool;
+use App\Events\AI\AIResponseGenerated;
 use App\Models\Tenant\AIConfiguration;
 use App\Models\Tenant\Conversation;
 use App\Models\Tenant\Message;
@@ -12,10 +15,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AIStreamingService
 {
     protected $configuration;
+
     protected GeminiService $geminiService;
 
-    public function __construct(GeminiService $geminiService)
-    {
+    public function __construct(
+        GeminiService $geminiService,
+        protected AiUsageRecorder $recorder,
+    ) {
         $this->configuration = AIConfiguration::first() ?? AIConfiguration::getDefault();
         $this->geminiService = $geminiService;
     }
@@ -26,22 +32,30 @@ class AIStreamingService
     public function streamResponse(Conversation $conversation, Message $message): StreamedResponse
     {
         return response()->stream(function () use ($conversation, $message) {
+            $startTime = microtime(true);
+            $fullResponse = '';
+            $chunksReceived = 0;
+            $providerUsage = [];
+            $errorMessage = null;
+            $aiMessage = null;
+
             try {
                 // Check if streaming is enabled
-                if (!$this->configuration->streaming_enabled) {
-                    echo "data: " . json_encode([
+                if (! $this->configuration->streaming_enabled) {
+                    echo 'data: '.json_encode([
                         'type' => 'error',
                         'message' => 'Streaming is not enabled for this tenant.',
-                    ]) . "\n\n";
+                    ])."\n\n";
+
                     return;
                 }
 
                 // Send start event
-                echo "data: " . json_encode([
+                echo 'data: '.json_encode([
                     'type' => 'start',
                     'message_id' => $message->id,
                     'conversation_id' => $conversation->id,
-                ]) . "\n\n";
+                ])."\n\n";
                 ob_flush();
                 flush();
 
@@ -51,17 +65,14 @@ class AIStreamingService
                 $prompt = $this->buildPrompt($context, $knowledge, $message->content);
 
                 // Stream using Gemini
-                $fullResponse = '';
-                $chunksReceived = 0;
-
                 $this->geminiService->streamContent($prompt, function ($chunk) use (&$fullResponse, &$chunksReceived) {
                     $chunksReceived++;
                     $fullResponse .= $chunk;
 
-                    echo "data: " . json_encode([
+                    echo 'data: '.json_encode([
                         'type' => 'chunk',
                         'content' => $chunk,
-                    ]) . "\n\n";
+                    ])."\n\n";
                     ob_flush();
                     flush();
                 }, [
@@ -81,45 +92,118 @@ class AIStreamingService
 
                     if ($result['success']) {
                         $fullResponse = $result['content'];
+                        $providerUsage = $result['usage'] ?? [];
 
-                        echo "data: " . json_encode([
+                        echo 'data: '.json_encode([
                             'type' => 'chunk',
                             'content' => $fullResponse,
-                        ]) . "\n\n";
+                        ])."\n\n";
+                    } else {
+                        $errorMessage = $result['error'] ?? 'AI provider returned no content.';
                     }
                 }
 
                 // Store AI message
-                if (!empty($fullResponse)) {
+                if (! empty($fullResponse)) {
                     $aiMessage = $this->storeAIResponse($message, $fullResponse);
 
-                    echo "data: " . json_encode([
+                    echo 'data: '.json_encode([
                         'type' => 'complete',
                         'message_id' => $aiMessage->id,
-                    ]) . "\n\n";
+                    ])."\n\n";
                 }
+            } catch (\Throwable $e) {
+                $errorMessage = $e->getMessage();
 
-                // ob_flush();
-                // flush();
-
-            } catch (\Exception $e) {
                 Log::error('Streaming error:', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
 
-                echo "data: " . json_encode([
+                echo 'data: '.json_encode([
                     'type' => 'error',
-                    'message' => 'Streaming error: ' . $e->getMessage(),
-                ]) . "\n\n";
+                    'message' => 'An error occurred while streaming the response.',
+                ])."\n\n";
                 ob_flush();
                 flush();
+            } finally {
+                $this->recordStreamUsage(
+                    $conversation,
+                    $message,
+                    $prompt ?? '',
+                    $fullResponse,
+                    $providerUsage,
+                    $chunksReceived,
+                    $errorMessage,
+                    (microtime(true) - $startTime) * 1000,
+                );
+
+                if ($aiMessage !== null) {
+                    event(new AIResponseGenerated($conversation, $aiMessage, [
+                        'provider' => 'gemini',
+                        'model' => $this->configuration->model,
+                        'usage' => $providerUsage,
+                        'streamed' => true,
+                        'original_message_id' => $message->id,
+                    ]));
+                }
             }
         }, 200, [
             'Cache-Control' => 'no-cache',
             'Content-Type' => 'text/event-stream',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /**
+     * Account for a streamed completion. Provider-reported usage is used when
+     * available (non-streaming fallback); otherwise the counts are estimated and
+     * flagged as such.
+     */
+    protected function recordStreamUsage(
+        Conversation $conversation,
+        Message $message,
+        string $prompt,
+        string $response,
+        array $providerUsage,
+        int $chunksReceived,
+        ?string $errorMessage,
+        float $durationMs,
+    ): void {
+        $status = $errorMessage === null && $response !== '' ? 'completed' : 'failed';
+
+        if (! empty($providerUsage)) {
+            $usage = $providerUsage;
+        } else {
+            $usage = [
+                'prompt_tokens' => $this->recorder->estimateTokens($prompt),
+                'completion_tokens' => $this->recorder->estimateTokens($response),
+                'estimated' => true,
+            ];
+        }
+
+        $this->recorder->record(
+            $conversation->id,
+            $message->id,
+            'gemini',
+            $this->configuration->model,
+            'chat_stream',
+            $usage,
+            $status,
+            null,
+            ['streamed_chunks' => $chunksReceived],
+        );
+
+        $this->recorder->log(
+            $conversation->id,
+            $message->id,
+            'gemini',
+            $this->configuration->model,
+            $status === 'completed' ? 'success' : 'failed',
+            (int) $durationMs,
+            $errorMessage,
+            ['usage' => $usage, 'streamed_chunks' => $chunksReceived],
+        );
     }
 
     /**
@@ -161,12 +245,12 @@ class AIStreamingService
      */
     protected function searchKnowledgeBase(string $query): array
     {
-        if (!$this->configuration->knowledge_base_enabled) {
+        if (! $this->configuration->knowledge_base_enabled) {
             return [];
         }
 
         try {
-            $tool = new \App\Ai\Tools\SearchKnowledgeBaseTool();
+            $tool = new SearchKnowledgeBaseTool;
             $result = $tool->execute(['query' => $query, 'limit' => 3]);
 
             return $result['success'] ? $result['results'] : [];
@@ -183,25 +267,25 @@ class AIStreamingService
     {
         $systemPrompt = $this->configuration->system_prompt ?? $this->configuration->getDefaultSystemPrompt();
 
-        $prompt = $systemPrompt . "\n\n";
+        $prompt = $systemPrompt."\n\n";
 
         if ($context['customer']) {
-            $prompt .= "Customer: " . ($context['customer']['name'] ?? 'Unknown') . "\n";
-            $prompt .= "Company: " . ($context['customer']['company'] ?? 'Unknown') . "\n\n";
+            $prompt .= 'Customer: '.($context['customer']['name'] ?? 'Unknown')."\n";
+            $prompt .= 'Company: '.($context['customer']['company'] ?? 'Unknown')."\n\n";
         }
 
-        $prompt .= "Subject: " . ($context['conversation']['subject'] ?? 'No subject') . "\n\n";
+        $prompt .= 'Subject: '.($context['conversation']['subject'] ?? 'No subject')."\n\n";
 
-        if (!empty($knowledge)) {
+        if (! empty($knowledge)) {
             $prompt .= "Relevant Knowledge:\n";
             foreach ($knowledge as $item) {
-                $prompt .= "### " . ($item['title'] ?? '') . "\n";
-                $prompt .= ($item['content'] ?? '') . "\n\n";
+                $prompt .= '### '.($item['title'] ?? '')."\n";
+                $prompt .= ($item['content'] ?? '')."\n\n";
             }
         }
 
-        $prompt .= "Customer Message: " . $userMessage . "\n\n";
-        $prompt .= "Please provide a helpful response.";
+        $prompt .= 'Customer Message: '.$userMessage."\n\n";
+        $prompt .= 'Please provide a helpful response.';
 
         return $prompt;
     }
