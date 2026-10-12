@@ -2,6 +2,7 @@
 
 namespace App\Jobs\AI;
 
+use App\Ai\Exceptions\EmbeddingException;
 use App\Ai\Services\EmbeddingService;
 use App\Ai\Services\KnowledgeBaseChunkingService;
 use App\Models\Tenant\KnowledgeBaseArticle;
@@ -18,6 +19,7 @@ class ReindexKnowledgeBaseJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300;
+
     public $tries = 3;
 
     protected $articleId;
@@ -47,24 +49,49 @@ class ReindexKnowledgeBaseJob implements ShouldQueue
             }
 
             foreach ($articles as $article) {
-                // Clear cached embeddings
-                Cache::forget('article_embeddings_' . $article->id);
-
                 // Chunk and generate embeddings
                 $chunks = $chunkingService->chunkArticle($article);
-                $embeddings = [];
 
-                foreach ($chunks as $chunk) {
-                    $embedding = $embeddingService->generateEmbedding($chunk['content']);
+                if ($chunks === []) {
+                    continue;
+                }
+
+                try {
+                    $vectors = $embeddingService->batchGenerateEmbeddings(
+                        array_map(fn ($chunk) => $chunk['content'], $chunks),
+                        'RETRIEVAL_DOCUMENT'
+                    );
+                } catch (EmbeddingException $e) {
+                    // Leave the previous revision in cache; never store fabricated vectors.
+                    Log::warning('Skipping article reindex after embedding failure', [
+                        'article_id' => $article->id,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
+                $embeddings = [];
+                foreach ($chunks as $position => $chunk) {
                     $embeddings[] = [
                         'content' => $chunk['content'],
-                        'embedding' => $embedding,
+                        'embedding' => $vectors[$position] ?? [],
                         'index' => $chunk['index'],
+                        'content_hash' => sha1($chunk['content']),
                     ];
                 }
 
-                // Store embeddings
-                Cache::put('article_embeddings_' . $article->id, $embeddings, 86400);
+                // Store embeddings under the tenant/model/version-scoped key.
+                Cache::put(
+                    $embeddingService->articleCacheKey(
+                        $article->id,
+                        (string) $article->title,
+                        (string) $article->content,
+                        $article->updated_at?->timestamp
+                    ),
+                    $embeddings,
+                    (int) config('ai.embeddings.cache_ttl', 86400)
+                );
 
                 Log::info('Article reindexed', [
                     'article_id' => $article->id,

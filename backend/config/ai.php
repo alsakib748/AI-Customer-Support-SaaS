@@ -41,6 +41,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Embeddings
+    |--------------------------------------------------------------------------
+    |
+    | The embedding backend used for knowledge base retrieval. Vectors are
+    | namespaced per tenant and per model so that a provider or model change
+    | never serves stale, incomparable vectors.
+    |
+    */
+
+    'embeddings' => [
+        'provider' => env('AI_EMBEDDING_PROVIDER', 'gemini'),
+        'model' => env('AI_EMBEDDING_MODEL', 'gemini-embedding-001'),
+        'dimensions' => (int) env('AI_EMBEDDING_DIMENSIONS', 768),
+        'cache' => env('AI_EMBEDDING_CACHE', true),
+        'cache_ttl' => (int) env('AI_EMBEDDING_CACHE_TTL', 86400),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Providers
     |--------------------------------------------------------------------------
     |
