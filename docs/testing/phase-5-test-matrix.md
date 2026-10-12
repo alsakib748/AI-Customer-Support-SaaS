@@ -1,6 +1,6 @@
 # Phase 5 — Automated Test Matrix
 
-Status: **WS3 (knowledge base + AI surface)**
+Status: **WS4 (billing + payment surface)**
 Owner: Phase 5 automated testing strategy
 Branch: `test/phase-5-automated-suite`
 
@@ -45,7 +45,9 @@ workstream lands.
 | KB articles API (new) | `Feature/KnowledgeBase/ArticleApiTest` (8) | P1 |
 | AI configuration API (new) | `Feature/Ai/AIConfigurationApiTest` (8) | P1 |
 | AI usage/health/analytics/logs API (new) | `Feature/Ai/AIUsageApiTest` (7) | P1 |
-| Billing / entitlement | `Feature/Billing/*` (12 files) | P0 |
+| Subscription lifecycle API (new) | `Feature/Billing/SubscriptionLifecycleApiTest` (20) | P0 |
+| Invoices / payments API (new) | `Feature/Billing/InvoicePaymentApiTest` (12) | P1 |
+| Billing / entitlement | `Feature/Billing/*` (service/controller level) | P0 |
 | AI pipeline / quota | `Feature/Ai/*` (9 files) | P0 |
 | Audit log API | `Feature/Audit/AuditLogApiTest` | P0 |
 | Permission sync | `Feature/Audit/UserPermissionSyncTest` | P0 |
@@ -70,7 +72,8 @@ workstream lands.
 | WS3 | AI configuration CRUD + provider gating | Partial (enforcement only). | P1 |
 | WS3 | Usage/token accounting per tenant | Covered in billing/AI; verify API surface. | P1 |
 | WS4 | Stripe webhook signature + idempotency | Covered. | P0 |
-| WS4 | Subscription lifecycle API (cancel/resume/change) | Partial (plan change + jobs). | P0 |
+| WS4 | Subscription lifecycle API (cancel/resume/change) | Covered at HTTP level by `SubscriptionLifecycleApiTest` (current/store/cancel/resume/validate-coupon/providers/upgrade/downgrade/checkout). | P0 |
+| WS4 | Invoices / payments HTTP surface | Covered by `InvoicePaymentApiTest` (index/statistics/show/download, cross-tenant isolation). | P1 |
 | WS5 | Public widget session bootstrap + message ingestion | No coverage. | P0 |
 | WS5 | Widget rate limiting / tenant resolution from embed key | No coverage. | P0 |
 | WS6 | Analytics aggregation endpoints | No coverage. | P1 |
@@ -85,7 +88,8 @@ workstream lands.
   **239 passed / 779 assertions** after WS0 (harness + isolation tests);
   **261 passed / 873 assertions** after WS1 (auth + permission matrix);
   **289 passed / 972 assertions** after WS2 (conversations / messages / tickets);
-  **319 passed / 1103 assertions** after WS3 (knowledge base / AI surface).
+  **319 passed / 1103 assertions** after WS3 (knowledge base / AI surface);
+  **351 passed / 1229 assertions** after WS4 (subscription lifecycle + invoices/payments).
 - Pint: repo-wide `--test` fails on 485 pre-existing files → CI scopes pint to
   changed files only.
 - Frontend: `npx eslint src` → 3 pre-existing problems
@@ -104,6 +108,14 @@ workstream lands.
 - Knowledge base and AI routes have **no RBAC middleware** and their
   in-controller `hasPermissionTo` guards are commented out, so any authenticated
   tenant member can call them. No negative-RBAC assertion is possible yet.
+- `POST /subscription/resume` can never reactivate a cancelled subscription:
+  `SubscriptionService::resume()` guards on `$subscription->canCancel()`, which
+  is already `false` once `status === 'cancelled'`, so it throws and the endpoint
+  returns **500**. A test records this (period-end cancels never set `cancelled`,
+  so the guard passes only in the case the endpoint rejects anyway).
+- `POST /subscription/validate-coupon` validates inline inside a
+  `catch (\Exception)`, so a missing `code` surfaces as **500** instead of 422
+  (`ValidationException` extends `Exception`). A test records this.
 
 ## Test-harness quirks
 
@@ -115,6 +127,9 @@ workstream lands.
   though the controllers do not set it; transitions/updates/reads return 200.
 - Eloquent `create()` does not hydrate DB column defaults back onto the returned
   model (e.g. category `status`), so assert those defaults from the database.
+- Billing tests set `database.default = central` (billing models are central and
+  `exists:plans,id` resolves the default connection), and the central schema
+  slice now includes a minimal `coupons` table for the coupon endpoints.
 
 ## Conventions for new tests
 

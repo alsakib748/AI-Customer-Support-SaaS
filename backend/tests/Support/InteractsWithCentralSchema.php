@@ -294,6 +294,27 @@ trait InteractsWithCentralSchema
             $table->unique('stripe_invoice_id');
         });
 
+        Schema::connection('central')->create('coupons', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->nullable();
+            $table->string('code', 50)->unique();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('type', 20);
+            $table->decimal('value', 10, 2);
+            $table->string('currency', 3)->default('USD');
+            $table->string('duration', 20)->default('once');
+            $table->unsignedInteger('max_redemptions')->nullable();
+            $table->unsignedInteger('max_redemptions_per_user')->nullable();
+            $table->json('applicable_plans')->nullable();
+            $table->timestamp('starts_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
         Schema::connection('central')->create('coupon_redemptions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('coupon_id')->nullable();
@@ -397,18 +418,18 @@ trait InteractsWithCentralSchema
     protected function createDefaultPlan(array $attributes = []): Plan
     {
         return Plan::query()->create(array_merge([
-            'name'         => 'Starter',
-            'slug'         => 'starter'.uniqid(),
-            'description'  => 'Starter plan',
+            'name' => 'Starter',
+            'slug' => 'starter'.uniqid(),
+            'description' => 'Starter plan',
             'price_monthly' => 0,
             'price_yearly' => 0,
-            'currency'     => 'USD',
-            'trial_days'   => 14,
-            'is_active'    => true,
-            'is_default'   => true,
-            'is_public'    => true,
-            'features'     => [],
-            'limits'       => [],
+            'currency' => 'USD',
+            'trial_days' => 14,
+            'is_active' => true,
+            'is_default' => true,
+            'is_public' => true,
+            'features' => [],
+            'limits' => [],
         ], $attributes));
     }
 
@@ -418,14 +439,14 @@ trait InteractsWithCentralSchema
     protected function registrationPayload(array $overrides = []): array
     {
         return array_merge([
-            'first_name'   => 'Jane',
-            'last_name'    => 'Doe',
-            'username'     => 'jane_doe',
-            'email'        => 'jane'.uniqid().'@example.test',
-            'password'     => 'SecretPass!123',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'username' => 'jane_doe',
+            'email' => 'jane'.uniqid().'@example.test',
+            'password' => 'SecretPass!123',
             'password_confirmation' => 'SecretPass!123',
             'company_name' => 'Acme Corp',
-            'timezone'     => 'UTC',
+            'timezone' => 'UTC',
         ], $overrides);
     }
 }
