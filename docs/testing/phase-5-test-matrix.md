@@ -1,6 +1,6 @@
 # Phase 5 — Automated Test Matrix
 
-Status: **WS5 (public chat widget)**
+Status: **WS6 (analytics, exports, notifications, audit)**
 Owner: Phase 5 automated testing strategy
 Branch: `test/phase-5-automated-suite`
 
@@ -48,6 +48,9 @@ workstream lands.
 | Subscription lifecycle API (new) | `Feature/Billing/SubscriptionLifecycleApiTest` (20) | P0 |
 | Invoices / payments API (new) | `Feature/Billing/InvoicePaymentApiTest` (12) | P1 |
 | Public widget API (new) | `Feature/Widget/PublicWidgetApiTest` (15) | P0 |
+| Analytics export API (new) | `Feature/Analytics/AnalyticsExportApiTest` (11) | P1 |
+| Analytics route RBAC (new) | `Feature/Analytics/AnalyticsRbacTest` (3) | P0 |
+| Tenant notification feed (new) | `Feature/Notifications/TenantNotificationApiTest` (4) | P1 |
 | Billing / entitlement | `Feature/Billing/*` (service/controller level) | P0 |
 | AI pipeline / quota | `Feature/Ai/*` (9 files) | P0 |
 | Audit log API | `Feature/Audit/AuditLogApiTest` | P0 |
@@ -77,9 +80,9 @@ workstream lands.
 | WS4 | Invoices / payments HTTP surface | Covered by `InvoicePaymentApiTest` (index/statistics/show/download, cross-tenant isolation). | P1 |
 | WS5 | Public widget session bootstrap + message ingestion | Covered by `PublicWidgetApiTest` (bootstrap config/origin/404/422, message + conversation read, rate limit). Session bootstrap is blocked by a P0 defect (see below). | P0 |
 | WS5 | Widget rate limiting / tenant resolution from embed key | Covered: `widget.rate.limit` returns 429 past the limit; tenant resolved from widget key and session token. | P0 |
-| WS6 | Analytics aggregation endpoints | No coverage. | P1 |
-| WS6 | Export jobs (CSV/PDF) tenant scoping | Partial (customer CSV, invoice PDF). | P1 |
-| WS6 | Audit side-effect assertions (no write on denial) | Partial. | P0 |
+| WS6 | Analytics aggregation endpoints | PostgreSQL-only SQL; route RBAC covered by `AnalyticsRbacTest`; aggregation correctness deferred to PostgreSQL-gated CI (WS7). | P1 |
+| WS6 | Export jobs (CSV/PDF) tenant scoping | Covered by `AnalyticsExportApiTest` (store/index/download, cross-tenant and cross-user isolation). | P1 |
+| WS6 | Audit side-effect assertions (no write on denial) | Partial: a notification cross-user read is asserted side-effect free; audit rows are not yet asserted on every denial. | P0 |
 | WS7 | Frontend unit/E2E (auth, widget, team accept) | No frontend test framework exists. | P1 |
 | WS7 | CI gate scoping pint to changed files; eslint baseline | Repo-wide pint fails (pre-existing, 485 files). | P1 |
 
@@ -91,7 +94,8 @@ workstream lands.
   **289 passed / 972 assertions** after WS2 (conversations / messages / tickets);
   **319 passed / 1103 assertions** after WS3 (knowledge base / AI surface);
   **351 passed / 1229 assertions** after WS4 (subscription lifecycle + invoices/payments);
-  **366 passed / 1313 assertions** after WS5 (public widget API).
+  **366 passed / 1313 assertions** after WS5 (public widget API);
+  **384 passed / 1358 assertions** after WS6 (analytics exports + RBAC + tenant notifications).
 - Pint: repo-wide `--test` fails on 485 pre-existing files → CI scopes pint to
   changed files only.
 - Frontend: `npx eslint src` → 3 pre-existing problems
@@ -126,6 +130,18 @@ workstream lands.
   does not catch `Error`, so `POST /v1/widget/session` returns **500** for every
   request. A test records this. (Widget reads via a session token still work
   because those handlers resolve the tenant before touching `current_tenant`.)
+- Analytics aggregation endpoints (`/analytics/overview`, `conversations`,
+  `customers`, `agents`, `tickets`, `ai`, `widget`, `knowledge-base`) use
+  PostgreSQL-only SQL (`COUNT(*) FILTER (...)`, `DATE_TRUNC`, `EXTRACT(EPOCH
+  ...)`, `TO_CHAR`), so they cannot be asserted on the SQLite harness and must be
+  validated under PostgreSQL in CI (WS7).
+- Analytics routes `agents`, `tickets`, `ai`, `widget` and `knowledge-base` have
+  **no `permission:` middleware** and their in-controller guards are commented
+  out, so any authenticated subscriber can call them (same class of gap as the
+  KB/AI routes). Only `overview`, `conversations` and `customers` are guarded.
+- Tenant `POST /notifications/{id}/read` returns `success: true` even when the id
+  does not belong to the caller (the scoped `find()` returns `null`). No side
+  effect occurs; a test asserts the foreign notification stays unread.
 
 ## Test-harness quirks
 
@@ -145,6 +161,11 @@ workstream lands.
   must resolve the tenant itself). Stancl's database bootstrapper is disabled,
   so controller-side `Tenancy::initialize()` does not switch connections; a
   single active tenant keeps the pointed connection authoritative.
+- Analytics export tests use `Queue::fake()` (the dispatched job's CSV builders
+  are aggregation-dependent) and `Storage::fake('local')` for downloads; owner
+  has `analytics.*` while `support_agent` lacks `analytics.export`.
+- Tenant notification tests seed the central `notifications` table through
+  `$user->notifications()->create([...])`; the central schema slice includes it.
 
 ## Conventions for new tests
 
