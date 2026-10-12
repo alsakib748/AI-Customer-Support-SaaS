@@ -5,13 +5,14 @@ namespace App\Services\Tenant;
 use App\Events\Tenant\TenantProvisioningCompleted;
 use App\Events\Tenant\TenantProvisioningFailed;
 use App\Events\Tenant\TenantProvisioningStarted;
+use App\Jobs\Tenant\ProvisionTenantJob;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\Models\Tenant\AIConfiguration;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\Billing\SubscriptionService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -23,8 +24,7 @@ class TenantProvisioningService
     public function __construct(
         protected SubscriptionService $subscriptions,
         protected AuditLogService $auditLog,
-    ) {
-    }
+    ) {}
 
     /**
      * Provision a newly created tenant. Idempotent: safe to run for the
@@ -37,19 +37,23 @@ class TenantProvisioningService
             if (! $tenant->canLogin()) {
                 $tenant->update(['status' => Tenant::STATUS_TRIAL]);
             }
+
             return $tenant->fresh();
         }
 
         TenantProvisioningStarted::dispatch($tenant);
 
         $tenant->update([
-            'status'            => Tenant::STATUS_PROVISIONING,
+            'status' => Tenant::STATUS_PROVISIONING,
             'provisioning_error' => null,
         ]);
 
         try {
-            // 1. Resolve / create the owner user.
-            $owner = $this->resolveOwnerUser($data['owner'] ?? []);
+            // 1. Resolve / create the owner user. When the tenant already has an
+            //    owner membership (e.g. a retry after a later step failed) we reuse
+            //    it so retries never require the original owner payload again.
+            $owner = $tenant->ownerMembership()->first()?->user
+                ?? $this->resolveOwnerUser($data['owner'] ?? []);
 
             // 2. Attach the owner membership (idempotent).
             $this->attachOwnerMembership($tenant, $owner);
@@ -63,7 +67,7 @@ class TenantProvisioningService
 
             // 5. Mark provisioned.
             $tenant->update([
-                'status'         => $plan && $plan->trial_days > 0 ? Tenant::STATUS_TRIAL : Tenant::STATUS_ACTIVE,
+                'status' => $plan && $plan->trial_days > 0 ? Tenant::STATUS_TRIAL : Tenant::STATUS_ACTIVE,
                 'provisioned_at' => now(),
                 'provisioning_error' => null,
             ]);
@@ -74,9 +78,9 @@ class TenantProvisioningService
                 $tenant->id,
                 null,
                 [
-                    'name'  => $tenant->name,
-                    'slug'  => $tenant->slug,
-                    'plan'  => $plan?->slug,
+                    'name' => $tenant->name,
+                    'slug' => $tenant->slug,
+                    'plan' => $plan?->slug,
                     'owner' => $owner->email,
                 ]
             );
@@ -87,11 +91,11 @@ class TenantProvisioningService
         } catch (\Throwable $e) {
             Log::error('Tenant provisioning failed', [
                 'tenant_id' => $tenant->id,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             $tenant->update([
-                'status'            => Tenant::STATUS_PROVISIONING_FAILED,
+                'status' => Tenant::STATUS_PROVISIONING_FAILED,
                 'provisioning_error' => $e->getMessage(),
             ]);
 
@@ -102,7 +106,10 @@ class TenantProvisioningService
     }
 
     /**
-     * Retry provisioning for a failed tenant.
+     * Queue a provisioning retry for a tenant whose provisioning failed.
+     *
+     * The work runs through {@see ProvisionTenantJob} so it inherits the job's
+     * retry/backoff policy rather than failing inline in the HTTP request.
      */
     public function retry(Tenant $tenant): Tenant
     {
@@ -110,7 +117,9 @@ class TenantProvisioningService
             throw new \RuntimeException('Tenant is not in a failed provisioning state.');
         }
 
-        return $this->provision($tenant, []);
+        ProvisionTenantJob::dispatch($tenant);
+
+        return $tenant->fresh();
     }
 
     // ============================================
@@ -137,18 +146,18 @@ class TenantProvisioningService
         $password = $ownerData['password'] ?? '11111111';
 
         return User::create([
-            'first_name'    => $firstName,
-            'last_name'     => $lastName,
-            'username'      => Str::slug($firstName) . '-' . Str::lower(Str::random(5)),
-            'email'         => $email,
-            'password'      => Hash::make($password),
-            'uuid'          => (string) Str::uuid(),
-            'timezone'      => 'UTC',
-            'language'      => 'en',
-            'preferences'   => [
-                'admin_created'             => true,
-                'must_change_password'      => true,
-                'temporary_password'        => $password,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'username' => Str::slug($firstName).'-'.Str::lower(Str::random(5)),
+            'email' => $email,
+            'password' => Hash::make($password),
+            'uuid' => (string) Str::uuid(),
+            'timezone' => 'UTC',
+            'language' => 'en',
+            'preferences' => [
+                'admin_created' => true,
+                'must_change_password' => true,
+                'temporary_password' => $password,
             ],
         ]);
     }
@@ -161,9 +170,9 @@ class TenantProvisioningService
 
         if (! $exists) {
             TenantUser::create([
-                'tenant_id'   => $tenant->id,
-                'user_id'     => $owner->id,
-                'role'        => 'owner',
+                'tenant_id' => $tenant->id,
+                'user_id' => $owner->id,
+                'role' => 'owner',
                 'accepted_at' => now(),
             ]);
         }
@@ -185,24 +194,24 @@ class TenantProvisioningService
             if (! tenancy()->initialized) {
                 Tenancy::initialize($tenant);
 
-                if (! \App\Models\Tenant\AIConfiguration::exists()) {
-                    \App\Models\Tenant\AIConfiguration::create([
-                        'provider'                 => 'gemini',
-                        'model'                    => 'gemini-1.5-flash',
-                        'enabled'                  => true,
-                        'auto_reply_enabled'       => true,
-                        'auto_escalation_enabled'  => true,
-                        'streaming_enabled'        => true,
-                        'knowledge_base_enabled'   => true,
-                        'temperature'              => 0.7,
-                        'max_tokens'               => 2000,
+                if (! AIConfiguration::exists()) {
+                    AIConfiguration::create([
+                        'provider' => 'gemini',
+                        'model' => 'gemini-1.5-flash',
+                        'enabled' => true,
+                        'auto_reply_enabled' => true,
+                        'auto_escalation_enabled' => true,
+                        'streaming_enabled' => true,
+                        'knowledge_base_enabled' => true,
+                        'temperature' => 0.7,
+                        'max_tokens' => 2000,
                     ]);
                 }
             }
         } catch (\Throwable $e) {
             Log::warning('Tenant defaults initialization skipped', [
                 'tenant_id' => $tenant->id,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         } finally {
             if (tenancy()->initialized) {
@@ -232,6 +241,7 @@ class TenantProvisioningService
 
         if (! $plan) {
             Log::warning('No plan available while provisioning tenant', ['tenant_id' => $tenant->id]);
+
             return;
         }
 
