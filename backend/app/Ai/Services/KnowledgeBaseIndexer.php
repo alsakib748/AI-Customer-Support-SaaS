@@ -141,8 +141,16 @@ class KnowledgeBaseIndexer
      */
     public function purge(KnowledgeBaseArticle $article): int
     {
+        return $this->purgeById((int) $article->getKey());
+    }
+
+    /**
+     * Remove all persisted embeddings by article id (works for soft-deleted rows).
+     */
+    public function purgeById(int $articleId): int
+    {
         return KnowledgeBaseEmbedding::query()
-            ->where('article_id', $article->id)
+            ->where('article_id', $articleId)
             ->delete();
     }
 
