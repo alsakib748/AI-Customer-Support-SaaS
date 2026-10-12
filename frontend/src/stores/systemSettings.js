@@ -87,9 +87,7 @@ export const useSystemSettingsStore = defineStore('systemSettings', () => {
     const testEmail = async (recipient = null) => {
         testing.value = true;
         try {
-            const { data } = await systemSettingsService.testEmail(
-                recipient ? { recipient } : {}
-            );
+            const { data } = await systemSettingsService.testEmail(recipient ? { recipient } : {});
             return data;
         } finally {
             testing.value = false;

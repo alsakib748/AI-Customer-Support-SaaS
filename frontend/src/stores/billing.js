@@ -1623,6 +1623,7 @@ export const useBillingStore = defineStore('billing', () => {
         fetchInvoiceStatistics,
         fetchPayments,
         fetchPaymentStatistics,
+        fetchProviders,
 
         // Admin actions
         fetchAdminPlans,
