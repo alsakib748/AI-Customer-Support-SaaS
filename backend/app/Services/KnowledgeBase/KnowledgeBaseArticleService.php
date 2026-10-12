@@ -1,10 +1,12 @@
 <?php
+
 // app/Services/KnowledgeBase/KnowledgeBaseArticleService.php
 
 namespace App\Services\KnowledgeBase;
 
 use App\Events\KnowledgeBase\ArticleArchived;
 use App\Events\KnowledgeBase\ArticleCreated;
+use App\Events\KnowledgeBase\ArticleDeleted;
 use App\Events\KnowledgeBase\ArticlePublished;
 use App\Events\KnowledgeBase\ArticleUpdated;
 use App\Helpers\SanitizationHelper;
@@ -13,6 +15,7 @@ use App\Models\Tenant\KnowledgeBaseCategory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class KnowledgeBaseArticleService
@@ -26,36 +29,36 @@ class KnowledgeBaseArticleService
             ->with('category');
 
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
         // Filter by category
-        if (!empty($filters['category_id'])) {
+        if (! empty($filters['category_id'])) {
             $query->byCategory($filters['category_id']);
         }
 
         // Filter by status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
         // Filter by visibility
-        if (!empty($filters['visibility'])) {
+        if (! empty($filters['visibility'])) {
             $query->byVisibility($filters['visibility']);
         }
 
         // Filter by author
-        if (!empty($filters['author_id'])) {
+        if (! empty($filters['author_id'])) {
             $query->where('author_id', $filters['author_id']);
         }
 
         // Date range
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
@@ -72,6 +75,7 @@ class KnowledgeBaseArticleService
         }
 
         $perPage = $filters['per_page'] ?? 20;
+
         return $query->paginate($perPage);
     }
 
@@ -82,9 +86,10 @@ class KnowledgeBaseArticleService
     {
         return KnowledgeBaseArticle::publishedAndEligible()
             ->where(function ($q) use ($query) {
-                $q->where('title', 'ILIKE', "%{$query}%")
-                    ->orWhere('excerpt', 'ILIKE', "%{$query}%")
-                    ->orWhere('content', 'ILIKE', "%{$query}%");
+                $term = '%'.Str::lower($query).'%';
+                $q->whereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(excerpt) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(content) LIKE ?', [$term]);
             })
             ->limit(10)
             ->get()
@@ -175,6 +180,8 @@ class KnowledgeBaseArticleService
     {
         $article->delete();
 
+        event(new ArticleDeleted($article));
+
         Log::info('Knowledge base article deleted', [
             'article_id' => $article->id,
             'user_id' => auth()->id(),
@@ -188,7 +195,7 @@ class KnowledgeBaseArticleService
      */
     public function publishArticle(KnowledgeBaseArticle $article): KnowledgeBaseArticle
     {
-        if (!$article->canTransitionTo('published')) {
+        if (! $article->canTransitionTo('published')) {
             throw ValidationException::withMessages([
                 'status' => ['Article cannot be published in its current state.'],
             ]);
@@ -211,13 +218,15 @@ class KnowledgeBaseArticleService
      */
     public function unpublishArticle(KnowledgeBaseArticle $article): KnowledgeBaseArticle
     {
-        if (!$article->canTransitionTo('draft')) {
+        if (! $article->canTransitionTo('draft')) {
             throw ValidationException::withMessages([
                 'status' => ['Article cannot be unpublished in its current state.'],
             ]);
         }
 
         $article->unpublish();
+
+        event(new ArticleUpdated($article));
 
         Log::info('Knowledge base article unpublished', [
             'article_id' => $article->id,
@@ -232,7 +241,7 @@ class KnowledgeBaseArticleService
      */
     public function archiveArticle(KnowledgeBaseArticle $article): KnowledgeBaseArticle
     {
-        if (!$article->canTransitionTo('archived')) {
+        if (! $article->canTransitionTo('archived')) {
             throw ValidationException::withMessages([
                 'status' => ['Article cannot be archived in its current state.'],
             ]);

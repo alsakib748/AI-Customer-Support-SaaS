@@ -2,7 +2,6 @@
 
 namespace App\Ai\Tools;
 
-use App\Models\Tenant\Customer;
 use App\Services\Ticket\TicketService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
@@ -89,41 +88,45 @@ class CreateTicketTool extends BaseTool
         ];
     }
 
+    protected function requiresConversationContext(): bool
+    {
+        return true;
+    }
+
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to create tickets.');
             }
 
             // Validate required parameters
-            $customerId = $parameters['customer_id'] ?? null;
             $subject = $parameters['subject'] ?? null;
             $description = $parameters['description'] ?? null;
 
-            if (!$customerId) {
-                return $this->error('Customer ID is required.');
-            }
-
-            if (!$subject) {
+            if (! $subject) {
                 return $this->error('Subject is required.');
             }
 
-            if (!$description) {
+            if (! $description) {
                 return $this->error('Description is required.');
             }
 
-            // Verify customer exists and belongs to tenant
-            $customer = Customer::find($customerId);
-            if (!$customer) {
+            // Tickets are always created for the customer of the conversation
+            // being served; a mismatched id supplied by the model is rejected.
+            $customer = $this->contextCustomer();
+            if (! $customer) {
                 return $this->error('Customer not found.');
             }
 
-            // Check if customer belongs to current tenant (handled by tenant DB)
+            $customerId = $parameters['customer_id'] ?? null;
+            if ($customerId !== null && (int) $customerId !== (int) $customer->id) {
+                return $this->error('Access denied for the requested customer.');
+            }
 
             // Create ticket data
             $ticketData = [
-                'customer_id' => $customerId,
+                'customer_id' => $customer->id,
                 'conversation_id' => $this->conversation?->id,
                 'subject' => $subject,
                 'description' => $description,
@@ -137,7 +140,7 @@ class CreateTicketTool extends BaseTool
 
             // Create system message in conversation
             if ($this->conversation) {
-                $systemMessage = "A ticket has been created for this issue: TKT-" . $ticket->id;
+                $systemMessage = 'A ticket has been created for this issue: TKT-'.$ticket->id;
                 // Could create a system message here
             }
 
@@ -162,10 +165,12 @@ class CreateTicketTool extends BaseTool
 
         } catch (ValidationException $e) {
             Log::error('Ticket creation validation failed:', ['errors' => $e->errors()]);
-            return $this->error('Validation failed: ' . json_encode($e->errors()));
+
+            return $this->error('Validation failed: '.json_encode($e->errors()));
         } catch (\Exception $e) {
             Log::error('Ticket creation failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to create ticket: ' . $e->getMessage());
+
+            return $this->error('Failed to create ticket.');
         }
     }
 

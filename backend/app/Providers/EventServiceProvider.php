@@ -16,7 +16,11 @@ use App\Events\Billing\TrialEndingSoon;
 use App\Events\Conversation\ConversationCreated;
 use App\Events\Health\PlatformIncidentOpened;
 use App\Events\Health\PlatformIncidentResolved;
+use App\Events\KnowledgeBase\ArticleArchived;
 use App\Events\KnowledgeBase\ArticleCreated;
+use App\Events\KnowledgeBase\ArticleDeleted;
+use App\Events\KnowledgeBase\ArticlePublished;
+use App\Events\KnowledgeBase\ArticleUpdated;
 use App\Events\Message\MessageCreated;
 use App\Events\Tenant\TenantActivated;
 use App\Events\Tenant\TenantArchived;
@@ -25,6 +29,7 @@ use App\Events\Tenant\TenantProvisioningFailed;
 use App\Events\Tenant\TenantRestored;
 use App\Events\Tenant\TenantSuspended;
 use App\Listeners\Ai\EnforceAiBillingLimit;
+use App\Listeners\Ai\QueueKnowledgeBaseReindex;
 use App\Listeners\Billing\SendInvoicePaidNotification;
 use App\Listeners\Billing\SendPaymentCompletedNotification;
 use App\Listeners\Billing\SendPaymentFailedNotification;
@@ -139,6 +144,19 @@ class EventServiceProvider extends ServiceProvider
         ],
         ArticleCreated::class => [
             TrackUsageOnDomainEvent::class,
+            QueueKnowledgeBaseReindex::class,
+        ],
+        ArticleUpdated::class => [
+            QueueKnowledgeBaseReindex::class,
+        ],
+        ArticlePublished::class => [
+            QueueKnowledgeBaseReindex::class,
+        ],
+        ArticleArchived::class => [
+            QueueKnowledgeBaseReindex::class,
+        ],
+        ArticleDeleted::class => [
+            QueueKnowledgeBaseReindex::class,
         ],
 
         // ===== AI BILLING ENFORCEMENT =====

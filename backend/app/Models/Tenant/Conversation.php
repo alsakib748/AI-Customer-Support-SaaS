@@ -27,10 +27,15 @@ class Conversation extends Model
         'started_at',
         'resolved_at',
         'closed_at',
+        'escalated',
+        'escalated_reason',
+        'escalated_at',
         'metadata',
     ];
 
     protected $casts = [
+        'escalated' => 'boolean',
+        'escalated_at' => 'datetime',
         'metadata' => 'array',
         'last_message_at' => 'datetime',
         'started_at' => 'datetime',

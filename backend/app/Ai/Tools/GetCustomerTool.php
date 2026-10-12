@@ -2,7 +2,6 @@
 
 namespace App\Ai\Tools;
 
-use App\Models\Tenant\Customer;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Tool;
@@ -37,32 +36,35 @@ class GetCustomerTool extends BaseTool
         ];
     }
 
+    protected function requiresConversationContext(): bool
+    {
+        return true;
+    }
+
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to access customer information.');
             }
 
+            $customer = $this->contextCustomer();
+
+            if (! $customer) {
+                return $this->error('Customer not found.');
+            }
+
+            // Any identifier the model supplies must match the customer of the
+            // conversation being served; tools may not enumerate other customers.
             $customerId = $parameters['customer_id'] ?? null;
             $email = $parameters['email'] ?? null;
 
-            if (!$customerId && !$email) {
-                return $this->error('Either customer_id or email is required.');
+            if ($customerId !== null && (int) $customerId !== (int) $customer->id) {
+                return $this->error('Access denied for the requested customer.');
             }
 
-            $query = Customer::query();
-
-            if ($customerId) {
-                $query->where('id', $customerId);
-            } elseif ($email) {
-                $query->where('email', $email);
-            }
-
-            $customer = $query->first();
-
-            if (!$customer) {
-                return $this->error('Customer not found.');
+            if ($email !== null && strcasecmp((string) $email, (string) $customer->email) !== 0) {
+                return $this->error('Access denied for the requested customer.');
             }
 
             $result = [
@@ -88,7 +90,8 @@ class GetCustomerTool extends BaseTool
 
         } catch (\Exception $e) {
             Log::error('Get customer failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to get customer: ' . $e->getMessage());
+
+            return $this->error('Failed to get customer.');
         }
     }
 
