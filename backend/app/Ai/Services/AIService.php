@@ -1,23 +1,23 @@
 <?php
+
 // app/Ai/Services/AIService.php
 
 namespace App\Ai\Services;
 
-use App\Models\Tenant\Conversation;
-use App\Models\Tenant\Message;
-use App\Models\Tenant\AIConfiguration;
-use App\Models\Tenant\AIUsage;
-use App\Models\Tenant\AILog;
-use App\Ai\Agents\CustomerSupportAgent;
 use App\Ai\Tools\SearchKnowledgeBaseTool;
 use App\Events\AI\AIResponseGenerated;
+use App\Models\Tenant\AIConfiguration;
+use App\Models\Tenant\AILog;
+use App\Models\Tenant\AIUsage;
+use App\Models\Tenant\Conversation;
+use App\Models\Tenant\Message;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class AIService
 {
     protected $configuration;
+
     protected GeminiService $geminiService;
 
     public function __construct(GeminiService $geminiService)
@@ -35,7 +35,7 @@ class AIService
         $customer = $conversation->customer;
 
         // Check if AI is enabled
-        if (!$this->configuration->enabled || !$this->configuration->auto_reply_enabled) {
+        if (! $this->configuration->enabled || ! $this->configuration->auto_reply_enabled) {
             return ['success' => false, 'skipped' => true, 'message' => 'AI is disabled for this tenant.'];
         }
 
@@ -53,7 +53,7 @@ class AIService
         // ai_usage(message_id, operation) guarantees that only one worker — even
         // across concurrent queue workers — proceeds to call the AI provider.
         $claim = $this->claimProcessing($message, $conversation);
-        if (!$claim) {
+        if (! $claim) {
             return ['success' => false, 'skipped' => true, 'message' => 'AI processing already claimed for this message.'];
         }
 
@@ -127,7 +127,7 @@ class AIService
 
             return [
                 'success' => false,
-                'message' => 'AI processing failed: ' . $e->getMessage(),
+                'message' => 'AI processing failed.',
             ];
         }
     }
@@ -144,15 +144,15 @@ class AIService
         try {
             return AIUsage::create([
                 'conversation_id' => $conversation->id,
-                'message_id'      => $message->id,
-                'provider'        => 'gemini',
-                'model'           => $this->configuration->model,
-                'operation'       => 'chat',
-                'input_tokens'    => 0,
-                'output_tokens'   => 0,
-                'total_tokens'    => 0,
-                'estimated_cost'  => 0,
-                'metadata'        => ['status' => 'processing'],
+                'message_id' => $message->id,
+                'provider' => 'gemini',
+                'model' => $this->configuration->model,
+                'operation' => 'chat',
+                'input_tokens' => 0,
+                'output_tokens' => 0,
+                'total_tokens' => 0,
+                'estimated_cost' => 0,
+                'metadata' => ['status' => 'processing'],
             ]);
         } catch (QueryException $e) {
             Log::info('AI message already claimed for processing', [
@@ -170,7 +170,7 @@ class AIService
         } catch (\Throwable $e) {
             Log::warning('Failed to release AI claim', [
                 'claim_id' => $claim->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -223,24 +223,24 @@ class AIService
         $systemPrompt = $this->configuration->system_prompt ?? $this->configuration->getDefaultSystemPrompt();
         $customInstructions = $this->configuration->custom_instructions ?? '';
 
-        $prompt = $systemPrompt . "\n\n";
+        $prompt = $systemPrompt."\n\n";
 
         // Customer context
         if ($context['customer']) {
             $prompt .= "Customer Information:\n";
-            $prompt .= "Name: " . ($context['customer']['name'] ?? 'Unknown') . "\n";
-            $prompt .= "Email: " . ($context['customer']['email'] ?? 'Unknown') . "\n";
-            $prompt .= "Company: " . ($context['customer']['company'] ?? 'Unknown') . "\n";
-            $prompt .= "Total Conversations: " . ($context['customer']['total_conversations'] ?? 0) . "\n";
-            $prompt .= "Total Tickets: " . ($context['customer']['total_tickets'] ?? 0) . "\n\n";
+            $prompt .= 'Name: '.($context['customer']['name'] ?? 'Unknown')."\n";
+            $prompt .= 'Email: '.($context['customer']['email'] ?? 'Unknown')."\n";
+            $prompt .= 'Company: '.($context['customer']['company'] ?? 'Unknown')."\n";
+            $prompt .= 'Total Conversations: '.($context['customer']['total_conversations'] ?? 0)."\n";
+            $prompt .= 'Total Tickets: '.($context['customer']['total_tickets'] ?? 0)."\n\n";
         }
 
         // Conversation context
-        $prompt .= "Conversation Subject: " . ($context['conversation']['subject'] ?? 'No subject') . "\n";
-        $prompt .= "Conversation Status: " . ($context['conversation']['status'] ?? 'open') . "\n\n";
+        $prompt .= 'Conversation Subject: '.($context['conversation']['subject'] ?? 'No subject')."\n";
+        $prompt .= 'Conversation Status: '.($context['conversation']['status'] ?? 'open')."\n\n";
 
         // Recent messages
-        if (!empty($context['messages'])) {
+        if (! empty($context['messages'])) {
             $prompt .= "Recent Messages:\n";
             foreach ($context['messages'] as $msg) {
                 $sender = $msg['sender_type'] === 'customer' ? 'Customer' :
@@ -252,22 +252,22 @@ class AIService
         }
 
         // Knowledge base
-        if (!empty($knowledge)) {
+        if (! empty($knowledge)) {
             $prompt .= "Relevant Knowledge Base Information:\n";
             foreach ($knowledge as $item) {
-                $prompt .= "### " . ($item['title'] ?? 'Untitled') . "\n";
-                $prompt .= ($item['content'] ?? '') . "\n\n";
+                $prompt .= '### '.($item['title'] ?? 'Untitled')."\n";
+                $prompt .= ($item['content'] ?? '')."\n\n";
             }
         }
 
         // Custom instructions
         if ($customInstructions) {
-            $prompt .= "Additional Instructions:\n" . $customInstructions . "\n\n";
+            $prompt .= "Additional Instructions:\n".$customInstructions."\n\n";
         }
 
         // Current message
-        $prompt .= "Customer Message: " . $userMessage . "\n\n";
-        $prompt .= "Please provide a helpful response to the customer.";
+        $prompt .= 'Customer Message: '.$userMessage."\n\n";
+        $prompt .= 'Please provide a helpful response to the customer.';
 
         return $prompt;
     }
@@ -277,18 +277,19 @@ class AIService
      */
     protected function searchKnowledgeBase(string $query): array
     {
-        if (!$this->configuration->knowledge_base_enabled) {
+        if (! $this->configuration->knowledge_base_enabled) {
             return [];
         }
 
         try {
-            $tool = new \App\Ai\Tools\SearchKnowledgeBaseTool();
+            $tool = new SearchKnowledgeBaseTool;
             $result = $tool->execute(['query' => $query, 'limit' => 5]);
 
             return $result['success'] ? $result['results'] : [];
 
         } catch (\Exception $e) {
             Log::error('Knowledge base search failed:', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -370,13 +371,13 @@ class AIService
             $estimatedCost = $inputCost + $outputCost;
 
             $claim->update([
-                'input_tokens'   => $inputTokens,
-                'output_tokens'  => $outputTokens,
-                'total_tokens'   => $totalTokens,
+                'input_tokens' => $inputTokens,
+                'output_tokens' => $outputTokens,
+                'total_tokens' => $totalTokens,
                 'estimated_cost' => $estimatedCost,
-                'metadata'       => [
-                    'status'        => ($response['success'] ?? false) ? 'completed' : 'failed',
-                    'success'       => $response['success'] ?? false,
+                'metadata' => [
+                    'status' => ($response['success'] ?? false) ? 'completed' : 'failed',
+                    'success' => $response['success'] ?? false,
                     'finish_reason' => $response['finish_reason'] ?? null,
                 ],
             ]);

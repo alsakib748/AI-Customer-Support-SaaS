@@ -11,14 +11,38 @@ use Stringable;
 abstract class BaseTool
 {
     protected $tenant;
+
     protected $conversation;
+
     protected $customer;
+
     protected $user;
 
     public function __construct()
     {
-        $this->tenant = app('current_tenant');
+        $this->tenant = $this->resolveTenant();
         $this->user = auth()->user();
+    }
+
+    /**
+     * Resolve the active tenant from tenancy or the request-bound current
+     * tenant, without throwing when neither is available.
+     */
+    protected function resolveTenant()
+    {
+        try {
+            if (function_exists('tenancy') && tenancy()->tenant) {
+                return tenancy()->tenant;
+            }
+        } catch (\Throwable $e) {
+            // Tenancy is not initialized; fall through to the bound instance.
+        }
+
+        try {
+            return app()->bound('current_tenant') ? app('current_tenant') : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
@@ -27,6 +51,7 @@ abstract class BaseTool
     public function setConversation($conversation): self
     {
         $this->conversation = $conversation;
+
         return $this;
     }
 
@@ -36,6 +61,7 @@ abstract class BaseTool
     public function setCustomer($customer): self
     {
         $this->customer = $customer;
+
         return $this;
     }
 
@@ -60,11 +86,48 @@ abstract class BaseTool
     abstract public function parameters(): array;
 
     /**
-     * Check if tool is authorized
+     * Whether this tool may only run when a server-side conversation context
+     * has been established.
+     */
+    protected function requiresConversationContext(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Check if tool is authorized.
+     *
+     * Tools only run inside an active tenant context, and context-sensitive
+     * tools additionally require a conversation context that the server set
+     * (never one supplied by the model).
      */
     protected function isAuthorized(): bool
     {
+        if (! $this->tenant) {
+            return false;
+        }
+
+        if ($this->requiresConversationContext() && ! $this->conversation) {
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * The customer associated with the current conversation context.
+     */
+    protected function contextCustomer()
+    {
+        if ($this->customer) {
+            return $this->customer;
+        }
+
+        if ($this->conversation) {
+            return $this->conversation->customer;
+        }
+
+        return null;
     }
 
     /**

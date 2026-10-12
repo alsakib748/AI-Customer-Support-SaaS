@@ -1,115 +1,152 @@
 <?php
+
 // app/Ai/Services/EmbeddingService.php
 
 namespace App\Ai\Services;
 
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
+use App\Ai\Embeddings\EmbeddingProvider;
+use App\Ai\Exceptions\EmbeddingException;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Generates real embeddings through the configured {@see EmbeddingProvider}.
+ *
+ * Vectors are cached per tenant, per provider, per model, per dimension and
+ * per task type. The service never fabricates a vector: if the provider cannot
+ * be reached it throws {@see EmbeddingException} so callers can decide whether
+ * to skip an article or fall back to keyword search instead of ranking against
+ * meaningless data.
+ */
 class EmbeddingService
 {
-    protected $provider;
-    protected $model;
-    protected $configuration;
+    public function __construct(protected EmbeddingProvider $provider) {}
 
-    public function __construct()
+    public function provider(): EmbeddingProvider
     {
-        $this->configuration = \App\Models\Tenant\AIConfiguration::first()
-            ?? \App\Models\Tenant\AIConfiguration::getDefault();
+        return $this->provider;
+    }
 
-        $this->provider = $this->configuration->provider ?? 'openai';
-        $this->model = $this->getEmbeddingModel();
+    public function model(): string
+    {
+        return $this->provider->model();
+    }
+
+    public function dimensions(): int
+    {
+        return $this->provider->dimensions();
     }
 
     /**
-     * Get embedding model based on provider
+     * Generate an embedding for a single piece of text.
+     *
+     * @return array<int, float>
+     *
+     * @throws EmbeddingException
      */
-    protected function getEmbeddingModel(): string
+    public function generateEmbedding(string $text, string $taskType = 'RETRIEVAL_DOCUMENT'): array
     {
-        $models = [
-            'openai' => 'text-embedding-ada-002',
-            'anthropic' => 'claude-3-embedding',
-            'gemini' => 'embedding-001',
-        ];
+        $text = trim($text);
 
-        return $models[$this->provider] ?? 'text-embedding-ada-002';
-    }
-
-    /**
-     * Generate embeddings for text
-     */
-    public function generateEmbedding(string $text): array
-    {
-        try {
-            // Check cache first
-            $cacheKey = 'embedding_' . md5($text);
-
-            if (Cache::has($cacheKey)) {
-                return Cache::get($cacheKey);
-            }
-
-            // Get embedding from provider
-            $embedding = $this->getEmbeddingFromProvider($text);
-
-            // Cache the embedding
-            Cache::put($cacheKey, $embedding, 86400); // 24 hours
-
-            return $embedding;
-
-        } catch (\Exception $e) {
-            Log::error('Failed to generate embedding:', [
-                'error' => $e->getMessage(),
-                'text_length' => strlen($text),
-            ]);
-
-            // Return a zero vector as fallback
-            return $this->getZeroEmbedding();
+        if ($text === '') {
+            throw EmbeddingException::emptyText();
         }
-    }
 
-    /**
-     * Get embedding from provider
-     */
-    protected function getEmbeddingFromProvider(string $text): array
-    {
-        // For now, simulate embedding with random vector
-        // In production, this would call the actual API
-        // $response = Http::withHeaders([
-        //     'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-        // ])->post('https://api.openai.com/v1/embeddings', [
-        //     'model' => $this->model,
-        //     'input' => $text,
-        // ]);
-
-        // return $response->json('data.0.embedding');
-
-        // Simulated embedding (1536 dimensions for OpenAI)
-        $embedding = [];
-        for ($i = 0; $i < 1536; $i++) {
-            $embedding[] = rand(-100, 100) / 100;
+        if (! $this->cacheEnabled()) {
+            return $this->provider->embed($text, $taskType);
         }
+
+        $cacheKey = $this->cacheKey($text, $taskType);
+        $cached = Cache::get($cacheKey);
+
+        if (is_array($cached) && $cached !== []) {
+            return $cached;
+        }
+
+        $embedding = $this->provider->embed($text, $taskType);
+
+        Cache::put($cacheKey, $embedding, $this->cacheTtl());
+
         return $embedding;
     }
 
     /**
-     * Get zero embedding (fallback)
+     * Generate embeddings for a batch of texts.
+     *
+     * @param  array<int, string>  $texts
+     * @return array<int, array<int, float>>
+     *
+     * @throws EmbeddingException
      */
-    protected function getZeroEmbedding(): array
+    public function batchGenerateEmbeddings(array $texts, string $taskType = 'RETRIEVAL_DOCUMENT'): array
     {
-        return array_fill(0, 1536, 0);
+        if (! $this->cacheEnabled()) {
+            return $this->provider->embedBatch($texts, $taskType);
+        }
+
+        $results = [];
+        $pending = [];
+        $pendingIndexes = [];
+
+        foreach (array_values($texts) as $index => $text) {
+            $text = trim((string) $text);
+
+            if ($text === '') {
+                continue;
+            }
+
+            $cached = Cache::get($this->cacheKey($text, $taskType));
+
+            if (is_array($cached) && $cached !== []) {
+                $results[$index] = $cached;
+
+                continue;
+            }
+
+            $pendingIndexes[$index] = $text;
+            $pending[] = $text;
+        }
+
+        if ($pending !== []) {
+            $fresh = array_values($this->provider->embedBatch($pending, $taskType));
+
+            $position = 0;
+            foreach ($pendingIndexes as $index => $text) {
+                $vector = $fresh[$position] ?? [];
+
+                $results[$index] = $vector;
+                Cache::put($this->cacheKey($text, $taskType), $vector, $this->cacheTtl());
+
+                $position++;
+            }
+        }
+
+        ksort($results);
+
+        return array_values($results);
     }
 
     /**
-     * Calculate cosine similarity between two vectors
+     * Cosine similarity between two vectors of equal dimension.
+     *
+     * Returns 0.0 for empty or mismatched vectors rather than throwing: a
+     * dimension mismatch means the vectors are incomparable, not similar.
+     *
+     * @param  array<int, float>  $a
+     * @param  array<int, float>  $b
      */
     public function cosineSimilarity(array $a, array $b): float
     {
-        $dotProduct = 0;
-        $normA = 0;
-        $normB = 0;
+        $count = count($a);
 
-        for ($i = 0; $i < count($a); $i++) {
+        if ($count === 0 || $count !== count($b)) {
+            return 0.0;
+        }
+
+        $dotProduct = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+
+        for ($i = 0; $i < $count; $i++) {
             $dotProduct += $a[$i] * $b[$i];
             $normA += $a[$i] * $a[$i];
             $normB += $b[$i] * $b[$i];
@@ -118,22 +155,50 @@ class EmbeddingService
         $normA = sqrt($normA);
         $normB = sqrt($normB);
 
-        if ($normA == 0 || $normB == 0) {
-            return 0;
+        if ($normA === 0.0 || $normB === 0.0) {
+            return 0.0;
         }
 
         return $dotProduct / ($normA * $normB);
     }
 
     /**
-     * Batch generate embeddings
+     * Tenant namespace for cache isolation. Falls back to "central" outside a
+     * tenant context (e.g. platform jobs and tests).
      */
-    public function batchGenerateEmbeddings(array $texts): array
+    public function tenantKey(): string
     {
-        $results = [];
-        foreach ($texts as $text) {
-            $results[] = $this->generateEmbedding($text);
+        if (function_exists('tenant')) {
+            $tenant = tenant();
+
+            if ($tenant !== null) {
+                return (string) $tenant->getTenantKey();
+            }
         }
-        return $results;
+
+        return 'central';
+    }
+
+    protected function cacheKey(string $text, string $taskType): string
+    {
+        return sprintf(
+            'ai_embedding:%s:%s:%s:%d:%s:%s',
+            $this->tenantKey(),
+            $this->provider->name(),
+            $this->provider->model(),
+            $this->provider->dimensions(),
+            $taskType,
+            sha1($text)
+        );
+    }
+
+    protected function cacheEnabled(): bool
+    {
+        return (bool) config('ai.embeddings.cache', true);
+    }
+
+    protected function cacheTtl(): int
+    {
+        return (int) config('ai.embeddings.cache_ttl', 86400);
     }
 }

@@ -6,6 +6,7 @@ use App\Ai\Services\AIService;
 use App\Exceptions\PlanLimitExceededException;
 use App\Jobs\AI\ProcessCustomerMessage;
 use App\Models\Tenant\Message;
+use App\Models\Tenant\QuotaReservation;
 use App\Services\Billing\BillingLimitService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,11 @@ class ProcessCustomerMessageEnforcementTest extends TestCase
                 ->once()
                 ->with(Mockery::on(fn ($tenant) => $tenant->id === 'tenant-1'), 'ai.requests.monthly', 1)
                 ->andThrow(new PlanLimitExceededException('limit reached', 'PLAN_LIMIT_REACHED', []));
+
+            // The enforce() gate throws before a reservation is attempted, but
+            // the job still releases the (null) reservation in its finally block.
+            $mock->shouldReceive('reserve')->never();
+            $mock->shouldReceive('release')->once()->with(null);
         });
 
         $this->mock(AIService::class, function ($mock) {
@@ -106,6 +112,13 @@ class ProcessCustomerMessageEnforcementTest extends TestCase
 
         $this->mock(BillingLimitService::class, function ($mock) {
             $mock->shouldReceive('enforce')->once()->andReturn(null);
+
+            $mock->shouldReceive('reserve')
+                ->once()
+                ->with(Mockery::on(fn ($tenant) => $tenant->id === 'tenant-1'), 'ai.requests.monthly', 1)
+                ->andReturn(new QuotaReservation);
+
+            $mock->shouldReceive('release')->once();
         });
 
         $this->mock(AIService::class, function ($mock) use ($message) {

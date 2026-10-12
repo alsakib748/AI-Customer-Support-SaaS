@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Models\Tenant\Conversation;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Tool;
@@ -10,7 +11,6 @@ use Stringable;
 
 class GetConversationTool extends BaseTool
 {
-
     public function name(): string
     {
         return 'get_conversation';
@@ -32,29 +32,32 @@ class GetConversationTool extends BaseTool
         ];
     }
 
+    protected function requiresConversationContext(): bool
+    {
+        return true;
+    }
+
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to access conversation.');
             }
 
             $conversationId = $parameters['conversation_id'] ?? null;
 
-            if (!$conversationId) {
-                return $this->error('Conversation ID is required.');
+            // The model may only read the conversation it is serving; any other
+            // id is rejected rather than silently redirected.
+            if ($conversationId !== null && (int) $conversationId !== (int) $this->conversation->id) {
+                return $this->error('Access denied for the requested conversation.');
             }
 
             $conversation = Conversation::with(['customer', 'messages'])
-                ->find($conversationId);
+                ->find($this->conversation->id);
 
-            if (!$conversation) {
+            if (! $conversation) {
                 return $this->error('Conversation not found.');
             }
-
-            // Verify conversation belongs to current tenant
-            // (Already handled by tenant database)
-
             $result = [
                 'id' => $conversation->id,
                 'subject' => $conversation->subject,
@@ -101,7 +104,8 @@ class GetConversationTool extends BaseTool
 
         } catch (\Exception $e) {
             Log::error('Get conversation failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to get conversation: ' . $e->getMessage());
+
+            return $this->error('Failed to get conversation.');
         }
     }
 

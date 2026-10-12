@@ -4,11 +4,11 @@ namespace App\Ai\Tools;
 
 use App\Models\Tenant\KnowledgeBaseArticle;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class SearchKnowledgeBaseTool extends BaseTool
 {
-
     public function name(): string
     {
         return 'search_knowledge_base';
@@ -38,7 +38,7 @@ class SearchKnowledgeBaseTool extends BaseTool
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to search knowledge base.');
             }
 
@@ -49,13 +49,16 @@ class SearchKnowledgeBaseTool extends BaseTool
                 return $this->error('Search query is required.');
             }
 
-            // Search only published and AI-eligible articles
+            // Search only published and AI-eligible articles. LOWER(...) LIKE
+            // keeps matching case-insensitive on both PostgreSQL and SQLite.
+            $term = '%'.Str::lower($query).'%';
+
             $results = KnowledgeBaseArticle::publishedAndEligible()
                 ->with('category')
-                ->where(function ($q) use ($query) {
-                    $q->where('title', 'ILIKE', "%{$query}%")
-                        ->orWhere('excerpt', 'ILIKE', "%{$query}%")
-                        ->orWhere('content', 'ILIKE', "%{$query}%");
+                ->where(function ($q) use ($term) {
+                    $q->whereRaw('LOWER(title) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(excerpt) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(content) LIKE ?', [$term]);
                 })
                 ->limit($limit)
                 ->get();
@@ -67,7 +70,7 @@ class SearchKnowledgeBaseTool extends BaseTool
                     'excerpt' => $article->excerpt ?? Str::limit((string) $article->content, 150),
                     'content' => $article->content,
                     'category' => $article->category?->name,
-                    'url' => route('knowledge-base.articles.show', $article->slug),
+                    'url' => $this->articleUrl($article),
                 ];
             });
 
@@ -82,8 +85,22 @@ class SearchKnowledgeBaseTool extends BaseTool
 
         } catch (\Exception $e) {
             Log::error('Knowledge base search failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to search knowledge base: ' . $e->getMessage());
+
+            return $this->error('Failed to search knowledge base.');
         }
+    }
+
+    protected function articleUrl($article): ?string
+    {
+        try {
+            if (Route::has('knowledge-base.articles.show')) {
+                return route('knowledge-base.articles.show', $article->slug);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Knowledge base article URL generation failed.', ['error' => $e->getMessage()]);
+        }
+
+        return null;
     }
 
     protected function error(string $message): array
@@ -95,7 +112,6 @@ class SearchKnowledgeBaseTool extends BaseTool
             'count' => 0,
         ];
     }
-
 
     // /**
     //  * Get the description of the tool's purpose.

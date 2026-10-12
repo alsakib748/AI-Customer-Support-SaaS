@@ -2,7 +2,6 @@
 
 namespace App\Ai\Tools;
 
-use App\Models\Tenant\Conversation;
 use App\Services\Conversation\ConversationService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +11,6 @@ use Stringable;
 
 class EscalateConversationTool extends BaseTool
 {
-
     protected ConversationService $conversationService;
 
     public function __construct(ConversationService $conversationService)
@@ -47,28 +45,32 @@ class EscalateConversationTool extends BaseTool
         ];
     }
 
+    protected function requiresConversationContext(): bool
+    {
+        return true;
+    }
+
     public function execute(array $parameters): array
     {
         try {
-            if (!$this->isAuthorized()) {
+            if (! $this->isAuthorized()) {
                 return $this->error('Unauthorized to escalate conversations.');
             }
 
-            $conversationId = $parameters['conversation_id'] ?? null;
             $reason = $parameters['reason'] ?? null;
 
-            if (!$conversationId) {
-                return $this->error('Conversation ID is required.');
-            }
-
-            if (!$reason) {
+            if (! $reason) {
                 return $this->error('Escalation reason is required.');
             }
 
-            $conversation = Conversation::find($conversationId);
-            if (!$conversation) {
-                return $this->error('Conversation not found.');
+            // Only the conversation being served may be escalated; a
+            // mismatched id supplied by the model is rejected.
+            $conversationId = $parameters['conversation_id'] ?? null;
+            if ($conversationId !== null && (int) $conversationId !== (int) $this->conversation->id) {
+                return $this->error('Access denied for the requested conversation.');
             }
+
+            $conversation = $this->conversation;
 
             // Update conversation
             $conversation->update([
@@ -100,7 +102,8 @@ class EscalateConversationTool extends BaseTool
 
         } catch (\Exception $e) {
             Log::error('Escalation failed:', ['error' => $e->getMessage()]);
-            return $this->error('Failed to escalate conversation: ' . $e->getMessage());
+
+            return $this->error('Failed to escalate conversation.');
         }
     }
 
