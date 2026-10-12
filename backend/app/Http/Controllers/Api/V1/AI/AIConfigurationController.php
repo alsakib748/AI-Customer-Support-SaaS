@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\AI;
 
-use App\Http\Controllers\Controller;
 use App\Ai\Services\GeminiService;
+use App\Http\Controllers\Controller;
 use App\Models\Tenant\AIConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AIConfigurationController extends Controller
 {
@@ -75,20 +76,22 @@ class AIConfigurationController extends Controller
                     'nullable',
                     'string',
                     function ($attribute, $value, $fail) use ($request) {
-                        if ($value === null) return;
+                        if ($value === null) {
+                            return;
+                        }
 
                         $provider = $request->input('provider');
-                        if (!$provider) {
+                        if (! $provider) {
                             $config = AIConfiguration::first();
                             $provider = $config ? $config->provider : 'gemini';
                         }
 
                         $validModels = AIConfiguration::getModelsByProvider($provider);
 
-                        if (!in_array($value, array_keys($validModels))) {
+                        if (! in_array($value, array_keys($validModels))) {
                             $fail("Invalid model for provider: {$provider}");
                         }
-                    }
+                    },
                 ],
                 'enabled' => ['sometimes', 'boolean'],
                 'auto_reply_enabled' => ['sometimes', 'boolean'],
@@ -103,7 +106,7 @@ class AIConfigurationController extends Controller
 
             $config = AIConfiguration::first();
 
-            if (!$config) {
+            if (! $config) {
                 $config = AIConfiguration::create($validated);
             } else {
                 $config->update($validated);
@@ -120,7 +123,7 @@ class AIConfigurationController extends Controller
                 'data' => $config,
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
@@ -165,7 +168,7 @@ class AIConfigurationController extends Controller
                 'maxOutputTokens' => 256,
             ]);
 
-            if (!$response['success']) {
+            if (! $response['success']) {
                 Log::warning('AI configuration test failed', [
                     'error' => $response['error'] ?? 'Unknown provider error',
                 ]);
@@ -185,7 +188,7 @@ class AIConfigurationController extends Controller
                 ],
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
@@ -197,7 +200,7 @@ class AIConfigurationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'AI test failed: ' . $e->getMessage(),
+                'message' => 'AI test failed.',
             ], 500);
         }
     }

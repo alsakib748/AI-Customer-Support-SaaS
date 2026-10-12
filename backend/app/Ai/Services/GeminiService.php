@@ -1,4 +1,5 @@
 <?php
+
 // app/Ai/Services/GeminiService.php
 
 namespace App\Ai\Services;
@@ -11,9 +12,13 @@ use Illuminate\Support\Facades\Log;
 class GeminiService
 {
     protected string $apiKey;
+
     protected string $model;
+
     protected array $safetySettings;
+
     protected array $generationConfig;
+
     protected int $maxRetries;
 
     public function __construct()
@@ -27,17 +32,40 @@ class GeminiService
     }
 
     /**
+     * Per-tenant daily quota key. Scoping by tenant prevents one tenant's
+     * traffic from exhausting another tenant's provider quota.
+     */
+    protected function quotaCacheKey(): string
+    {
+        $tenantId = 'shared';
+
+        try {
+            $tenant = tenancy()->tenant
+                ?? (app()->bound('current_tenant') ? app('current_tenant') : null);
+
+            if ($tenant) {
+                $tenantId = $tenant->getTenantKey() ?? $tenant->id ?? $tenantId;
+            }
+        } catch (\Throwable $e) {
+            // Fall back to the shared bucket when tenancy is unavailable.
+        }
+
+        return 'gemini_requests_'.$tenantId.'_'.date('Y-m-d');
+    }
+
+    /**
      *  Check if daily quota is available
      */
     protected function canMakeRequest(): bool
     {
-        $key = 'gemini_requests_' . date('Y-m-d');
+        $key = $this->quotaCacheKey();
         try {
             $count = Cache::get($key, 0);
         } catch (\Throwable $e) {
             Log::warning('Gemini quota cache is unavailable; allowing request', [
                 'error' => $e->getMessage(),
             ]);
+
             return true;
         }
 
@@ -52,7 +80,7 @@ class GeminiService
      */
     protected function trackRequest(): void
     {
-        $key = 'gemini_requests_' . date('Y-m-d');
+        $key = $this->quotaCacheKey();
         try {
             Cache::increment($key);
             Cache::put($key, Cache::get($key), now()->endOfDay());
@@ -137,10 +165,9 @@ class GeminiService
     //     }
     // }
 
-
     public function generateContent(string $prompt, array $options = []): array
     {
-        if (!$this->canMakeRequest()) {
+        if (! $this->canMakeRequest()) {
             return [
                 'success' => false,
                 'error' => 'Daily API quota exceeded. Please try again tomorrow.',
@@ -184,6 +211,7 @@ class GeminiService
 
                     if ($attempts < $this->maxRetries) {
                         sleep((int) $retryAfter);
+
                         continue;
                     }
 
@@ -193,7 +221,7 @@ class GeminiService
                     ];
                 }
 
-                if (!$response->successful()) {
+                if (! $response->successful()) {
                     Log::error('Gemini API error:', [
                         'status' => $response->status(),
                         'body' => $response->body(),
@@ -201,7 +229,7 @@ class GeminiService
 
                     return [
                         'success' => false,
-                        'error' => 'Gemini API error: ' . $response->body(),
+                        'error' => 'The AI provider returned an error.',
                     ];
                 }
 
@@ -235,7 +263,7 @@ class GeminiService
                 if ($attempts >= $this->maxRetries) {
                     return [
                         'success' => false,
-                        'error' => $e->getMessage(),
+                        'error' => 'The AI provider is temporarily unavailable. Please try again later.',
                     ];
                 }
 
@@ -258,7 +286,7 @@ class GeminiService
     public function streamContent(string $prompt, callable $callback, array $options = []): void
     {
         try {
-            if (!$this->canMakeRequest()) {
+            if (! $this->canMakeRequest()) {
                 throw new \RuntimeException('Daily API quota exceeded. Please try again tomorrow.');
             }
 
@@ -282,14 +310,15 @@ class GeminiService
             $response = Http::timeout(120)->connectTimeout(10)->withHeaders([
                 'Content-Type' => 'application/json',
             ])->withOptions([
-                        'stream' => true,
-                    ])->post($url, $payload);
+                'stream' => true,
+            ])->post($url, $payload);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Gemini streaming error:', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return;
             }
 
@@ -298,7 +327,7 @@ class GeminiService
             $body = $response->getBody();
             $buffer = '';
 
-            while (!$body->eof()) {
+            while (! $body->eof()) {
                 $chunk = $body->read(1024);
                 $buffer .= $chunk;
 
@@ -336,63 +365,10 @@ class GeminiService
     }
 
     /**
-     * Generate embeddings using Gemini
-     */
-    public function generateEmbedding(string $text): array
-    {
-        try {
-            $model = 'text-embedding-004';
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:embedContent?key={$this->apiKey}";
-
-            $payload = [
-                'model' => "models/{$model}",
-                'content' => [
-                    'parts' => [
-                        ['text' => $text],
-                    ],
-                ],
-            ];
-
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post($url, $payload);
-
-            if (!$response->successful()) {
-                Log::error('Gemini embedding error:', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return $this->getZeroEmbedding();
-            }
-
-            $data = $response->json();
-            $embedding = $data['embedding']['values'] ?? [];
-
-            return $embedding;
-
-        } catch (\Exception $e) {
-            Log::error('Gemini embedding failed:', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return $this->getZeroEmbedding();
-        }
-    }
-
-    /**
-     * Get zero embedding (fallback)
-     */
-    protected function getZeroEmbedding(): array
-    {
-        return array_fill(0, 768, 0);
-    }
-
-    /**
      * Check if Gemini is configured
      */
     public function isConfigured(): bool
     {
-        return !empty($this->apiKey);
+        return ! empty($this->apiKey);
     }
 }

@@ -112,7 +112,7 @@ class AIStreamController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Streaming error: '.$e->getMessage(),
+                'message' => 'An error occurred while streaming the response.',
             ], 500);
         }
     }
