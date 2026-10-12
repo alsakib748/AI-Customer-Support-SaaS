@@ -1,13 +1,15 @@
 <?php
+
 // app/Services/AuditLogService.php
 
 namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\User;
-use Illuminate\Support\Facades\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request;
 
 class AuditLogService
 {
@@ -77,6 +79,7 @@ class AuditLogService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return null;
         }
     }
@@ -102,7 +105,7 @@ class AuditLogService
     public function logCreation(string $resourceType, $resource, array $data = []): ?AuditLog
     {
         return $this->log(
-            $resourceType . '_created',
+            $resourceType.'_created',
             $resourceType,
             $resource->id,
             null,
@@ -117,7 +120,7 @@ class AuditLogService
     public function logUpdate(string $resourceType, $resource, array $oldValues, array $newValues): ?AuditLog
     {
         return $this->log(
-            $resourceType . '_updated',
+            $resourceType.'_updated',
             $resourceType,
             $resource->id,
             $oldValues,
@@ -132,7 +135,7 @@ class AuditLogService
     public function logDeletion(string $resourceType, $resource, array $data = []): ?AuditLog
     {
         return $this->log(
-            $resourceType . '_deleted',
+            $resourceType.'_deleted',
             $resourceType,
             $resource->id,
             $data,
@@ -182,6 +185,52 @@ class AuditLogService
             ->limit($limit)
             ->get()
             ->toArray();
+    }
+
+    /**
+     * Paginated audit logs with optional filters.
+     *
+     * Supported filters: tenant_id, user_id, action, resource_type,
+     * resource_id, search, date_from, date_to.
+     */
+    public function paginate(array $filters = [], int $perPage = 25): LengthAwarePaginator
+    {
+        $query = AuditLog::query()->with('user');
+
+        if (! empty($filters['tenant_id'])) {
+            $query->forTenant($filters['tenant_id']);
+        }
+
+        if (! empty($filters['user_id'])) {
+            $query->forUser($filters['user_id']);
+        }
+
+        if (! empty($filters['action'])) {
+            $query->action($filters['action']);
+        }
+
+        if (! empty($filters['resource_type'])) {
+            $query->where('resource_type', $filters['resource_type']);
+        }
+
+        if (! empty($filters['search'])) {
+            $term = '%'.strtolower($filters['search']).'%';
+            $query->where(function ($q) use ($term) {
+                $q->whereRaw('LOWER(action) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(resource_type) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(resource_id) LIKE ?', [$term]);
+            });
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->where('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->where('created_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
     /**

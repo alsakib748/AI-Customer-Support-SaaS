@@ -1,10 +1,14 @@
 <?php
+
 // app/Services/Customer/CustomerService.php
 
 namespace App\Services\Customer;
 
+use App\Models\Tenant;
 use App\Models\Tenant\Customer;
+use App\Services\Billing\BillingLimitService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -12,10 +16,12 @@ use Illuminate\Support\Str;
 class CustomerService
 {
     protected $tenant;
-    protected $tenantId;
-    protected ?\App\Services\Billing\BillingLimitService $limits;
 
-    public function __construct(Request $request, \App\Services\Billing\BillingLimitService $limits)
+    protected $tenantId;
+
+    protected ?BillingLimitService $limits;
+
+    public function __construct(Request $request, BillingLimitService $limits)
     {
         $this->limits = $limits;
         // Try multiple ways to get the tenant
@@ -35,7 +41,7 @@ class CustomerService
             Log::info('Tenant from attributes', ['tenant_id' => $tenant?->id]);
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             try {
                 $tenant = app('current_tenant');
             } catch (\Exception $e) {
@@ -45,25 +51,25 @@ class CustomerService
         }
 
         // 2. From authenticated user's current tenant
-        if (!$tenant && auth()->check()) {
+        if (! $tenant && auth()->check()) {
             $user = auth()->user();
             if ($user && $user->current_tenant_id) {
-                $tenant = \App\Models\Tenant::find($user->current_tenant_id);
+                $tenant = Tenant::find($user->current_tenant_id);
                 Log::info('Tenant from user', ['tenant_id' => $tenant?->id]);
             }
         }
 
         // 3. From header
-        if (!$tenant) {
+        if (! $tenant) {
             $tenantId = $request->header('X-Tenant-ID');
             if ($tenantId) {
-                $tenant = \App\Models\Tenant::find($tenantId);
+                $tenant = Tenant::find($tenantId);
                 Log::info('Tenant from header', ['tenant_id' => $tenantId]);
             }
         }
 
         // 4. From first tenant of user
-        if (!$tenant && auth()->check()) {
+        if (! $tenant && auth()->check()) {
             $user = auth()->user();
             if ($user) {
                 $tenant = $user->tenants()->first();
@@ -75,16 +81,17 @@ class CustomerService
         }
 
         // 5. Check if user is Super Admin
-        if (!$tenant && auth()->check() && auth()->user()->hasRole('super_admin')) {
+        if (! $tenant && auth()->check() && auth()->user()->hasRole('super_admin')) {
             Log::info('Super Admin accessing customer service - no tenant needed');
             // For Super Admin, we can return empty data or all tenants
             // We'll handle this in the methods
             $this->tenant = null;
             $this->tenantId = null;
+
             return;
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             Log::error('No tenant found in customer service', [
                 'user_id' => auth()->id(),
                 'headers' => $request->headers->all(),
@@ -104,9 +111,10 @@ class CustomerService
      */
     protected function getTenantId(): string
     {
-        if (!$this->tenantId) {
+        if (! $this->tenantId) {
             throw new \RuntimeException('No tenant found in current context');
         }
+
         return $this->tenantId;
     }
 
@@ -115,7 +123,7 @@ class CustomerService
      */
     public function hasTenant(): bool
     {
-        return !is_null($this->tenant);
+        return ! is_null($this->tenant);
     }
 
     /**
@@ -132,42 +140,66 @@ class CustomerService
     public function getCustomers(array $filters = [])
     {
         // If Super Admin, return all customers across all tenants or empty
-        if ($this->isSuperAdmin() && !$this->tenantId) {
+        if ($this->isSuperAdmin() && ! $this->tenantId) {
             Log::info('Super Admin viewing customers - returning empty or all');
+
             // Return empty paginated result for Super Admin without tenant
-            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20, 1);
+            return new LengthAwarePaginator([], 0, 20, 1);
         }
 
-        $tenantId = $this->getTenantId();
+        $this->getTenantId();
+
+        $query = $this->buildCustomerQuery($filters);
+
+        $perPage = $filters['per_page'] ?? 20;
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Export customers (unpaginated) matching the given filters.
+     */
+    public function exportCustomers(array $filters = [])
+    {
+        $this->getTenantId();
+
+        return $this->buildCustomerQuery($filters)->get();
+    }
+
+    /**
+     * Build the filtered customer query shared by listing and exporting.
+     */
+    protected function buildCustomerQuery(array $filters = [])
+    {
         $query = Customer::query();
 
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
         // Filter by status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
         // Filter by tag
-        if (!empty($filters['tag'])) {
+        if (! empty($filters['tag'])) {
             $query->byTag($filters['tag']);
         }
 
         // Date range filter
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
         // Sorting
         $sortField = $filters['sort'] ?? 'created_at';
-        $sortDirection = $filters['direction'] ?? 'desc';
+        $sortDirection = strtolower($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
         $allowedSorts = [
             'first_name',
@@ -187,8 +219,7 @@ class CustomerService
             $query->orderBy('created_at', 'desc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
-        return $query->paginate($perPage);
+        return $query;
     }
 
     /**
@@ -197,6 +228,7 @@ class CustomerService
     public function getCustomer(int $id): Customer
     {
         $tenantId = $this->getTenantId();
+
         return Customer::where('id', $id)->firstOrFail();
     }
 
@@ -253,6 +285,7 @@ class CustomerService
 
         return $customer;
     }
+
     /**
      * Update a customer
      */
@@ -350,7 +383,7 @@ class CustomerService
     /**
      * Block a customer
      */
-    public function blockCustomer(int $id, string $reason = null): Customer
+    public function blockCustomer(int $id, ?string $reason = null): Customer
     {
         $tenantId = $this->getTenantId();
         $customer = $this->getCustomer($id);
@@ -422,7 +455,6 @@ class CustomerService
         return $customer->fresh();
     }
 
-
     /**
      * Get customer statistics
      */
@@ -447,8 +479,9 @@ class CustomerService
 
         try {
             // Check if Super Admin
-            if ($this->isSuperAdmin() && !$this->tenantId) {
+            if ($this->isSuperAdmin() && ! $this->tenantId) {
                 Log::info('Super Admin viewing customer statistics - returning empty');
+
                 return $this->getEmptyStatistics();
             }
 

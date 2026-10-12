@@ -72,6 +72,7 @@ const saving = computed(() => teamStore.saving);
 const deleting = computed(() => teamStore.deleting);
 const members = computed(() => teamStore.members);
 const totalMembers = computed(() => teamStore.totalMembers);
+const onlineMembers = computed(() => teamStore.onlineMembers);
 const statistics = computed(() => teamStore.statistics);
 const departments = computed(() => teamStore.departments);
 const canManageTeam = computed(() => teamStore.canManageTeam);

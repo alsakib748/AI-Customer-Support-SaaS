@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
+use App\Http\Controllers\Api\V1\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Api\V1\Admin\TenantLifecycleController as AdminTenantLifecycleController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\UserRoleController;
+use App\Http\Controllers\Api\V1\Admin\UserPermissionController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\UserSessionController;
@@ -210,27 +212,27 @@ Route::prefix('v1')->group(function () {
             // Main CRUD
             Route::get ('/',       [CustomerController::class, 'index'])  ->middleware('permission:customers.view');
             Route::post('/',       [CustomerController::class, 'store'])  ->middleware('permission:customers.create');
-            Route::get('/statistics', [CustomerController::class, 'statistics']);
-            Route::get('/tags', [CustomerController::class, 'tags']);
-            Route::get('/export', [CustomerController::class, 'export']);
+            Route::get('/statistics', [CustomerController::class, 'statistics'])->middleware('permission:customers.view');
+            Route::get('/tags', [CustomerController::class, 'tags'])->middleware('permission:customers.view');
+            Route::get('/export', [CustomerController::class, 'export'])->middleware('permission:customers.view');
             Route::get ('/{id}',   [CustomerController::class, 'show'])   ->middleware('permission:customers.view');
             Route::put ('/{id}',   [CustomerController::class, 'update']) ->middleware('permission:customers.update');
             Route::delete('/{id}', [CustomerController::class, 'destroy'])->middleware('permission:customers.delete');
 
             // Restore (soft delete)
-            Route::post('/{id}/restore', [CustomerController::class, 'restore']);
-            Route::delete('/{id}/force', [CustomerController::class, 'forceDelete']);
+            Route::post('/{id}/restore', [CustomerController::class, 'restore'])->middleware('permission:customers.delete');
+            Route::delete('/{id}/force', [CustomerController::class, 'forceDelete'])->middleware('permission:customers.delete');
 
             // Block/Unblock
-            Route::post('/{id}/block', [CustomerController::class, 'block']);
-            Route::post('/{id}/unblock', [CustomerController::class, 'unblock']);
+            Route::post('/{id}/block', [CustomerController::class, 'block'])->middleware('permission:customers.update');
+            Route::post('/{id}/unblock', [CustomerController::class, 'unblock'])->middleware('permission:customers.update');
 
             // Tags
-            Route::post('/{id}/tags', [CustomerController::class, 'addTag']);
-            Route::delete('/{id}/tags/{tag}', [CustomerController::class, 'removeTag']);
+            Route::post('/{id}/tags', [CustomerController::class, 'addTag'])->middleware('permission:customers.update');
+            Route::delete('/{id}/tags/{tag}', [CustomerController::class, 'removeTag'])->middleware('permission:customers.update');
 
             // Bulk Operations
-            Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete']);
+            Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete'])->middleware('permission:customers.delete');
         });
 
         // todo; ========== Conversation Routes ===========
@@ -616,6 +618,23 @@ Route::prefix('v1/admin/rbac')
         // User ↔ Role
         Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign']);
         Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke']);
+
+        // User ↔ direct Permissions
+        Route::put   ('/users/{user}/permissions',  [UserPermissionController::class, 'sync']);
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Platform — Audit Logs (Super Admin)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/admin/audit-logs')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/statistics', [AdminAuditLogController::class, 'statistics'])
+            ->middleware('permission:platform.audit_logs');
+        Route::get('/',           [AdminAuditLogController::class, 'index'])
+            ->middleware('permission:platform.audit_logs');
     });
 
 /*

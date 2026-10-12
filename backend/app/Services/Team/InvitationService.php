@@ -1,8 +1,10 @@
 <?php
+
 // app/Services/Team/InvitationService.php
 
 namespace App\Services\Team;
 
+use App\Mail\TeamInvitationMail;
 use App\Models\Tenant;
 use App\Models\TenantInvitation;
 use App\Models\TenantUser;
@@ -10,13 +12,18 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class InvitationService
 {
+    protected const EXPIRY_DAYS = 7;
+
     protected Tenant $tenant;
+
     protected ?User $user;
 
     public function __construct(Request $request)
@@ -27,7 +34,7 @@ class InvitationService
             ?? app('current_tenant')
             ?? ($this->user?->currentTenant);
 
-        if (!$tenant) {
+        if (! $tenant) {
             $tenantId = $request->header('X-Tenant-Id')
                 ?? $request->header('X-Tenant-ID')
                 ?? $request->header('x-tenant-id');
@@ -37,11 +44,11 @@ class InvitationService
             }
         }
 
-        if (!$tenant && $this->user) {
+        if (! $tenant && $this->user) {
             $tenant = $this->user->tenants()->first();
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \RuntimeException('No tenant found in current context');
         }
 
@@ -53,7 +60,7 @@ class InvitationService
      */
     public function canManageInvitations(): bool
     {
-        if (!$this->user) {
+        if (! $this->user) {
             return false;
         }
 
@@ -80,7 +87,7 @@ class InvitationService
 
             if ($exists) {
                 throw ValidationException::withMessages([
-                    'email' => ['This user is already a member of the workspace.']
+                    'email' => ['This user is already a member of the workspace.'],
                 ]);
             }
         }
@@ -96,24 +103,31 @@ class InvitationService
 
         if ($pending) {
             throw ValidationException::withMessages([
-                'email' => ['An invitation has already been sent to this email.']
+                'email' => ['An invitation has already been sent to this email.'],
             ]);
         }
 
-        // Create invitation
+        // Create invitation. Only a hash of the token is persisted; the
+        // plaintext token is exposed to the caller once so it can be emailed.
+        $plainToken = Str::random(64);
+
         $invitation = TenantInvitation::create([
             'tenant_id' => $this->tenant->id,
             'invited_by' => auth()->id(),
             'email' => $data['email'],
             'role' => $data['role'] ?? 'agent',
             'department' => $data['department'] ?? null,
-            'token' => Str::random(64),
-            'expires_at' => now()->addDays(7),
+            'token' => hash('sha256', $plainToken),
+            'expires_at' => now()->addDays(self::EXPIRY_DAYS),
             'metadata' => [
                 'position' => $data['position'] ?? null,
                 'invited_at' => now()->toISOString(),
             ],
         ]);
+
+        $invitation->setAttribute('plain_token', $plainToken);
+
+        $this->sendInvitationEmail($invitation, $plainToken);
 
         Log::info('Team invitation created', [
             'tenant_id' => $this->tenant->id,
@@ -132,11 +146,11 @@ class InvitationService
         $query = TenantInvitation::query()
             ->where('tenant_id', $this->tenant->id);
 
-        if (!empty($filters['search'])) {
-            $query->where('email', 'ILIKE', "%{$filters['search']}%");
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             if ($filters['status'] === 'pending') {
                 $query->whereNull('accepted_at')
                     ->whereNull('revoked_at')
@@ -162,7 +176,12 @@ class InvitationService
     public function acceptInvitation(string $token, array $data): TenantUser
     {
         $invitation = TenantInvitation::query()
-            ->where('token', $token)
+            ->where(function ($query) use ($token) {
+                // New invitations store a SHA-256 hash; legacy rows stored the
+                // raw token, so accept either form.
+                $query->where('token', hash('sha256', $token))
+                    ->orWhere('token', $token);
+            })
             ->whereNull('accepted_at')
             ->whereNull('revoked_at')
             ->where('expires_at', '>', now())
@@ -171,14 +190,14 @@ class InvitationService
         // Check if email matches
         if ($invitation->email !== $data['email']) {
             throw ValidationException::withMessages([
-                'email' => ['This invitation is for a different email address.']
+                'email' => ['This invitation is for a different email address.'],
             ]);
         }
 
         // Find or create user
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user) {
+        if (! $user) {
             $user = User::create([
                 'first_name' => $data['first_name'] ?? '',
                 'last_name' => $data['last_name'] ?? '',
@@ -197,7 +216,7 @@ class InvitationService
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'email' => ['This user is already a member.']
+                'email' => ['This user is already a member.'],
             ]);
         }
 
@@ -214,12 +233,20 @@ class InvitationService
             'accepted_at' => now(),
         ]);
 
-        // Assign Spatie role
+        // Assign the Spatie role inside the invitation's tenant team. Accept is
+        // a public route, so the team context is not set for us.
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($invitation->tenant_id);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $role = Role::firstOrCreate([
             'name' => $invitation->role,
             'guard_name' => 'api',
         ]);
         $user->assignRole($role);
+
+        setPermissionsTeamId($previousTeamId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Mark invitation as accepted
         $invitation->update([
@@ -250,24 +277,30 @@ class InvitationService
 
         if ($invitation->accepted_at) {
             throw ValidationException::withMessages([
-                'invitation' => ['This invitation has already been accepted.']
+                'invitation' => ['This invitation has already been accepted.'],
             ]);
         }
 
         if ($invitation->revoked_at) {
             throw ValidationException::withMessages([
-                'invitation' => ['This invitation has been revoked.']
+                'invitation' => ['This invitation has been revoked.'],
             ]);
         }
 
+        $plainToken = Str::random(64);
+
         $invitation->update([
-            'expires_at' => now()->addDays(7),
-            'token' => Str::random(64),
+            'expires_at' => now()->addDays(self::EXPIRY_DAYS),
+            'token' => hash('sha256', $plainToken),
             'metadata' => array_merge($invitation->metadata ?? [], [
                 'resent_at' => now()->toISOString(),
                 'resent_by' => auth()->id(),
             ]),
         ]);
+
+        $invitation->setAttribute('plain_token', $plainToken);
+
+        $this->sendInvitationEmail($invitation, $plainToken);
 
         Log::info('Team invitation resent', [
             'tenant_id' => $this->tenant->id,
@@ -275,7 +308,41 @@ class InvitationService
             'resent_by' => auth()->id(),
         ]);
 
-        return $invitation->fresh();
+        return $invitation;
+    }
+
+    /**
+     * Email the invitation link to the invited user.
+     */
+    protected function sendInvitationEmail(TenantInvitation $invitation, string $plainToken): void
+    {
+        try {
+            $inviter = $invitation->invited_by ? User::find($invitation->invited_by) : null;
+
+            Mail::to($invitation->email)->queue(new TeamInvitationMail(
+                acceptUrl: $this->buildAcceptUrl($plainToken),
+                workspaceName: $this->tenant->name,
+                role: $invitation->role,
+                inviterName: $inviter?->full_name,
+                expiresAt: $invitation->expires_at?->toDateTimeString(),
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send team invitation email', [
+                'tenant_id' => $this->tenant->id,
+                'email' => $invitation->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Build the public URL a user follows to accept an invitation.
+     */
+    protected function buildAcceptUrl(string $plainToken): string
+    {
+        $base = config('app.frontend_url') ?: config('app.url');
+
+        return rtrim((string) $base, '/').'/team/invitations/accept/'.$plainToken;
     }
 
     /**
@@ -289,7 +356,7 @@ class InvitationService
 
         if ($invitation->accepted_at) {
             throw ValidationException::withMessages([
-                'invitation' => ['Cannot revoke an already accepted invitation.']
+                'invitation' => ['Cannot revoke an already accepted invitation.'],
             ]);
         }
 

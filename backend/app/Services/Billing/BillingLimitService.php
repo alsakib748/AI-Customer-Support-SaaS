@@ -307,6 +307,11 @@ class BillingLimitService
                 })
                 ->sum('total_tokens')),
 
+            // Storage bytes are synced from the tenant's stored documents by
+            // UsageTracker::syncStorageUsage and cached on the subscription.
+            'storage_bytes' => (int) ($this->subscriptions
+                ->getEntitlingSubscription($tenant->id)?->storage_used ?? 0),
+
             default => 0,
         };
     }

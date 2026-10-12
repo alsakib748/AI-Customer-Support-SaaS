@@ -57,6 +57,10 @@ class RbacService {
     revokeUserRole(userId) {
         return api.delete(`/admin/rbac/users/${userId}/role`);
     }
+
+    syncUserPermissions(userId, permissions) {
+        return api.put(`/admin/rbac/users/${userId}/permissions`, { permissions });
+    }
 }
 
 export default new RbacService();

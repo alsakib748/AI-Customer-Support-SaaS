@@ -10,13 +10,13 @@ use App\Http\Resources\Customer\CustomerCollection;
 use App\Http\Resources\Customer\CustomerResource;
 use App\Services\Billing\BillingLimitService;
 use App\Services\Customer\CustomerService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
-
     protected CustomerService $service;
 
     public function __construct(CustomerService $service)
@@ -56,9 +56,11 @@ class CustomerController extends Controller
             return new CustomerCollection($customers);
 
         } catch (\RuntimeException $e) {
+            Log::warning('Customer listing without tenant context.', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'No workspace found.',
             ], 400);
 
         } catch (\Exception $e) {
@@ -91,7 +93,7 @@ class CustomerController extends Controller
 
             return new CustomerResource($customer);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer not found.',
@@ -130,24 +132,23 @@ class CustomerController extends Controller
                     'message' => 'Customer created successfully.',
                 ]);
 
-        }catch (PlanLimitExceededException $e) {
-        //  Structured 403 — frontend shows "upgrade" prompt
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage(),
-            'code'    => $e->errorCode,
-            'data'    => $e->errorData,
-        ], 403);
+        } catch (PlanLimitExceededException $e) {
+            //  Structured 403 — frontend shows "upgrade" prompt
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code' => $e->errorCode,
+                'data' => $e->errorData,
+            ], 403);
 
-       } catch (ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed.',
-            'errors'  => $e->errors(),
-        ], 422);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
 
-       }
-         catch (\Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Failed to create customer:', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -177,7 +178,7 @@ class CustomerController extends Controller
                     'message' => 'Customer updated successfully 🎉',
                 ]);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer not found.',
@@ -213,7 +214,7 @@ class CustomerController extends Controller
                 'message' => 'Customer deleted successfully.',
             ]);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer not found.',
@@ -283,7 +284,7 @@ class CustomerController extends Controller
                     'message' => 'Customer blocked successfully.',
                 ]);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer not found.',
@@ -319,7 +320,7 @@ class CustomerController extends Controller
                     'message' => 'Customer unblocked successfully.',
                 ]);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer not found.',
@@ -502,4 +503,115 @@ class CustomerController extends Controller
         }
     }
 
+    /**
+     * Permanently delete a customer (force delete)
+     */
+    public function forceDelete($id)
+    {
+        try {
+            $this->service->forceDeleteCustomer($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer permanently deleted.',
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found.',
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to force delete customer:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete customer.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Export customers matching the current filters as a CSV download.
+     */
+    public function export(Request $request)
+    {
+        try {
+            $filters = $request->only([
+                'search',
+                'status',
+                'tag',
+                'date_from',
+                'date_to',
+                'sort',
+                'direction',
+            ]);
+
+            $customers = $this->service->exportCustomers($filters);
+
+            $columns = [
+                'id',
+                'uuid',
+                'first_name',
+                'last_name',
+                'email',
+                'phone',
+                'company_name',
+                'status',
+                'tags',
+                'total_conversations',
+                'total_tickets',
+                'satisfaction_score',
+                'last_contacted_at',
+                'created_at',
+            ];
+
+            $callback = function () use ($customers, $columns) {
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, $columns);
+
+                foreach ($customers as $customer) {
+                    fputcsv($handle, [
+                        $customer->id,
+                        $customer->uuid,
+                        $customer->first_name,
+                        $customer->last_name,
+                        $customer->email,
+                        $customer->phone,
+                        $customer->company_name,
+                        $customer->status,
+                        implode(', ', $customer->tags ?? []),
+                        $customer->total_conversations,
+                        $customer->total_tickets,
+                        $customer->satisfaction_score,
+                        $customer->last_contacted_at?->toISOString(),
+                        $customer->created_at?->toISOString(),
+                    ]);
+                }
+
+                fclose($handle);
+            };
+
+            return response()->streamDownload(
+                $callback,
+                'customers-'.now()->format('Ymd_His').'.csv',
+                ['Content-Type' => 'text/csv'],
+            );
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to export customers:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export customers.',
+            ], 500);
+        }
+    }
 }

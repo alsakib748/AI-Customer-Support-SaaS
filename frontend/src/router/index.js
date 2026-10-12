@@ -487,6 +487,12 @@ const router = createRouter({
             meta: { requiresGuest: true, title: 'Register' }
         },
         {
+            path: '/team/invitations/accept/:token',
+            name: 'AcceptTeamInvitation',
+            component: () => import('@/views/pages/auth/AcceptInvitation.vue'),
+            meta: { title: 'Accept Invitation' }
+        },
+        {
             path: '/403',
             name: 'Forbidden',
             component: () => import('@/views/pages/auth/Forbidden.vue'),
@@ -904,7 +910,7 @@ const router = createRouter({
                 {
                     path: '/admin/audit-logs',
                     name: 'AdminAuditLogs',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    component: () => import('@/views/admin/AuditLogs.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.audit_logs', title: 'Audit Logs' }
                 },
                 {
