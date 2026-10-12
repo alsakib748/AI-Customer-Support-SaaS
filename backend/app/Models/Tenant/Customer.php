@@ -2,7 +2,6 @@
 
 namespace App\Models\Tenant;
 
-use App\Models\Tenant\Conversation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -56,19 +55,20 @@ class Customer extends Model
     // ============================================
     public function getFullNameAttribute(): string
     {
-        return trim($this->first_name . ' ' . ($this->last_name ?? ''));
+        return trim($this->first_name.' '.($this->last_name ?? ''));
     }
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->full_name ?: $this->email ?? $this->phone ?? 'Customer #' . $this->id;
+        return $this->full_name ?: $this->email ?? $this->phone ?? 'Customer #'.$this->id;
     }
 
     public function getInitialsAttribute(): string
     {
         $first = substr($this->first_name, 0, 1);
         $last = $this->last_name ? substr($this->last_name, 0, 1) : '';
-        return strtoupper($first . $last);
+
+        return strtoupper($first.$last);
     }
 
     public function getStatusLabelAttribute(): string
@@ -96,7 +96,7 @@ class Customer extends Model
     //  Add avatar accessor for frontend compatibility
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? '/storage/' . $this->avatar : null;
+        return $this->avatar ? '/storage/'.$this->avatar : null;
     }
 
     // ============================================
@@ -120,12 +120,14 @@ class Customer extends Model
 
     public function scopeSearch($query, $search)
     {
-        return $query->where(function ($q) use ($search) {
-            $q->where('first_name', 'ILIKE', "%{$search}%")
-                ->orWhere('last_name', 'ILIKE', "%{$search}%")
-                ->orWhere('email', 'ILIKE', "%{$search}%")
-                ->orWhere('phone', 'ILIKE', "%{$search}%")
-                ->orWhere('company_name', 'ILIKE', "%{$search}%");
+        $term = '%'.strtolower($search).'%';
+
+        return $query->where(function ($q) use ($term) {
+            $q->whereRaw('LOWER(first_name) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(last_name) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(email) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(phone) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(company_name) LIKE ?', [$term]);
         });
     }
 
@@ -148,11 +150,11 @@ class Customer extends Model
         return $this->status === 'blocked';
     }
 
-    public function block(string $reason = null): void
+    public function block(?string $reason = null): void
     {
         $this->update([
             'status' => 'blocked',
-            'notes' => $this->notes ? $this->notes . "\n\nBlocked: " . ($reason ?? 'No reason provided') : 'Blocked: ' . ($reason ?? 'No reason provided'),
+            'notes' => $this->notes ? $this->notes."\n\nBlocked: ".($reason ?? 'No reason provided') : 'Blocked: '.($reason ?? 'No reason provided'),
         ]);
     }
 
@@ -176,7 +178,7 @@ class Customer extends Model
     public function addTag(string $tag): void
     {
         $tags = $this->tags ?? [];
-        if (!in_array($tag, $tags)) {
+        if (! in_array($tag, $tags)) {
             $tags[] = $tag;
             $this->update(['tags' => $tags]);
         }
@@ -207,5 +209,4 @@ class Customer extends Model
     {
         return $this->activeConversation()->first();
     }
-
 }

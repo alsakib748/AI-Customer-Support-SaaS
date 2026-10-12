@@ -210,27 +210,27 @@ Route::prefix('v1')->group(function () {
             // Main CRUD
             Route::get ('/',       [CustomerController::class, 'index'])  ->middleware('permission:customers.view');
             Route::post('/',       [CustomerController::class, 'store'])  ->middleware('permission:customers.create');
-            Route::get('/statistics', [CustomerController::class, 'statistics']);
-            Route::get('/tags', [CustomerController::class, 'tags']);
-            Route::get('/export', [CustomerController::class, 'export']);
+            Route::get('/statistics', [CustomerController::class, 'statistics'])->middleware('permission:customers.view');
+            Route::get('/tags', [CustomerController::class, 'tags'])->middleware('permission:customers.view');
+            Route::get('/export', [CustomerController::class, 'export'])->middleware('permission:customers.view');
             Route::get ('/{id}',   [CustomerController::class, 'show'])   ->middleware('permission:customers.view');
             Route::put ('/{id}',   [CustomerController::class, 'update']) ->middleware('permission:customers.update');
             Route::delete('/{id}', [CustomerController::class, 'destroy'])->middleware('permission:customers.delete');
 
             // Restore (soft delete)
-            Route::post('/{id}/restore', [CustomerController::class, 'restore']);
-            Route::delete('/{id}/force', [CustomerController::class, 'forceDelete']);
+            Route::post('/{id}/restore', [CustomerController::class, 'restore'])->middleware('permission:customers.delete');
+            Route::delete('/{id}/force', [CustomerController::class, 'forceDelete'])->middleware('permission:customers.delete');
 
             // Block/Unblock
-            Route::post('/{id}/block', [CustomerController::class, 'block']);
-            Route::post('/{id}/unblock', [CustomerController::class, 'unblock']);
+            Route::post('/{id}/block', [CustomerController::class, 'block'])->middleware('permission:customers.update');
+            Route::post('/{id}/unblock', [CustomerController::class, 'unblock'])->middleware('permission:customers.update');
 
             // Tags
-            Route::post('/{id}/tags', [CustomerController::class, 'addTag']);
-            Route::delete('/{id}/tags/{tag}', [CustomerController::class, 'removeTag']);
+            Route::post('/{id}/tags', [CustomerController::class, 'addTag'])->middleware('permission:customers.update');
+            Route::delete('/{id}/tags/{tag}', [CustomerController::class, 'removeTag'])->middleware('permission:customers.update');
 
             // Bulk Operations
-            Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete']);
+            Route::post('/bulk-delete', [CustomerController::class, 'bulkDelete'])->middleware('permission:customers.delete');
         });
 
         // todo; ========== Conversation Routes ===========
