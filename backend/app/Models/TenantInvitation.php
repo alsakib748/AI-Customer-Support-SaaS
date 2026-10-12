@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/TenantInvitation.php
 
 namespace App\Models;
@@ -160,6 +161,6 @@ class TenantInvitation extends Model
 
     public function scopeSearch($query, $search)
     {
-        return $query->where('email', 'ILIKE', "%{$search}%");
+        return $query->whereRaw('LOWER(email) LIKE ?', ['%'.strtolower($search).'%']);
     }
 }

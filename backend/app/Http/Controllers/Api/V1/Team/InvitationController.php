@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Team\InviteMemberRequest;
 use App\Services\Billing\BillingLimitService;
 use App\Services\Team\InvitationService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +26,7 @@ class InvitationController extends Controller
     public function index(Request $request)
     {
         try {
-            if (!$this->service->canManageInvitations()) {
+            if (! $this->service->canManageInvitations()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to view invitations.',
@@ -68,16 +69,16 @@ class InvitationController extends Controller
     public function store(InviteMemberRequest $request, BillingLimitService $limits)
     {
         try {
-            // if (!$this->service->canManageInvitations()) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'You do not have permission to send invitations.',
-            //     ], 403);
-            // }
+            if (! $this->service->canManageInvitations()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to send invitations.',
+                ], 403);
+            }
 
             //  Enforce plan limit BEFORE creating the invitation
-        $tenant = app('current_tenant');
-        $limits->enforce($tenant, 'agents.max', 1);
+            $tenant = app('current_tenant');
+            $limits->enforce($tenant, 'agents.max', 1);
 
             $invitation = $this->service->createInvitation($request->validated());
 
@@ -116,7 +117,7 @@ class InvitationController extends Controller
     public function resend($id)
     {
         try {
-            if (!$this->service->canManageInvitations()) {
+            if (! $this->service->canManageInvitations()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to resend invitations.',
@@ -138,7 +139,7 @@ class InvitationController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invitation not found.',
@@ -166,7 +167,7 @@ class InvitationController extends Controller
     public function destroy($id)
     {
         try {
-            if (!$this->service->canManageInvitations()) {
+            if (! $this->service->canManageInvitations()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to revoke invitations.',
@@ -187,7 +188,7 @@ class InvitationController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invitation not found.',
@@ -237,7 +238,7 @@ class InvitationController extends Controller
                 'errors' => $e->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired invitation.',
