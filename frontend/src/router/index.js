@@ -487,6 +487,12 @@ const router = createRouter({
             meta: { requiresGuest: true, title: 'Register' }
         },
         {
+            path: '/team/invitations/accept/:token',
+            name: 'AcceptTeamInvitation',
+            component: () => import('@/views/pages/auth/AcceptInvitation.vue'),
+            meta: { title: 'Accept Invitation' }
+        },
+        {
             path: '/403',
             name: 'Forbidden',
             component: () => import('@/views/pages/auth/Forbidden.vue'),

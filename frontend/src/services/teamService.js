@@ -75,7 +75,7 @@ class TeamService {
     }
 
     acceptInvitation(token, data) {
-        return api.post(`/team/invitations/accpet/${token}`, data);
+        return api.post(`/team/invitations/accept/${token}`, data);
     }
 }
 
