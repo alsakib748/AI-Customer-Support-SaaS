@@ -6,24 +6,14 @@ namespace App\Ai\Services;
 
 use App\Ai\Exceptions\EmbeddingException;
 use App\Models\Tenant\KnowledgeBaseArticle;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SemanticSearchService
 {
-    protected EmbeddingService $embeddingService;
-
-    protected KnowledgeBaseChunkingService $chunkingService;
-
-    protected $cacheResults = true;
-
     public function __construct(
-        EmbeddingService $embeddingService,
-        KnowledgeBaseChunkingService $chunkingService
-    ) {
-        $this->embeddingService = $embeddingService;
-        $this->chunkingService = $chunkingService;
-    }
+        protected EmbeddingService $embeddingService,
+        protected KnowledgeBaseIndexer $indexer,
+    ) {}
 
     /**
      * Search knowledge base semantically
@@ -98,56 +88,16 @@ class SemanticSearchService
     }
 
     /**
-     * Get or generate article embeddings.
+     * Get the persisted, version-fresh embeddings for an article.
      *
-     * The cache key is namespaced by tenant, embedding model and article
-     * content version, so a stale entry can never score a changed article and
-     * one tenant can never read another tenant's vectors.
+     * The indexer stores vectors in the tenant database and refreshes them when
+     * the article content or embedding model changes, so a stale entry can
+     * never score a changed article and one tenant can never read another
+     * tenant's vectors.
      */
     protected function getArticleEmbeddings($article): array
     {
-        $cacheKey = $this->embeddingService->articleCacheKey(
-            $article->id,
-            (string) $article->title,
-            (string) $article->content,
-            $article->updated_at?->timestamp
-        );
-
-        if ($this->cacheResults) {
-            $cached = Cache::get($cacheKey);
-
-            if (is_array($cached) && $cached !== []) {
-                return $cached;
-            }
-        }
-
-        // Chunk the article
-        $chunks = $this->chunkingService->chunkArticle($article);
-
-        if ($chunks === []) {
-            return [];
-        }
-
-        $vectors = $this->embeddingService->batchGenerateEmbeddings(
-            array_map(fn ($chunk) => $chunk['content'], $chunks),
-            'RETRIEVAL_DOCUMENT'
-        );
-
-        $embeddings = [];
-        foreach ($chunks as $position => $chunk) {
-            $embeddings[] = [
-                'content' => $chunk['content'],
-                'embedding' => $vectors[$position] ?? [],
-                'index' => $chunk['index'],
-                'content_hash' => sha1($chunk['content']),
-            ];
-        }
-
-        if ($this->cacheResults) {
-            Cache::put($cacheKey, $embeddings, (int) config('ai.embeddings.cache_ttl', 86400));
-        }
-
-        return $embeddings;
+        return $this->indexer->embeddingsFor($article);
     }
 
     /**

@@ -163,25 +163,6 @@ class EmbeddingService
     }
 
     /**
-     * Shared cache key for a knowledge base article's chunk vectors.
-     *
-     * The key embeds the tenant, model and a content version so that a
-     * reindexed article never overwrites (or is served from) a stale entry.
-     */
-    public function articleCacheKey(int $articleId, string $title, string $content, ?int $updatedAt = null): string
-    {
-        $version = sha1(implode('|', [$title, $content, (string) $updatedAt]));
-
-        return sprintf(
-            'ai_article_embeddings:%s:%s:%d:%s',
-            $this->tenantKey(),
-            $this->provider->model(),
-            $articleId,
-            $version
-        );
-    }
-
-    /**
      * Tenant namespace for cache isolation. Falls back to "central" outside a
      * tenant context (e.g. platform jobs and tests).
      */
