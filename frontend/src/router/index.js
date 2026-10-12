@@ -904,7 +904,7 @@ const router = createRouter({
                 {
                     path: '/admin/audit-logs',
                     name: 'AdminAuditLogs',
-                    component: () => import('@/views/admin/AdminPlaceholder.vue'),
+                    component: () => import('@/views/admin/AuditLogs.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.audit_logs', title: 'Audit Logs' }
                 },
                 {

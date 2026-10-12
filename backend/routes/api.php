@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
+use App\Http\Controllers\Api\V1\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Api\V1\Admin\TenantLifecycleController as AdminTenantLifecycleController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\UserRoleController;
+use App\Http\Controllers\Api\V1\Admin\UserPermissionController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\UserSessionController;
@@ -616,6 +618,23 @@ Route::prefix('v1/admin/rbac')
         // User ↔ Role
         Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign']);
         Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke']);
+
+        // User ↔ direct Permissions
+        Route::put   ('/users/{user}/permissions',  [UserPermissionController::class, 'sync']);
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Platform — Audit Logs (Super Admin)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/admin/audit-logs')
+    ->middleware(['jwt.auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/statistics', [AdminAuditLogController::class, 'statistics'])
+            ->middleware('permission:platform.audit_logs');
+        Route::get('/',           [AdminAuditLogController::class, 'index'])
+            ->middleware('permission:platform.audit_logs');
     });
 
 /*
