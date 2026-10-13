@@ -75,7 +75,7 @@ class AiProviderHealthCheck extends AbstractHealthCheck
         }
 
         $metadata['probe'] = [
-            'url' => $url,
+            'url' => $this->redactUrl($url),
             'status' => $response->status(),
         ];
 
@@ -130,6 +130,20 @@ class AiProviderHealthCheck extends AbstractHealthCheck
         }
 
         return $base.'/'.$paths[$provider];
+    }
+
+    /**
+     * Strip any credential that could appear as a query parameter before a URL
+     * is written to health metadata. Provider URLs must never carry the key,
+     * but stored metadata must be safe regardless of the provider's format.
+     */
+    protected function redactUrl(string $url): string
+    {
+        return (string) preg_replace(
+            '/([?&](?:[^=&#]*(?:key|token|secret|password|signature|auth)[^=&#]*)=)[^&#]*/i',
+            '$1REDACTED',
+            $url,
+        );
     }
 
     protected function headers(string $provider, string $key): array
