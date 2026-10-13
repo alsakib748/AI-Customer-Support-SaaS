@@ -3,10 +3,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useTeamStore } from '@/stores/team';
-import { useToast } from 'primevue/usetoast';
+import { toast } from 'vue3-toastify';
 
 const teamStore = useTeamStore();
-const toast = useToast();
 
 // State
 const showInviteDialog = ref(false);
@@ -79,23 +78,13 @@ const handleSendInvitation = async () => {
     try {
         await teamStore.sendInvitation(inviteForm);
 
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Invitation sent successfully 📧',
-            life: 3000
-        });
+        toast.success('Invitation sent successfully 📧', { autoClose: 3000 });
 
         showInviteDialog.value = false;
         resetInviteForm();
         await loadData();
     } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data?.message || 'Failed to send invitation',
-            life: 5000
-        });
+        toast.error(error.response?.data?.message || 'Failed to send invitation', { autoClose: 5000 });
     } finally {
         saving.value = false;
     }
@@ -105,21 +94,11 @@ const resendInvitation = async (id) => {
     try {
         await teamStore.resendInvitation(id);
 
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Invitation resent successfully 📧',
-            life: 3000
-        });
+        toast.success('Invitation resent successfully 📧', { autoClose: 3000 });
 
         await loadData();
     } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data?.message || 'Failed to resend invitation',
-            life: 5000
-        });
+        toast.error(error.response?.data?.message || 'Failed to resend invitation', { autoClose: 5000 });
     }
 };
 
@@ -129,21 +108,11 @@ const revokeInvitation = async (id) => {
     try {
         await teamStore.revokeInvitation(id);
 
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Invitation revoked successfully',
-            life: 3000
-        });
+        toast.success('Invitation revoked successfully', { autoClose: 3000 });
 
         await loadData();
     } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data?.message || 'Failed to revoke invitation',
-            life: 5000
-        });
+        toast.error(error.response?.data?.message || 'Failed to revoke invitation', { autoClose: 5000 });
     }
 };
 
@@ -184,24 +153,29 @@ onMounted(() => {
                 <p class="text-surface-600 dark:text-surface-400">Manage team member invitations</p>
             </div>
             <div class="flex gap-3">
-                <Button label="New Invitation" icon="pi pi-plus" severity="primary" @click="showInviteDialog = true" v-if="canManageTeam" />
-                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
+                <Button label="New Invitation" icon="pi pi-plus" severity="primary" @click="showInviteDialog = true"
+                    v-if="canManageTeam" />
+                <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData"
+                    :loading="loading" />
             </div>
         </div>
 
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="invitationFilters.search" placeholder="Search invitations..." class="w-full" @input="applyInvitationFilters" />
+                <InputText v-model="invitationFilters.search" placeholder="Search invitations..." class="w-full"
+                    @input="applyInvitationFilters" />
             </div>
             <div class="w-48">
-                <Select v-model="invitationFilters.status" :options="statusFilterOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyInvitationFilters" />
+                <Select v-model="invitationFilters.status" :options="statusFilterOptions" optionLabel="label"
+                    optionValue="value" placeholder="Status" class="w-full" @change="applyInvitationFilters" />
             </div>
             <Button icon="pi pi-times" label="Clear" severity="secondary" outlined @click="clearInvitationFilters" />
         </div>
 
         <!-- Invitations Table -->
-        <DataTable :value="invitations" :loading="loading" paginator :rows="invitationFilters.per_page" :totalRecords="totalInvitations" :lazy="true" @page="onInvitationPageChange" class="w-full">
+        <DataTable :value="invitations" :loading="loading" paginator :rows="invitationFilters.per_page"
+            :totalRecords="totalInvitations" :lazy="true" @page="onInvitationPageChange" class="w-full">
             <Column field="email" header="Email">
                 <template #body="{ data }">
                     <div>
@@ -238,8 +212,10 @@ onMounted(() => {
             <Column header="Actions" style="width: 150px">
                 <template #body="{ data }">
                     <div class="flex gap-2">
-                        <Button v-if="data.is_pending" icon="pi pi-send" severity="info" text rounded @click="resendInvitation(data.id)" tooltip="Resend" :loading="saving" />
-                        <Button v-if="data.is_pending" icon="pi pi-times" severity="danger" text rounded @click="revokeInvitation(data.id)" tooltip="Revoke" :loading="saving" />
+                        <Button v-if="data.is_pending" icon="pi pi-send" severity="info" text rounded
+                            @click="resendInvitation(data.id)" tooltip="Resend" :loading="saving" />
+                        <Button v-if="data.is_pending" icon="pi pi-times" severity="danger" text rounded
+                            @click="revokeInvitation(data.id)" tooltip="Revoke" :loading="saving" />
                     </div>
                 </template>
             </Column>
@@ -250,7 +226,8 @@ onMounted(() => {
             <form @submit.prevent="handleSendInvitation" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Email Address *</label>
-                    <InputText v-model="inviteForm.email" type="email" class="w-full" :class="{ 'p-invalid': getError('email') }" placeholder="member@example.com" />
+                    <InputText v-model="inviteForm.email" type="email" class="w-full"
+                        :class="{ 'p-invalid': getError('email') }" placeholder="member@example.com" />
                     <small v-if="getError('email')" class="text-red-500">
                         {{ getError('email') }}
                     </small>
@@ -258,7 +235,8 @@ onMounted(() => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Role *</label>
-                    <Select v-model="inviteForm.role" :options="roleOptions" optionLabel="label" optionValue="value" class="w-full" :class="{ 'p-invalid': getError('role') }" placeholder="Select Role" />
+                    <Select v-model="inviteForm.role" :options="roleOptions" optionLabel="label" optionValue="value"
+                        class="w-full" :class="{ 'p-invalid': getError('role') }" placeholder="Select Role" />
                     <small v-if="getError('role')" class="text-red-500">
                         {{ getError('role') }}
                     </small>
@@ -277,11 +255,9 @@ onMounted(() => {
 
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" severity="secondary" @click="showInviteDialog = false" />
-                <Button label="Send Invitation" icon="pi pi-send" severity="primary" :loading="saving" @click="handleSendInvitation" />
+                <Button label="Send Invitation" icon="pi pi-send" severity="primary" :loading="saving"
+                    @click="handleSendInvitation" />
             </template>
         </Dialog>
-
-        <!-- Toast -->
-        <Toast />
     </div>
 </template>
