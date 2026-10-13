@@ -475,9 +475,9 @@ watch(
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
                     <div class="flex gap-2">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)" tooltip="View Details" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" tooltip="Edit" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" tooltip="Remove" :loading="deleting" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)" v-tooltip="'View Details'" />
+                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" v-tooltip="'Edit'" />
+                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" v-tooltip="'Remove'" :loading="deleting" />
                     </div>
                 </template>
             </Column>
@@ -595,7 +595,7 @@ watch(
                     <label class="block text-sm font-medium mb-1">Skills</label>
                     <div class="flex gap-2 mb-2">
                         <InputText v-model="skillInput" placeholder="Add a skill" class="flex-1" @keydown.enter.prevent="addSkill" />
-                        <Button icon="pi pi-plus" severity="secondary" @click="addSkill" />
+                        <Button icon="pi pi-plus" severity="secondary" v-tooltip="'Add skill'" @click="addSkill" />
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Chip v-for="skill in editForm.skills" :key="skill" :label="skill" removable @remove="removeSkill(skill)" />

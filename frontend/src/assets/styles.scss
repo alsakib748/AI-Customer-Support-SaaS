@@ -2,3 +2,26 @@
 @use 'primeicons/primeicons.css';
 @use '@/assets/layout/layout.scss';
 @use '@/assets/demo/demo.scss';
+
+/* ------------------------------------------------------------------ */
+/* Action tooltips (PrimeVue v-tooltip directive)                     */
+/* A refined, theme-aware look used consistently on action icons.     */
+/* ------------------------------------------------------------------ */
+.p-tooltip {
+    .p-tooltip-text {
+        padding: 0.45rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        line-height: 1.2;
+        box-shadow:
+            0 10px 15px -3px rgb(0 0 0 / 0.22),
+            0 4px 6px -4px rgb(0 0 0 / 0.22);
+    }
+
+    .p-tooltip-arrow {
+        border-width: 0.25rem;
+    }
+}
+

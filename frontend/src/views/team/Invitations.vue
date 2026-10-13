@@ -213,9 +213,9 @@ onMounted(() => {
                 <template #body="{ data }">
                     <div class="flex gap-2">
                         <Button v-if="data.is_pending" icon="pi pi-send" severity="info" text rounded
-                            @click="resendInvitation(data.id)" tooltip="Resend" :loading="saving" />
+                            @click="resendInvitation(data.id)" v-tooltip="'Resend'" :loading="saving" />
                         <Button v-if="data.is_pending" icon="pi pi-times" severity="danger" text rounded
-                            @click="revokeInvitation(data.id)" tooltip="Revoke" :loading="saving" />
+                            @click="revokeInvitation(data.id)" v-tooltip="'Revoke'" :loading="saving" />
                     </div>
                 </template>
             </Column>

@@ -114,8 +114,8 @@ watch(() => filters.status, applyFilters);
             <Column header="Actions" style="width: 150px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewInvoice(data)" />
-                        <Button icon="pi pi-download" severity="secondary" text rounded :disabled="!data.invoice_pdf_url" @click="downloadInvoice(data)" />
+                        <Button icon="pi pi-eye" severity="info" text rounded v-tooltip="'View invoice'" @click="viewInvoice(data)" />
+                        <Button icon="pi pi-download" severity="secondary" text rounded v-tooltip="'Download PDF'" :disabled="!data.invoice_pdf_url" @click="downloadInvoice(data)" />
                     </div>
                 </template>
             </Column>

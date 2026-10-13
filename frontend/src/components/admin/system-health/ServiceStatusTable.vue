@@ -52,7 +52,7 @@ const formatTime = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
                             </div>
                         </div>
 
-                        <Button v-if="onRun && check.status !== 'disabled'" icon="pi pi-play" :loading="runningKey === check.key" severity="secondary" text rounded size="small" title="Run now" @click.stop="onRun(check)" />
+                        <Button v-if="onRun && check.status !== 'disabled'" icon="pi pi-play" :loading="runningKey === check.key" severity="secondary" text rounded size="small" v-tooltip="'Run now'" @click.stop="onRun(check)" />
                     </div>
                 </li>
             </ul>

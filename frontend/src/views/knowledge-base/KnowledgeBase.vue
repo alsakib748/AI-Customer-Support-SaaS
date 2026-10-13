@@ -317,7 +317,7 @@ watch(
                 <div class="bg-surface-0 dark:bg-surface-900 rounded-lg shadow p-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-surface-900 dark:text-surface-0">Categories</h3>
-                        <Button v-if="canCreateKnowledge" icon="pi pi-plus" severity="primary" text rounded size="small" @click="showCategoryDialog = true" tooltip="New Category" />
+                        <Button v-if="canCreateKnowledge" icon="pi pi-plus" severity="primary" text rounded size="small" @click="showCategoryDialog = true" v-tooltip="'New Category'" />
                     </div>
 
                     <div class="mb-3">
@@ -338,8 +338,8 @@ watch(
                             </div>
                             <div class="flex items-center gap-1">
                                 <Tag :value="category.status_label" :severity="category.status_color" size="small" />
-                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="secondary" text rounded size="small" @click.stop="editCategory(category)" />
-                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded size="small" @click.stop="confirmDeleteCategory(category)" />
+                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="secondary" text rounded size="small" v-tooltip="'Edit category'" @click.stop="editCategory(category)" />
+                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded size="small" v-tooltip="'Delete category'" @click.stop="confirmDeleteCategory(category)" />
                             </div>
                         </div>
 
@@ -420,12 +420,12 @@ watch(
                     <Column header="Actions" style="width: 250px">
                         <template #body="{ data }">
                             <div class="flex gap-1 flex-wrap">
-                                <Button icon="pi pi-eye" severity="info" text rounded @click="viewArticle(data)" tooltip="View" />
-                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="warning" text rounded @click="editArticle(data)" tooltip="Edit" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'published'" icon="pi pi-check" severity="success" text rounded @click="publishArticle(data)" tooltip="Publish" />
-                                <Button v-if="canUpdateKnowledge && data.status === 'published'" icon="pi pi-times" severity="secondary" text rounded @click="unpublishArticle(data)" tooltip="Unpublish" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'archived'" icon="pi pi-folder" severity="secondary" text rounded @click="archiveArticle(data)" tooltip="Archive" />
-                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded @click="confirmDeleteArticle(data)" tooltip="Delete" />
+                                <Button icon="pi pi-eye" severity="info" text rounded @click="viewArticle(data)" v-tooltip="'View'" />
+                                <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="warning" text rounded @click="editArticle(data)" v-tooltip="'Edit'" />
+                                <Button v-if="canUpdateKnowledge && data.status !== 'published'" icon="pi pi-check" severity="success" text rounded @click="publishArticle(data)" v-tooltip="'Publish'" />
+                                <Button v-if="canUpdateKnowledge && data.status === 'published'" icon="pi pi-times" severity="secondary" text rounded @click="unpublishArticle(data)" v-tooltip="'Unpublish'" />
+                                <Button v-if="canUpdateKnowledge && data.status !== 'archived'" icon="pi pi-folder" severity="secondary" text rounded @click="archiveArticle(data)" v-tooltip="'Archive'" />
+                                <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded @click="confirmDeleteArticle(data)" v-tooltip="'Delete'" />
                             </div>
                         </template>
                     </Column>
