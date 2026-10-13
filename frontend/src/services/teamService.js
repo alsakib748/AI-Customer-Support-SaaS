@@ -37,6 +37,10 @@ class TeamService {
         return api.delete(`/team/members/${id}`);
     }
 
+    verifyMember(id) {
+        return api.post(`/team/members/${id}/verify-email`);
+    }
+
     getStatistics() {
         return api.get('/team/members/statistics');
     }

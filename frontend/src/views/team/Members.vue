@@ -183,6 +183,21 @@ const handleRemoveMember = async (id) => {
     }
 };
 
+const verifyMember = async (member) => {
+    const label = member.name || member.email;
+
+    if (!confirm(`Mark ${label}'s email address as verified?`)) {
+        return;
+    }
+
+    try {
+        await teamStore.verifyMember(member.id);
+        await loadData();
+    } catch (error) {
+        // Error handled in store
+    }
+};
+
 const addSkill = () => {
     const skill = skillInput.value.trim();
     if (skill && !editForm.skills.includes(skill)) {
@@ -423,6 +438,12 @@ watch(
                 </template>
             </Column>
 
+            <Column field="email_verified" header="Verified" sortable>
+                <template #body="{ data }">
+                    <Tag :value="data.email_verified ? 'Verified' : 'Unverified'" :severity="data.email_verified ? 'success' : 'warning'" />
+                </template>
+            </Column>
+
             <Column field="department" header="Department" sortable>
                 <template #body="{ data }">
                     <span class="px-2 py-1 bg-surface-100 dark:bg-surface-800 rounded-md text-sm">
@@ -472,10 +493,11 @@ watch(
                 </template>
             </Column>
 
-            <Column header="Actions" style="width: 120px">
+            <Column header="Actions" style="width: 150px">
                 <template #body="{ data }">
                     <div class="flex gap-2">
                         <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)" v-tooltip="'View Details'" />
+                        <Button v-if="canManageTeam && !data.is_owner && !data.email_verified" icon="pi pi-check-circle" severity="success" text rounded @click="verifyMember(data)" v-tooltip="'Verify Email'" :loading="saving" />
                         <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" v-tooltip="'Edit'" />
                         <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" v-tooltip="'Remove'" :loading="deleting" />
                     </div>

@@ -196,6 +196,11 @@ export const useUsersStore = defineStore('users', () => {
         return response.data.data;
     };
 
+    const verifyUserEmail = async (id) => {
+        const response = await userService.verifyUserEmail(id);
+        return applyResult(response.data.data);
+    };
+
     // =========================================================
     // RETURN
     // =========================================================
@@ -229,6 +234,7 @@ export const useUsersStore = defineStore('users', () => {
         // Lifecycle
         activateUser,
         suspendUser,
-        revokeUserSessions
+        revokeUserSessions,
+        verifyUserEmail
     };
 });

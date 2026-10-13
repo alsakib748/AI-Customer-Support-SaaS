@@ -1,7 +1,8 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { toast } from 'vue3-toastify';
 
 const authStore = useAuthStore();
 
@@ -11,11 +12,37 @@ const form = reactive({
     remember: false
 });
 
+const notVerified = ref(false);
+const resending = ref(false);
+
 const handleLogin = async () => {
+    notVerified.value = false;
+
     try {
         await authStore.login(form);
-    } catch {
+    } catch (err) {
         // Error toast is fired by the axios response interceptor in services/api.js
+        if (err.response?.status === 403 && err.response?.data?.error === 'email_not_verified') {
+            notVerified.value = true;
+        }
+    }
+};
+
+const resendVerification = async () => {
+    if (!form.email) {
+        toast.error('Enter your email address first.');
+        return;
+    }
+
+    resending.value = true;
+
+    try {
+        await authStore.resendVerification(form.email);
+        toast.success('If an account exists for that email, a verification link has been sent.');
+    } catch (err) {
+        toast.error(err.response?.data?.message || 'Could not send a verification email.');
+    } finally {
+        resending.value = false;
     }
 };
 </script>
@@ -62,6 +89,12 @@ const handleLogin = async () => {
                                     <label for="rememberme">Remember me</label>
                                 </div>
                                 <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
+                            </div>
+                            <div v-if="notVerified" class="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                                <p class="mb-2">Your email address is not verified yet. Please verify it before signing in.</p>
+                                <button type="button" :disabled="resending || authStore.loading" @click="resendVerification" class="font-semibold text-amber-900 underline disabled:opacity-50">
+                                    {{ resending ? 'Sending…' : 'Resend verification email' }}
+                                </button>
                             </div>
                             <div class="pt-2 pb-3 text-center">
                                 <router-link to="/register" class="cursor-pointer text-green-600">Don't have an account? <span class="text-green-400 font-bold">Register</span></router-link>

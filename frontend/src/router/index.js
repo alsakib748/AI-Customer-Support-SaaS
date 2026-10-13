@@ -493,6 +493,12 @@ const router = createRouter({
             meta: { title: 'Accept Invitation' }
         },
         {
+            path: '/verify-email/:id?/:hash?',
+            name: 'VerifyEmail',
+            component: () => import('@/views/pages/auth/VerifyEmail.vue'),
+            meta: { title: 'Verify Email' }
+        },
+        {
             path: '/403',
             name: 'Forbidden',
             component: () => import('@/views/pages/auth/Forbidden.vue'),
