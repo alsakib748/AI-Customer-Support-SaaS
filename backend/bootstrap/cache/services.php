@@ -38,11 +38,11 @@
     34 => 'Stancl\\Tenancy\\TenancyServiceProvider',
     35 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
     36 => 'App\\Providers\\AppServiceProvider',
-    37 => 'App\\Providers\\BillingServiceProvider',
-    38 => 'App\\Providers\\EventServiceProvider',
-    39 => 'App\\Providers\\PaymentServiceProvider',
-    40 => 'App\\Providers\\TenancyServiceProvider',
-    41 => 'App\\Providers\\PaymentServiceProvider',
+    37 => 'App\\Providers\\AiServiceProvider',
+    38 => 'App\\Providers\\BillingServiceProvider',
+    39 => 'App\\Providers\\EventServiceProvider',
+    40 => 'App\\Providers\\PaymentServiceProvider',
+    41 => 'App\\Providers\\TenancyServiceProvider',
   ),
   'eager' => 
   array (
@@ -67,11 +67,11 @@
     18 => 'Stancl\\Tenancy\\TenancyServiceProvider',
     19 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
     20 => 'App\\Providers\\AppServiceProvider',
-    21 => 'App\\Providers\\BillingServiceProvider',
-    22 => 'App\\Providers\\EventServiceProvider',
-    23 => 'App\\Providers\\PaymentServiceProvider',
-    24 => 'App\\Providers\\TenancyServiceProvider',
-    25 => 'App\\Providers\\PaymentServiceProvider',
+    21 => 'App\\Providers\\AiServiceProvider',
+    22 => 'App\\Providers\\BillingServiceProvider',
+    23 => 'App\\Providers\\EventServiceProvider',
+    24 => 'App\\Providers\\PaymentServiceProvider',
+    25 => 'App\\Providers\\TenancyServiceProvider',
   ),
   'deferred' => 
   array (
