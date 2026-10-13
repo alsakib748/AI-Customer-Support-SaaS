@@ -141,7 +141,7 @@ const handleSubmit = () => {
             <label class="block text-sm font-medium mb-1">Tags</label>
             <div class="flex gap-2 mb-2">
                 <InputText v-model="tagInput" placeholder="Add a tag" class="flex-1" @keydown.enter.prevent="addTag" />
-                <Button icon="pi pi-plus" severity="secondary" type="button" @click="addTag" />
+                <Button icon="pi pi-plus" severity="secondary" type="button" v-tooltip="'Add tag'" @click="addTag" />
             </div>
             <div class="flex flex-wrap gap-2">
                 <Chip v-for="tag in form.tags" :key="tag" :label="tag" removable @remove="removeTag(tag)" />

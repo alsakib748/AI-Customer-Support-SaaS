@@ -126,8 +126,8 @@ onMounted(load);
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-pencil" severity="info" text rounded @click="openEdit(data)" />
-                        <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDelete(data)" />
+                        <Button icon="pi pi-pencil" severity="info" text rounded v-tooltip="'Edit coupon'" @click="openEdit(data)" />
+                        <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip="'Delete coupon'" @click="handleDelete(data)" />
                     </div>
                 </template>
             </Column>

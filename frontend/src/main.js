@@ -6,6 +6,7 @@ import router from './router';
 import Aura from '@primeuix/themes/aura';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
+import Tooltip from 'primevue/tooltip';
 // import ToastService from 'primevue/toastservice';
 
 // Import components
@@ -46,6 +47,7 @@ app.component('ToggleSwitch', ToggleSwitch);
 app.component('InputMask', InputMask);
 // app.component('Toast', Toast);
 app.use(ConfirmationService);
+app.directive('tooltip', Tooltip);
 app.use(pinia);
 app.use(Vue3Toastify, {
     // autoClose: false,

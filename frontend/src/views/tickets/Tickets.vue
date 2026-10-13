@@ -459,7 +459,7 @@ watch(
             <Column header="Actions" style="width: 250px">
                 <template #body="{ data }">
                     <div class="flex gap-1 flex-wrap">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewTicket(data)" tooltip="View Details" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewTicket(data)" v-tooltip="'View Details'" />
 
                         <Button
                             v-if="canAssignTickets && !data.assigned_user_id && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')"
@@ -468,7 +468,7 @@ watch(
                             text
                             rounded
                             @click="assignToMe(data)"
-                            tooltip="Assign to Me"
+                            v-tooltip="'Assign to Me'"
                         />
 
                         <Button
@@ -478,16 +478,16 @@ watch(
                             text
                             rounded
                             @click="unassignTicket(data)"
-                            tooltip="Unassign"
+                            v-tooltip="'Unassign'"
                         />
 
-                        <Button v-if="canUpdateTickets && data.status === 'open'" icon="pi pi-play" severity="success" text rounded @click="startTicket(data)" tooltip="Start" />
+                        <Button v-if="canUpdateTickets && data.status === 'open'" icon="pi pi-play" severity="success" text rounded @click="startTicket(data)" v-tooltip="'Start'" />
 
-                        <Button v-if="canUpdateTickets && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="resolveTicket(data)" tooltip="Resolve" />
+                        <Button v-if="canUpdateTickets && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="resolveTicket(data)" v-tooltip="'Resolve'" />
 
-                        <Button v-if="canUpdateTickets && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="reopenTicket(data)" tooltip="Reopen" />
+                        <Button v-if="canUpdateTickets && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="reopenTicket(data)" v-tooltip="'Reopen'" />
 
-                        <Button v-if="canDeleteTickets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
+                        <Button v-if="canDeleteTickets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
                     </div>
                 </template>
             </Column>
@@ -575,7 +575,7 @@ watch(
                             size="small"
                             @click="resolveTicket(selectedTicket)"
                         />
-                        <Button icon="pi pi-times" severity="secondary" text @click="showDetailsDialog = false" />
+                        <Button icon="pi pi-times" severity="secondary" text v-tooltip="'Close'" @click="showDetailsDialog = false" />
                     </div>
                 </div>
 

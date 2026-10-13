@@ -16,7 +16,9 @@ class ProcessExpiredSubscriptions implements ShouldQueue
 
     public $timeout = 300;
 
-    public $tries = 1;
+    public $tries = 3;
+
+    public $backoff = [60, 300];
 
     /**
      * Create a new job instance.

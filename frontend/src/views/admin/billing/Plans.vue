@@ -33,7 +33,7 @@ const formatCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-U
             <div class="flex gap-2">
                 <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing')" />
                 <Button label="Create Plan" icon="pi pi-plus" @click="router.push('/admin/billing/plans/create')" />
-                <Button icon="pi pi-dollar" severity="success" text rounded @click="$router.push(`/admin/billing/plans/${data.id}/prices`)" />
+                <Button icon="pi pi-dollar" severity="success" text rounded v-tooltip="'Manage prices'" @click="$router.push(`/admin/billing/plans/${data.id}/prices`)" />
             </div>
         </div>
 
@@ -55,8 +55,8 @@ const formatCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-U
             <Column header="Actions" style="width: 150px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-pencil" severity="info" text rounded @click="router.push(`/admin/billing/plans/${data.id}/edit`)" />
-                        <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDelete(data)" />
+                        <Button icon="pi pi-pencil" severity="info" text rounded v-tooltip="'Edit plan'" @click="router.push(`/admin/billing/plans/${data.id}/edit`)" />
+                        <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip="'Delete plan'" @click="handleDelete(data)" />
                     </div>
                 </template>
             </Column>

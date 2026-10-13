@@ -8,8 +8,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Tenant Assets Route
-Route::get('/tenant-assets/{tenantId}/{path}', [TenantAssetController::class, 'show'])->where('path', '.*');
+// Tenant Assets Route (authenticated + tenant ownership enforced in controller)
+Route::get('/tenant-assets/{tenantId}/{path}', [TenantAssetController::class, 'show'])
+    ->where('path', '.*')
+    ->middleware('jwt.auth');
 
 // Widget Routes (No Authentication)
 Route::get('/widget/chat.js', function () {

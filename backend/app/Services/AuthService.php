@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services;
 
+use App\Mail\PasswordResetMail;
 use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Tenant;
@@ -41,13 +43,13 @@ class AuthService
     public function register(array $data): array
     {
         $validator = Validator::make($data, [
-            'first_name'   => 'required|string|max:100',
-            'last_name'    => 'required|string|max:100',
-            'username'     => 'string|unique:users',
-            'email'        => 'required|email|unique:users',
-            'password'     => 'required|string|min:8|confirmed',
-            'phone'        => 'nullable|string|max:20',
-            'timezone'     => 'nullable|string|timezone',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'username' => 'string|unique:users',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+            'timezone' => 'nullable|string|timezone',
             'company_name' => 'nullable|string|max:255',
         ]);
 
@@ -66,15 +68,15 @@ class AuthService
 
             // 1. Create user
             $user = User::create([
-                'first_name'   => $data['first_name'],
-                'last_name'    => $data['last_name'],
-                'username'     => $data['username'],
-                'email'        => $data['email'],
-                'password'     => Hash::make($data['password']),
-                'phone'        => $data['phone'] ?? null,
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'username' => $data['username'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'phone' => $data['phone'] ?? null,
                 'company_name' => $data['company_name'] ?? null,
-                'timezone'     => $data['timezone'] ?? 'UTC',
-                'uuid'         => (string) Str::uuid(),
+                'timezone' => $data['timezone'] ?? 'UTC',
+                'uuid' => (string) Str::uuid(),
             ]);
 
             // 2. Create default tenant
@@ -88,7 +90,7 @@ class AuthService
             app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             $ownerRole = Role::firstOrCreate([
-                'name'       => 'owner',
+                'name' => 'owner',
                 'guard_name' => 'api',
             ]);
             $user->assignRole($ownerRole);
@@ -114,37 +116,37 @@ class AuthService
                 = $this->authContext($user, $tenant->id);
 
             return [
-                'role'        => $role,
-                'roles'       => $roles,
+                'role' => $role,
+                'roles' => $roles,
                 'permissions' => $permissions,
-                'scope'       => $scope,
-                'user'   => [
-                    'id'                => $user->id,
-                    'uuid'              => $user->uuid,
-                    'first_name'        => $user->first_name,
-                    'last_name'         => $user->last_name,
-                    'full_name'         => $user->full_name,
-                    'username'          => $user->username,
-                    'email'             => $user->email,
-                    'phone'             => $user->phone,
-                    'avatar'            => $user->avatar,
-                    'timezone'          => $user->timezone,
-                    'language'          => $user->language,
-                    'is_active'         => $user->is_active,
+                'scope' => $scope,
+                'user' => [
+                    'id' => $user->id,
+                    'uuid' => $user->uuid,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'full_name' => $user->full_name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'avatar' => $user->avatar,
+                    'timezone' => $user->timezone,
+                    'language' => $user->language,
+                    'is_active' => $user->is_active,
                     'current_tenant_id' => $user->current_tenant_id,
-                    'permissions'       => $permissions,
-                    'roles'             => $roles,
+                    'permissions' => $permissions,
+                    'roles' => $roles,
                 ],
                 'tenant' => [
-                    'id'        => $tenant->id,
-                    'name'      => $tenant->name,
-                    'slug'      => $tenant->slug,
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'slug' => $tenant->slug,
                     'subdomain' => $tenant->subdomain,
-                    'domain'    => $tenant->domain,
-                    'logo_url'  => $tenant->logo_url,
-                    'status'    => $tenant->status,
+                    'domain' => $tenant->domain,
+                    'logo_url' => $tenant->logo_url,
+                    'status' => $tenant->status,
                 ],
-                'token'  => $token,
+                'token' => $token,
             ];
         } catch (\Throwable $e) {
             // Compensating cleanup — roll back anything created so far.
@@ -154,7 +156,7 @@ class AuthService
                 } catch (\Throwable $cleanup) {
                     Log::error('Registration cleanup: failed to delete tenant', [
                         'tenant_id' => $tenant->id,
-                        'error'     => $cleanup->getMessage(),
+                        'error' => $cleanup->getMessage(),
                     ]);
                 }
             }
@@ -165,7 +167,7 @@ class AuthService
                 } catch (\Throwable $cleanup) {
                     Log::error('Registration cleanup: failed to delete user', [
                         'user_id' => $user->id,
-                        'error'   => $cleanup->getMessage(),
+                        'error' => $cleanup->getMessage(),
                     ]);
                 }
             }
@@ -179,11 +181,11 @@ class AuthService
         }
     }
 
-/**
- * Assign the default plan (with trial) to a newly created tenant.
- * Wrapped so a billing failure never blocks registration.
- * Returns the resolved plan (or null) so the caller can derive the status.
- */
+    /**
+     * Assign the default plan (with trial) to a newly created tenant.
+     * Wrapped so a billing failure never blocks registration.
+     * Returns the resolved plan (or null) so the caller can derive the status.
+     */
     protected function assignDefaultSubscription(Tenant $tenant): ?Plan
     {
         try {
@@ -202,6 +204,7 @@ class AuthService
                 Log::warning('No default plan available for new tenant', [
                     'tenant_id' => $tenant->id,
                 ]);
+
                 return null;
             }
 
@@ -213,7 +216,7 @@ class AuthService
 
             Log::info('Default subscription assigned to new tenant', [
                 'tenant_id' => $tenant->id,
-                'plan_id'   => $plan->id,
+                'plan_id' => $plan->id,
                 'plan_slug' => $plan->slug,
             ]);
 
@@ -222,8 +225,9 @@ class AuthService
             // Never fail registration because of billing
             Log::error('Failed to assign default subscription', [
                 'tenant_id' => $tenant->id,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -233,52 +237,52 @@ class AuthService
 
         // dd($user->full_name);
 
-        $tenantName = $data['company_name'] ?? $user->full_name . "'s Workspace";
-        $slug       = Str::slug($tenantName) . '-' . Str::random(4);
-        $subdomain  = $data['subdomain'] ?? Str::slug($tenantName) . '-' . Str::random(4);
+        $tenantName = $data['company_name'] ?? $user->full_name."'s Workspace";
+        $slug = Str::slug($tenantName).'-'.Str::random(4);
+        $subdomain = $data['subdomain'] ?? Str::slug($tenantName).'-'.Str::random(4);
 
         $tenantId = (string) Str::uuid();
 
         // Create tenant
         $tenant = Tenant::create([
-            'id'               => $tenantId,
-            'name'             => $tenantName,
-            'slug'             => $slug,
-            'subdomain'        => $subdomain,
-            'domain'           => $data['domain'] ?? null,
-            'timezone'         => $data['timezone'] ?? 'UTC',
+            'id' => $tenantId,
+            'name' => $tenantName,
+            'slug' => $slug,
+            'subdomain' => $subdomain,
+            'domain' => $data['domain'] ?? null,
+            'timezone' => $data['timezone'] ?? 'UTC',
             'default_language' => 'en',
-            'status'           => 'active',
-            'metadata'         => [
+            'status' => 'active',
+            'metadata' => [
                 'registered_from' => request()->ip(),
-                'user_agent'      => request()->userAgent(),
+                'user_agent' => request()->userAgent(),
             ],
         ]);
 
         // Create domain record for subdomain
         $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';
         Domain::create([
-            'domain'     => $subdomain . '.' . $centralDomain,
-            'tenant_id'  => $tenant->id,
+            'domain' => $subdomain.'.'.$centralDomain,
+            'tenant_id' => $tenant->id,
             'is_primary' => false,
-            'status'     => 'active',
+            'status' => 'active',
         ]);
 
         // Create custom domain if provided
         if ($data['domain'] ?? false) {
             Domain::create([
-                'domain'     => $data['domain'],
-                'tenant_id'  => $tenant->id,
+                'domain' => $data['domain'],
+                'tenant_id' => $tenant->id,
                 'is_primary' => true,
-                'status'     => 'pending',
+                'status' => 'pending',
             ]);
         }
 
         // Assign user as owner of tenant
         TenantUser::create([
-            'tenant_id'   => $tenant->id,
-            'user_id'     => $user->id,
-            'role'        => 'owner',
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'role' => 'owner',
             'accepted_at' => now(),
         ]);
 
@@ -297,7 +301,7 @@ class AuthService
         // Log::info('AuthService::login called', ['credentials' => array_keys($credentials)]);
 
         $validator = Validator::make($credentials, [
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -361,52 +365,52 @@ class AuthService
             = $this->authContext($user, $currentTenant?->id);
 
         return [
-            'role'        => $role,
-            'roles'       => $roles,
+            'role' => $role,
+            'roles' => $roles,
             'permissions' => $permissions,
-            'scope'       => $scope,
-            'user'    => [
-                'id'                => $user->id,
-                'uuid'              => $user->uuid,
-                'first_name'        => $user->first_name,
-                'last_name'         => $user->last_name,
-                'full_name'         => $user->full_name,
-                'email'             => $user->email,
-                'phone'             => $user->phone,
-                'avatar'            => $user->avatar,
-                'timezone'          => $user->timezone,
-                'language'          => $user->language,
-                'is_active'         => $user->is_active,
-                'last_login_at'     => $user->last_login_at,
+            'scope' => $scope,
+            'user' => [
+                'id' => $user->id,
+                'uuid' => $user->uuid,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'avatar' => $user->avatar,
+                'timezone' => $user->timezone,
+                'language' => $user->language,
+                'is_active' => $user->is_active,
+                'last_login_at' => $user->last_login_at,
                 'current_tenant_id' => $user->current_tenant_id,
-                'permissions'       => $permissions,
-                'roles'             => $roles,
+                'permissions' => $permissions,
+                'roles' => $roles,
             ],
-            'tenant'  => $currentTenant ? [
-                'id'        => $currentTenant->id,
-                'name'      => $currentTenant->name,
-                'slug'      => $currentTenant->slug,
+            'tenant' => $currentTenant ? [
+                'id' => $currentTenant->id,
+                'name' => $currentTenant->name,
+                'slug' => $currentTenant->slug,
                 'subdomain' => $currentTenant->subdomain,
-                'domain'    => $currentTenant->domain,
-                'logo_url'  => $currentTenant->logo_url,
-                'status'    => $currentTenant->status,
+                'domain' => $currentTenant->domain,
+                'logo_url' => $currentTenant->logo_url,
+                'status' => $currentTenant->status,
             ] : null,
             'tenants' => $user->tenants->map(function ($tenant) {
                 return [
-                    'id'        => $tenant->id,
-                    'name'      => $tenant->name,
-                    'slug'      => $tenant->slug,
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'slug' => $tenant->slug,
                     'subdomain' => $tenant->subdomain,
-                    'domain'    => $tenant->domain,
-                    'logo_url'  => $tenant->logo_url,
-                    'status'    => $tenant->status,
-                    'pivot'     => [
-                        'role'       => $tenant->pivot->role,
+                    'domain' => $tenant->domain,
+                    'logo_url' => $tenant->logo_url,
+                    'status' => $tenant->status,
+                    'pivot' => [
+                        'role' => $tenant->pivot->role,
                         'department' => $tenant->pivot->department,
                     ],
                 ];
             }),
-            'token'   => $token,
+            'token' => $token,
         ];
     }
 
@@ -417,6 +421,7 @@ class AuthService
     {
         try {
             JWTAuth::invalidate(JWTAuth::getToken());
+
             return true;
         } catch (JWTException $e) {
             return false;
@@ -434,7 +439,7 @@ class AuthService
             // A revoked session must not be able to mint new tokens via refresh.
             try {
                 $payload = JWTAuth::setToken($token)->getPayload();
-                $user    = User::find($payload['sub'] ?? null);
+                $user = User::find($payload['sub'] ?? null);
                 if ($user && $user->isSessionRevokedBefore((int) ($payload['iat'] ?? 0))) {
                     throw new TokenInvalidException('Session revoked. Please login again.');
                 }
@@ -450,7 +455,7 @@ class AuthService
         } catch (TokenInvalidException $e) {
             throw new \Exception($e->getMessage());
         } catch (JWTException $e) {
-            throw new \Exception('Could not refresh token: ' . $e->getMessage());
+            throw new \Exception('Could not refresh token: '.$e->getMessage());
         }
     }
 
@@ -459,55 +464,55 @@ class AuthService
      */
     public function me(): array
     {
-        $user          = auth()->user();
+        $user = auth()->user();
         $currentTenant = $user->currentTenant ?? $user->tenants()->first();
 
         ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
             = $this->authContext($user, $currentTenant?->id);
 
         return [
-            'role'        => $role,
-            'roles'       => $roles,
+            'role' => $role,
+            'roles' => $roles,
             'permissions' => $permissions,
-            'scope'       => $scope,
-            'user'    => [
-                'id'                => $user->id,
-                'uuid'              => $user->uuid,
-                'first_name'        => $user->first_name,
-                'last_name'         => $user->last_name,
-                'full_name'         => $user->full_name,
-                'email'             => $user->email,
-                'phone'             => $user->phone,
-                'avatar_url'        => $user->avatar_url,
-                'timezone'          => $user->timezone,
-                'language'          => $user->language,
-                'is_active'         => $user->is_active,
-                'last_login_at'     => $user->last_login_at,
+            'scope' => $scope,
+            'user' => [
+                'id' => $user->id,
+                'uuid' => $user->uuid,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'avatar_url' => $user->avatar_url,
+                'timezone' => $user->timezone,
+                'language' => $user->language,
+                'is_active' => $user->is_active,
+                'last_login_at' => $user->last_login_at,
                 'current_tenant_id' => $user->current_tenant_id,
-                'permissions'       => $permissions,
-                'roles'             => $roles,
+                'permissions' => $permissions,
+                'roles' => $roles,
             ],
-            'tenant'  => $currentTenant ? [
-                'id'        => $currentTenant->id,
-                'name'      => $currentTenant->name,
-                'slug'      => $currentTenant->slug,
+            'tenant' => $currentTenant ? [
+                'id' => $currentTenant->id,
+                'name' => $currentTenant->name,
+                'slug' => $currentTenant->slug,
                 'subdomain' => $currentTenant->subdomain,
-                'domain'    => $currentTenant->domain,
-                'logo_url'  => $currentTenant->logo_url,
-                'status'    => $currentTenant->status,
-                'settings'  => $currentTenant->settings,
+                'domain' => $currentTenant->domain,
+                'logo_url' => $currentTenant->logo_url,
+                'status' => $currentTenant->status,
+                'settings' => $currentTenant->settings,
             ] : null,
             'tenants' => $user->tenants->map(function ($tenant) {
                 return [
-                    'id'        => $tenant->id,
-                    'name'      => $tenant->name,
-                    'slug'      => $tenant->slug,
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'slug' => $tenant->slug,
                     'subdomain' => $tenant->subdomain,
-                    'domain'    => $tenant->domain,
-                    'logo_url'  => $tenant->logo_url,
-                    'status'    => $tenant->status,
-                    'pivot'     => [
-                        'role'       => $tenant->pivot->role,
+                    'domain' => $tenant->domain,
+                    'logo_url' => $tenant->logo_url,
+                    'status' => $tenant->status,
+                    'pivot' => [
+                        'role' => $tenant->pivot->role,
                         'department' => $tenant->pivot->department,
                     ],
                 ];
@@ -537,10 +542,10 @@ class AuthService
             $roles = $user->getRoleNames()->values();
 
             return [
-                'role'        => 'super_admin',
-                'roles'       => $roles->all(),
+                'role' => 'super_admin',
+                'roles' => $roles->all(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
-                'scope'       => 'platform',
+                'scope' => 'platform',
             ];
         }
 
@@ -550,7 +555,7 @@ class AuthService
         $user->unsetRelation('permissions');
 
         $roles = $user->getRoleNames()->values();
-        $role  = $roles->first();
+        $role = $roles->first();
 
         $permissions = $user->getAllPermissions()->pluck('name')->sort()->values()->all();
 
@@ -559,10 +564,10 @@ class AuthService
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return [
-            'role'        => $role,
-            'roles'       => $roles->all(),
+            'role' => $role,
+            'roles' => $roles->all(),
             'permissions' => $permissions,
-            'scope'       => $tenantId ? 'tenant' : 'platform',
+            'scope' => $tenantId ? 'tenant' : 'platform',
         ];
     }
 
@@ -573,7 +578,7 @@ class AuthService
     {
         $validator = Validator::make($data, [
             'current_password' => 'required|string',
-            'new_password'     => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -604,41 +609,41 @@ class AuthService
     {
         try {
             $payload = JWTAuth::setToken($token)->getPayload();
-            $user    = JWTAuth::authenticate($token);
+            $user = JWTAuth::authenticate($token);
 
             if (! $user) {
                 return [
-                    'valid'   => false,
+                    'valid' => false,
                     'message' => 'User not found',
                 ];
             }
 
             return [
-                'valid'      => true,
-                'user'       => [
-                    'id'        => $user->id,
-                    'email'     => $user->email,
+                'valid' => true,
+                'user' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
                     'full_name' => $user->full_name,
                 ],
                 'expires_at' => $payload->get('exp'),
             ];
         } catch (TokenExpiredException $e) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Token expired',
-                'error'   => 'token_expired',
+                'error' => 'token_expired',
             ];
         } catch (TokenInvalidException $e) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Token invalid',
-                'error'   => 'token_invalid',
+                'error' => 'token_invalid',
             ];
         } catch (JWTException $e) {
             return [
-                'valid'   => false,
-                'message' => 'Token error: ' . $e->getMessage(),
-                'error'   => 'token_error',
+                'valid' => false,
+                'message' => 'Token error: '.$e->getMessage(),
+                'error' => 'token_error',
             ];
         }
     }
@@ -649,7 +654,7 @@ class AuthService
     public function forgotPassword(array $data): array
     {
         $validator = Validator::make($data, [
-            'email' => 'required|email|exists:users',
+            'email' => 'required|email',
         ]);
 
         if ($validator->fails()) {
@@ -658,16 +663,33 @@ class AuthService
 
         $user = User::where('email', $data['email'])->first();
 
-        // Generate reset token
-        $token = Password::createToken($user);
+        // The response is intentionally identical whether or not the account
+        // exists, to prevent user enumeration. The token is never returned to
+        // the caller — it is delivered only to the account owner by email.
+        if ($user) {
+            $token = Password::createToken($user);
 
-        // Send email (implement your email logic)
-        // Mail::to($user->email)->send(new PasswordResetMail($token, $user));
+            Mail::to($user->email)->send(
+                new PasswordResetMail($user, $this->buildPasswordResetUrl($user, $token))
+            );
+        }
 
         return [
-            'message' => 'Password reset link sent',
-            'token'   => $token, // In production, don't return this
+            'message' => 'If an account exists for that email, a password reset link has been sent.',
         ];
+    }
+
+    /**
+     * Build the frontend password-reset link for the given user and token.
+     */
+    protected function buildPasswordResetUrl(User $user, string $token): string
+    {
+        $base = rtrim((string) (config('app.frontend_url') ?: config('app.url')), '/');
+
+        return $base.'/reset-password?'.http_build_query([
+            'token' => $token,
+            'email' => $user->email,
+        ]);
     }
 
     /**
@@ -676,8 +698,8 @@ class AuthService
     public function resetPassword(array $data): array
     {
         $validator = Validator::make($data, [
-            'email'    => 'required|email|exists:users',
-            'token'    => 'required|string',
+            'email' => 'required|email|exists:users',
+            'token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -698,12 +720,12 @@ class AuthService
         }
 
         // Generate new token for auto-login
-        $user  = User::where('email', $data['email'])->first();
+        $user = User::where('email', $data['email'])->first();
         $token = JWTAuth::fromUser($user);
 
         return [
             'message' => 'Password reset successful',
-            'token'   => $token,
+            'token' => $token,
         ];
     }
 
@@ -713,7 +735,7 @@ class AuthService
     public function verifyEmail(array $data): array
     {
         $validator = Validator::make($data, [
-            'id'   => 'required|exists:users',
+            'id' => 'required|exists:users',
             'hash' => 'required|string',
         ]);
 

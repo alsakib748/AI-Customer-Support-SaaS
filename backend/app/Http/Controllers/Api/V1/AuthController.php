@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\AuditLogService;
 use App\Services\AuthService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -12,8 +13,8 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
-
     protected AuthService $authService;
+
     protected AuditLogService $auditLogService;
 
     public function __construct(AuthService $authService, AuditLogService $auditLogService)
@@ -68,7 +69,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Registration failed: ' . $e->getMessage(),
+                'message' => 'Registration failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -76,8 +77,7 @@ class AuthController extends Controller
     /**
      * Login user
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function login(Request $request)
     {
@@ -101,10 +101,9 @@ class AuthController extends Controller
                 ]
             );
 
-
             return response()->json([
                 'success' => true,
-                'message' => 'Login successful! Welcome back, ' . $result['user']['first_name'],
+                'message' => 'Login successful! Welcome back, '.$result['user']['first_name'],
                 'data' => $result,
             ]);
         } catch (ValidationException $e) {
@@ -136,12 +135,10 @@ class AuthController extends Controller
         }
     }
 
-
     /**
      * Logout user
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function logout(Request $request)
     {
@@ -167,7 +164,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Logout failed: ' . $e->getMessage(),
+                'message' => 'Logout failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -175,8 +172,7 @@ class AuthController extends Controller
     /**
      * Refresh JWT token
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function refresh(Request $request)
     {
@@ -199,7 +195,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Token refresh failed: ' . $e->getMessage(),
+                'message' => 'Token refresh failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -207,8 +203,7 @@ class AuthController extends Controller
     /**
      * Get authenticated user details
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function me(Request $request)
     {
@@ -222,7 +217,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Could not fetch user details: ' . $e->getMessage(),
+                'message' => 'Could not fetch user details: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -230,8 +225,7 @@ class AuthController extends Controller
     /**
      * Change user password
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function changePassword(Request $request)
     {
@@ -255,7 +249,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Password change failed: ' . $e->getMessage(),
+                'message' => 'Password change failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -263,15 +257,14 @@ class AuthController extends Controller
     /**
      * Validate token validity
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function validateToken(Request $request)
     {
         try {
             $token = $request->bearerToken();
 
-            if (!$token) {
+            if (! $token) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No token provided',
@@ -302,7 +295,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Token validation failed: ' . $e->getMessage(),
+                'message' => 'Token validation failed: '.$e->getMessage(),
                 'valid' => false,
             ], 500);
         }
@@ -311,8 +304,7 @@ class AuthController extends Controller
     /**
      * Send password reset link
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function forgotPassword(Request $request)
     {
@@ -321,8 +313,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Password reset link sent to your email',
-                'data' => $result,
+                'message' => $result['message'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -333,7 +324,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send reset link: ' . $e->getMessage(),
+                'message' => 'Failed to send reset link: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -341,8 +332,7 @@ class AuthController extends Controller
     /**
      * Reset password
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function resetPassword(Request $request)
     {
@@ -363,7 +353,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Password reset failed: ' . $e->getMessage(),
+                'message' => 'Password reset failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -371,8 +361,7 @@ class AuthController extends Controller
     /**
      * Verify email
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function verifyEmail(Request $request)
     {
@@ -387,7 +376,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email verification failed: ' . $e->getMessage(),
+                'message' => 'Email verification failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -395,8 +384,7 @@ class AuthController extends Controller
     /**
      * Resend verification email
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function resendVerification(Request $request)
     {
@@ -412,9 +400,8 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to resend verification: ' . $e->getMessage(),
+                'message' => 'Failed to resend verification: '.$e->getMessage(),
             ], 500);
         }
     }
-
 }

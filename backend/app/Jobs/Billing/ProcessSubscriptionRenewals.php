@@ -13,8 +13,13 @@ use Illuminate\Support\Facades\Log;
 class ProcessSubscriptionRenewals implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
     public $timeout = 600;
-    public $tries = 1;
+
+    public $tries = 3;
+
+    public $backoff = [60, 300];
+
     /**
      * Create a new job instance.
      */

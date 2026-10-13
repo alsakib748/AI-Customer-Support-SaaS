@@ -246,7 +246,7 @@ onMounted(async () => {
                         </Column>
                         <Column header="Actions" style="width: 100px">
                             <template #body="{ data }">
-                                <Button icon="pi pi-eye" severity="info" text rounded @click="router.push(`/billing/invoices/${data.id}`)" />
+                                <Button icon="pi pi-eye" severity="info" text rounded v-tooltip="'View invoice'" @click="router.push(`/billing/invoices/${data.id}`)" />
                             </template>
                         </Column>
                     </DataTable>

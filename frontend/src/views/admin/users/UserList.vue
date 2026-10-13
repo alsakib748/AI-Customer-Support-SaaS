@@ -232,14 +232,14 @@ onMounted(() => {
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-eye" severity="info" text rounded title="View details" @click="openUser(data)" />
+                        <Button icon="pi pi-eye" severity="info" text rounded v-tooltip="'View details'" @click="openUser(data)" />
                         <Button
                             v-if="data.status === 'suspended' && !data.is_super_admin && can(['platform.users.activate'])"
                             icon="pi pi-play"
                             severity="success"
                             text
                             rounded
-                            title="Activate"
+                            v-tooltip="'Activate'"
                             @click="
                                 usersStore
                                     .activateUser(data.id)

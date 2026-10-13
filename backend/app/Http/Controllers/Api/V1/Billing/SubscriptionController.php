@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1\Billing;
 
 use App\Events\Billing\SubscriptionCreated;
@@ -7,6 +8,7 @@ use App\Http\Requests\Billing\CancelSubscriptionRequest;
 use App\Http\Requests\Billing\CheckoutRequest;
 use App\Http\Resources\Billing\SubscriptionResource;
 use App\Models\Coupon;
+use App\Models\Plan;
 use App\Models\Subscription;
 use App\Payments\PaymentGatewayManager;
 use App\Services\Billing\BillingService;
@@ -19,6 +21,7 @@ use Illuminate\Validation\ValidationException;
 class SubscriptionController extends Controller
 {
     protected SubscriptionService $service;
+
     protected PlanService $planService;
 
     public function __construct(
@@ -26,7 +29,7 @@ class SubscriptionController extends Controller
         PlanService $planService,
         protected PaymentGatewayManager $gateways,
     ) {
-        $this->service     = $service;
+        $this->service = $service;
         $this->planService = $planService;
     }
 
@@ -42,10 +45,11 @@ class SubscriptionController extends Controller
                 if (auth()->user()?->hasRole('super_admin')) {
                     return response()->json([
                         'success' => true,
-                        'data'    => null,
+                        'data' => null,
                         'message' => 'No tenant context provided.',
                     ]);
                 }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Tenant context is required to access billing.',
@@ -57,14 +61,14 @@ class SubscriptionController extends Controller
             if (! $subscription) {
                 return response()->json([
                     'success' => true,
-                    'data'    => null,
+                    'data' => null,
                     'message' => 'No active subscription.',
                 ]);
             }
 
             return response()->json([
                 'success' => true,
-                'data'    => new SubscriptionResource($subscription),
+                'data' => new SubscriptionResource($subscription),
             ]);
 
         } catch (\Exception $e) {
@@ -75,7 +79,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve subscription: ' . $e->getMessage(),
+                'message' => 'Failed to retrieve subscription: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -87,9 +91,9 @@ class SubscriptionController extends Controller
     {
         try {
             $validated = $request->validate([
-                'plan_id'       => 'required|integer|exists:plans,id',
+                'plan_id' => 'required|integer|exists:plans,id',
                 'billing_cycle' => 'nullable|in:monthly,yearly',
-                'coupon_code'   => 'nullable|string',
+                'coupon_code' => 'nullable|string',
             ]);
 
             $tenant = app('current_tenant');
@@ -110,7 +114,7 @@ class SubscriptionController extends Controller
                 ], 400);
             }
 
-            $plan         = $this->planService->getPlan($validated['plan_id']);
+            $plan = $this->planService->getPlan($validated['plan_id']);
             $billingCycle = $validated['billing_cycle'] ?? 'monthly';
 
             // Paid plans must never be activated from client-supplied data:
@@ -120,7 +124,7 @@ class SubscriptionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Paid plans must be purchased through checkout.',
-                    'code'    => 'checkout_required',
+                    'code' => 'checkout_required',
                 ], 422);
             }
 
@@ -147,7 +151,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -155,7 +159,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create subscription: ' . $e->getMessage(),
+                'message' => 'Failed to create subscription: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -204,18 +208,18 @@ class SubscriptionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'This plan change must be completed through checkout.',
-                    'code'    => 'checkout_required',
+                    'code' => 'checkout_required',
                 ], 422);
             }
 
             $provider = $subscription->provider;
-            $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+            $priceId = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
 
             if (! $priceId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'The selected plan is not available with the current payment provider.',
-                    'code'    => 'provider_price_missing',
+                    'code' => 'provider_price_missing',
                 ], 422);
             }
 
@@ -223,21 +227,21 @@ class SubscriptionController extends Controller
                 $this->gateways->driver($provider)->changeSubscription(
                     $subscription->provider_subscription_id,
                     [
-                        'provider_price_id'  => $priceId,
+                        'provider_price_id' => $priceId,
                         'proration_behavior' => 'create_prorations',
-                        'metadata'           => ['tenant_id' => $tenant->id],
+                        'metadata' => ['tenant_id' => $tenant->id],
                     ]
                 );
             } catch (\Throwable $e) {
                 Log::error('Provider plan change failed', [
                     'subscription_id' => $subscription->id,
-                    'error'           => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
 
                 return response()->json([
                     'success' => false,
                     'message' => 'Unable to change the plan with the payment provider. Please try again.',
-                    'code'    => 'provider_change_failed',
+                    'code' => 'provider_change_failed',
                 ], 422);
             }
 
@@ -255,7 +259,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -263,7 +267,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to upgrade subscription: ' . $e->getMessage(),
+                'message' => 'Failed to upgrade subscription: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -312,18 +316,18 @@ class SubscriptionController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'Downgrading to a free plan requires cancelling the subscription at period end.',
-                        'code'    => 'cancel_required',
+                        'code' => 'cancel_required',
                     ], 422);
                 }
 
                 $provider = $subscription->provider;
-                $priceId  = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
+                $priceId = $this->resolveProviderPrice($newPlan, $provider, $subscription->billing_cycle);
 
                 if (! $priceId) {
                     return response()->json([
                         'success' => false,
                         'message' => 'The selected plan is not available with the current payment provider.',
-                        'code'    => 'provider_price_missing',
+                        'code' => 'provider_price_missing',
                     ], 422);
                 }
 
@@ -332,21 +336,21 @@ class SubscriptionController extends Controller
                     $this->gateways->driver($provider)->changeSubscription(
                         $subscription->provider_subscription_id,
                         [
-                            'provider_price_id'  => $priceId,
+                            'provider_price_id' => $priceId,
                             'proration_behavior' => 'none',
-                            'metadata'           => ['tenant_id' => $tenant->id],
+                            'metadata' => ['tenant_id' => $tenant->id],
                         ]
                     );
                 } catch (\Throwable $e) {
                     Log::error('Provider plan change failed', [
                         'subscription_id' => $subscription->id,
-                        'error'           => $e->getMessage(),
+                        'error' => $e->getMessage(),
                     ]);
 
                     return response()->json([
                         'success' => false,
                         'message' => 'Unable to change the plan with the payment provider. Please try again.',
-                        'code'    => 'provider_change_failed',
+                        'code' => 'provider_change_failed',
                     ], 422);
                 }
 
@@ -364,7 +368,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
 
         } catch (\Exception $e) {
@@ -372,7 +376,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to downgrade subscription: ' . $e->getMessage(),
+                'message' => 'Failed to downgrade subscription: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -436,7 +440,7 @@ class SubscriptionController extends Controller
     public function cancel(CancelSubscriptionRequest $request)
     {
         try {
-            $tenant       = app('current_tenant');
+            $tenant = app('current_tenant');
             $subscription = $this->service->getActiveSubscription($tenant->id);
 
             if (! $subscription) {
@@ -457,6 +461,7 @@ class SubscriptionController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to cancel subscription', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to cancel subscription.',
@@ -506,7 +511,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to resume subscription: ' . $e->getMessage(),
+                'message' => 'Failed to resume subscription: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -545,7 +550,7 @@ class SubscriptionController extends Controller
                 'message' => $result['valid']
                     ? 'Coupon is valid!'
                     : ($result['message'] ?? 'Invalid coupon.'),
-                'data'    => $result['valid'] ? [
+                'data' => $result['valid'] ? [
                     'discount' => $result['discount'],
                 ] : null,
             ]);
@@ -565,12 +570,12 @@ class SubscriptionController extends Controller
 
         \Log::info('Checkout request received', [
             'tenant_id' => optional(app('current_tenant'))->id,
-            'payload'   => $request->all(),
+            'payload' => $request->all(),
         ]);
 
-        $tenant   = app('current_tenant');
-        $plan     = \App\Models\Plan::on('central')->findOrFail($request->integer('plan_id'));
-        $cycle    = $request->input('billing_cycle', 'monthly');
+        $tenant = app('current_tenant');
+        $plan = Plan::on('central')->findOrFail($request->integer('plan_id'));
+        $cycle = $request->input('billing_cycle', 'monthly');
         $provider = $request->input('provider', config('payment.default'));
 
         try {
@@ -587,15 +592,16 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data'    => [
+                'data' => [
                     'subscription_id' => $subscription->id,
-                    'checkout_url'    => $result['checkout_url'],
-                    'session_id'      => $result['session_id'] ?? null,
-                    'provider'        => $provider,
+                    'checkout_url' => $result['checkout_url'],
+                    'session_id' => $result['session_id'] ?? null,
+                    'provider' => $provider,
                 ],
             ]);
         } catch (\Throwable $e) {
             \Log::error('Checkout failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -607,7 +613,7 @@ class SubscriptionController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => app(\App\Payments\PaymentGatewayManager::class)->availableProviders(),
+            'data' => app(PaymentGatewayManager::class)->availableProviders(),
         ]);
     }
 
@@ -619,10 +625,10 @@ class SubscriptionController extends Controller
         try {
             $validated = $request->validate([
                 'session_id' => ['required', 'string'],
-                'provider'   => ['nullable', 'string'],
+                'provider' => ['nullable', 'string'],
             ]);
 
-            $tenant   = app('current_tenant');
+            $tenant = app('current_tenant');
             $provider = $validated['provider'] ?? config('payment.default');
 
             if (! $tenant) {
@@ -643,9 +649,9 @@ class SubscriptionController extends Controller
 
             if ($sessionTenantId !== null && (string) $sessionTenantId !== (string) $tenant->id) {
                 Log::warning('Checkout session tenant mismatch', [
-                    'tenant_id'         => $tenant->id,
+                    'tenant_id' => $tenant->id,
                     'session_tenant_id' => $sessionTenantId,
-                    'provider'          => $provider,
+                    'provider' => $provider,
                 ]);
 
                 return response()->json([
@@ -660,9 +666,33 @@ class SubscriptionController extends Controller
             if (! in_array($status, ['complete', 'completed', 'approved'], true)) {
                 return response()->json([
                     'success' => true,
-                    'data'    => [
-                        'paid'   => false,
+                    'data' => [
+                        'paid' => false,
                         'status' => $session['status'] ?? 'unknown',
+                    ],
+                ]);
+            }
+
+            // Stripe can report a completed checkout that is not yet paid (async
+            // payment methods). Never activate a subscription from an unpaid
+            // session — the webhook will activate it once payment settles.
+            $paymentStatus = strtolower((string) ($session['payment_status'] ?? ''));
+
+            if ($provider === 'stripe'
+                && $paymentStatus !== ''
+                && ! in_array($paymentStatus, ['paid', 'no_payment_required'], true)) {
+                Log::warning('Checkout session is not paid', [
+                    'tenant_id' => $tenant->id,
+                    'provider' => $provider,
+                    'payment_status' => $paymentStatus,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'paid' => false,
+                        'status' => $session['status'] ?? 'unknown',
+                        'payment_status' => $paymentStatus,
                     ],
                 ]);
             }
@@ -677,17 +707,17 @@ class SubscriptionController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'data'    => $current ? new SubscriptionResource($current) : null,
+                    'data' => $current ? new SubscriptionResource($current) : null,
                 ]);
             }
 
             if ($subscription->status === 'pending') {
                 // Never trust the redirect alone: validate the charged amount and
                 // currency against the plan before activating. Trials charge nothing.
-                $plan           = $subscription->plan;
-                $isTrialing     = (int) ($plan?->trial_days ?? 0) > 0;
+                $plan = $subscription->plan;
+                $isTrialing = (int) ($plan?->trial_days ?? 0) > 0;
                 $expectedAmount = $plan?->getPriceForCycle($subscription->billing_cycle) ?? 0.0;
-                $chargedAmount  = $session['amount_total'] ?? null;
+                $chargedAmount = $session['amount_total'] ?? null;
                 $chargedCurrency = $session['currency'] !== null ? strtoupper((string) $session['currency']) : null;
                 $expectedCurrency = $plan?->currency !== null ? strtoupper((string) $plan->currency) : null;
 
@@ -696,15 +726,15 @@ class SubscriptionController extends Controller
                         || abs((float) $chargedAmount - (float) $expectedAmount) > 0.01) {
                         Log::warning('Checkout amount mismatch', [
                             'tenant_id' => $tenant->id,
-                            'provider'  => $provider,
-                            'expected'  => $expectedAmount,
-                            'charged'   => $chargedAmount,
+                            'provider' => $provider,
+                            'expected' => $expectedAmount,
+                            'charged' => $chargedAmount,
                         ]);
 
                         return response()->json([
                             'success' => false,
                             'message' => 'The amount charged does not match the selected plan.',
-                            'code'    => 'amount_mismatch',
+                            'code' => 'amount_mismatch',
                         ], 422);
                     }
                 }
@@ -712,24 +742,24 @@ class SubscriptionController extends Controller
                 if ($expectedCurrency !== null && $chargedCurrency !== null && $chargedCurrency !== $expectedCurrency) {
                     Log::warning('Checkout currency mismatch', [
                         'tenant_id' => $tenant->id,
-                        'provider'  => $provider,
-                        'expected'  => $expectedCurrency,
-                        'charged'   => $chargedCurrency,
+                        'provider' => $provider,
+                        'expected' => $expectedCurrency,
+                        'charged' => $chargedCurrency,
                     ]);
 
                     return response()->json([
                         'success' => false,
                         'message' => 'The currency charged does not match the selected plan.',
-                        'code'    => 'currency_mismatch',
+                        'code' => 'currency_mismatch',
                     ], 422);
                 }
 
                 $subscription = $this->service->completePendingCheckout($subscription, [
                     'provider_subscription_id' => $session['provider_subscription_id'],
-                    'provider_customer_id'     => $session['provider_customer_id'],
-                    'provider_payment_id'      => $session['provider_payment_id'] ?? null,
-                    'provider_invoice_id'      => $session['provider_invoice_id'] ?? null,
-                    'source'                   => 'checkout.verify',
+                    'provider_customer_id' => $session['provider_customer_id'],
+                    'provider_payment_id' => $session['provider_payment_id'] ?? null,
+                    'provider_invoice_id' => $session['provider_invoice_id'] ?? null,
+                    'source' => 'checkout.verify',
                 ]);
             }
 
@@ -739,20 +769,20 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data'    => new SubscriptionResource($subscription),
+                'data' => new SubscriptionResource($subscription),
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
             Log::error('Failed to verify checkout:', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to verify checkout: ' . $e->getMessage(),
+                'message' => 'Failed to verify checkout: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -760,9 +790,8 @@ class SubscriptionController extends Controller
     /**
      * Resolve the provider price id for a plan/cycle, or null when unavailable.
      */
-    protected function resolveProviderPrice(\App\Models\Plan $plan, string $provider, string $cycle): ?string
+    protected function resolveProviderPrice(Plan $plan, string $provider, string $cycle): ?string
     {
         return $plan->providerPrice($provider, $cycle, $plan->currency ?? 'USD')?->provider_price_id;
     }
-
 }

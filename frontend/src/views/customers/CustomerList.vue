@@ -407,11 +407,11 @@ watch(
             <Column header="Actions" style="width: 160px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewCustomer(data)" tooltip="View Details" />
-                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" text rounded @click="editCustomer(data)" tooltip="Edit" />
-                        <Button v-if="data.status === 'blocked' && canUpdateCustomers" icon="pi pi-unlock" severity="success" text rounded @click="handleUnblock(data)" tooltip="Unblock" />
-                        <Button v-if="data.status !== 'blocked' && canUpdateCustomers" icon="pi pi-lock" severity="danger" text rounded @click="handleBlock(data)" tooltip="Block" />
-                        <Button v-if="canDeleteCustomers" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewCustomer(data)" v-tooltip="'View Details'" />
+                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" text rounded @click="editCustomer(data)" v-tooltip="'Edit'" />
+                        <Button v-if="data.status === 'blocked' && canUpdateCustomers" icon="pi pi-unlock" severity="success" text rounded @click="handleUnblock(data)" v-tooltip="'Unblock'" />
+                        <Button v-if="data.status !== 'blocked' && canUpdateCustomers" icon="pi pi-lock" severity="danger" text rounded @click="handleBlock(data)" v-tooltip="'Block'" />
+                        <Button v-if="canDeleteCustomers" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
                     </div>
                 </template>
             </Column>
@@ -461,7 +461,7 @@ watch(
                     <label class="block text-sm font-medium mb-1">Tags</label>
                     <div class="flex gap-2 mb-2">
                         <InputText v-model="tagInput" placeholder="Add a tag" class="flex-1" @keydown.enter.prevent="addTagToForm" />
-                        <Button icon="pi pi-plus" severity="secondary" @click="addTagToForm" />
+                        <Button icon="pi pi-plus" severity="secondary" v-tooltip="'Add tag'" @click="addTagToForm" />
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Chip v-for="tag in form.tags" :key="tag" :label="tag" removable @remove="removeTagFromForm(tag)" />
@@ -510,8 +510,8 @@ watch(
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" @click="editCustomer(selectedCustomer)" />
-                        <Button icon="pi pi-times" severity="secondary" @click="showDetailsDialog = false" />
+                        <Button v-if="canUpdateCustomers" icon="pi pi-pencil" severity="warning" v-tooltip="'Edit customer'" @click="editCustomer(selectedCustomer)" />
+                        <Button icon="pi pi-times" severity="secondary" v-tooltip="'Close'" @click="showDetailsDialog = false" />
                     </div>
                 </div>
 

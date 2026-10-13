@@ -380,13 +380,13 @@ onMounted(() => {
             <Column header="Actions" style="width: 320px">
                 <template #body="{ data }">
                     <div class="flex gap-1 flex-wrap">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewWidget(data)" tooltip="View Details" />
-                        <Button v-if="canUpdateWidgets && data.status === 'disabled'" icon="pi pi-check" severity="success" text rounded @click="enableWidget(data)" tooltip="Enable" />
-                        <Button v-if="canUpdateWidgets && data.status === 'active'" icon="pi pi-times" severity="danger" text rounded @click="disableWidget(data)" tooltip="Disable" />
-                        <Button v-if="canUpdateWidgets" icon="pi pi-pencil" severity="warning" text rounded @click="openEditDialog(data)" tooltip="Edit" />
-                        <Button v-if="canUpdateWidgets" icon="pi pi-key" severity="secondary" text rounded @click="regenerateKey(data)" tooltip="Regenerate Key" />
-                        <Button v-if="canDeleteWidgets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" tooltip="Delete" />
-                        <Button icon="pi pi-code" severity="secondary" text rounded @click="showInstallationCode(data)" tooltip="Installation Code" />
+                        <Button icon="pi pi-eye" severity="info" text rounded @click="viewWidget(data)" v-tooltip="'View Details'" />
+                        <Button v-if="canUpdateWidgets && data.status === 'disabled'" icon="pi pi-check" severity="success" text rounded @click="enableWidget(data)" v-tooltip="'Enable'" />
+                        <Button v-if="canUpdateWidgets && data.status === 'active'" icon="pi pi-times" severity="danger" text rounded @click="disableWidget(data)" v-tooltip="'Disable'" />
+                        <Button v-if="canUpdateWidgets" icon="pi pi-pencil" severity="warning" text rounded @click="openEditDialog(data)" v-tooltip="'Edit'" />
+                        <Button v-if="canUpdateWidgets" icon="pi pi-key" severity="secondary" text rounded @click="regenerateKey(data)" v-tooltip="'Regenerate Key'" />
+                        <Button v-if="canDeleteWidgets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
+                        <Button icon="pi pi-code" severity="secondary" text rounded @click="showInstallationCode(data)" v-tooltip="'Installation Code'" />
                     </div>
                 </template>
             </Column>
@@ -454,7 +454,7 @@ onMounted(() => {
                     <label class="block text-sm font-medium mb-1">Allowed Origins</label>
                     <div class="flex gap-2 mb-2">
                         <InputText v-model="originInput" placeholder="https://example.com" class="flex-1" @keydown.enter.prevent="addOrigin" />
-                        <Button icon="pi pi-plus" severity="secondary" @click="addOrigin" />
+                        <Button icon="pi pi-plus" severity="secondary" v-tooltip="'Add origin'" @click="addOrigin" />
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Chip v-for="origin in form.allowed_origins" :key="origin" :label="origin" removable @remove="removeOrigin(origin)" />
@@ -572,7 +572,7 @@ onMounted(() => {
                     <pre class="bg-surface-100 dark:bg-surface-800 p-4 rounded-lg text-sm overflow-x-auto">
                 <code>{{ installationCode }}</code>
             </pre>
-                    <Button icon="pi pi-copy" severity="secondary" text class="absolute top-2 right-2" @click="copyCode" tooltip="Copy" />
+                    <Button icon="pi pi-copy" severity="secondary" text class="absolute top-2 right-2" @click="copyCode" v-tooltip="'Copy'" />
                 </div>
                 <div class="text-sm text-surface-500">
                     <i class="pi pi-info-circle mr-1"></i>

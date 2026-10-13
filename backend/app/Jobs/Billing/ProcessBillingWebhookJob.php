@@ -16,7 +16,10 @@ class ProcessBillingWebhookJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 30;
+
+    public int $timeout = 60;
 
     /**
      * Create a new job instance.
@@ -37,11 +40,13 @@ class ProcessBillingWebhookJob implements ShouldQueue
             Log::warning('ProcessBillingWebhookJob: record not found', [
                 'id' => $this->webhookEventId,
             ]);
+
             return;
         }
 
         if ($record->isProcessed()) {
             Log::info('Webhook already processed — skipping', ['id' => $record->id]);
+
             return;
         }
 
@@ -50,6 +55,7 @@ class ProcessBillingWebhookJob implements ShouldQueue
 
             if (empty($normalized)) {
                 $record->markAsIgnored('Empty normalized payload');
+
                 return;
             }
 
@@ -60,9 +66,9 @@ class ProcessBillingWebhookJob implements ShouldQueue
             $record->markAsFailed($e->getMessage());
             Log::error('Webhook processing failed', [
                 'webhook_id' => $record->id,
-                'provider'   => $record->provider,
+                'provider' => $record->provider,
                 'event_type' => $record->event_type,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }

@@ -149,7 +149,7 @@ onMounted(loadData);
             </Column>
             <Column header="Actions" style="width: 100px">
                 <template #body="{ data }">
-                    <Button v-if="data.invoice_id" icon="pi pi-eye" severity="info" text rounded @click="viewInvoice(data.invoice_id)" />
+                    <Button v-if="data.invoice_id" icon="pi pi-eye" severity="info" text rounded v-tooltip="'View invoice'" @click="viewInvoice(data.invoice_id)" />
                 </template>
             </Column>
         </DataTable>

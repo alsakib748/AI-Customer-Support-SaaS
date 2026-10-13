@@ -411,7 +411,7 @@ onUnmounted(() => {
 
                     <Button v-if="canReply && currentConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose" />
 
-                    <Button icon="pi pi-ellipsis-v" severity="secondary" text rounded @click="showActionsMenu = !showActionsMenu" />
+                    <Button icon="pi pi-ellipsis-v" severity="secondary" text rounded v-tooltip="'More actions'" @click="showActionsMenu = !showActionsMenu" />
                 </div>
             </div>
 

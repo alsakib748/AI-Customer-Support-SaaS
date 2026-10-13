@@ -111,7 +111,7 @@ onMounted(load);
             </Column>
             <Column header="Actions" style="width: 100px">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" severity="danger" text rounded @click="handleDelete(data)" />
+                    <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip="'Delete price'" @click="handleDelete(data)" />
                 </template>
             </Column>
         </DataTable>

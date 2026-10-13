@@ -79,7 +79,7 @@ onMounted(load);
                 <p class="text-surface-600">Platform-wide payment transactions</p>
             </div>
             <Button label="Back" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.push('/admin/billing')" />
-            <Button icon="pi pi-undo" severity="warning" text rounded @click="openRefund(data)" tooltip="Refund" />
+            <Button icon="pi pi-undo" severity="warning" text rounded @click="openRefund(data)" v-tooltip="'Refund'" />
         </div>
 
         <div class="mb-4 flex flex-wrap gap-3 items-center">

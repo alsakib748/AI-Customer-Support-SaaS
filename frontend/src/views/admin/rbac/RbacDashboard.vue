@@ -203,7 +203,7 @@ watch(roles, () => {
                             <template #title>
                                 <div class="flex items-center justify-between">
                                     <span>Roles ({{ roles.length }})</span>
-                                    <Button icon="pi pi-plus" size="small" severity="primary" @click="openCreateRole" />
+                                    <Button icon="pi pi-plus" size="small" severity="primary" v-tooltip="'Add role'" @click="openCreateRole" />
                                 </div>
                             </template>
                             <template #content>
@@ -243,8 +243,8 @@ watch(roles, () => {
                                         <Button label="Select All" size="small" severity="secondary" outlined :disabled="isProtected" @click="selectAll" />
                                         <Button label="Clear All" size="small" severity="secondary" outlined :disabled="isProtected" @click="clearAll" />
                                         <Button label="Save" icon="pi pi-check" size="small" :loading="saving" :disabled="isProtected" @click="savePermissions" />
-                                        <Button icon="pi pi-pencil" size="small" severity="secondary" outlined :disabled="selectedRole.is_system" @click="openEditRole" />
-                                        <Button icon="pi pi-trash" size="small" severity="danger" outlined :disabled="selectedRole.is_system" @click="confirmDeleteRole" />
+                                        <Button icon="pi pi-pencil" size="small" severity="secondary" outlined v-tooltip="'Edit role'" :disabled="selectedRole.is_system" @click="openEditRole" />
+                                        <Button icon="pi pi-trash" size="small" severity="danger" outlined v-tooltip="'Delete role'" :disabled="selectedRole.is_system" @click="confirmDeleteRole" />
                                     </div>
                                 </div>
                             </template>
@@ -322,8 +322,8 @@ watch(roles, () => {
                                     </Column>
                                     <Column header="Actions" style="width: 120px">
                                         <template #body="{ data }">
-                                            <Button v-if="!data.is_system" icon="pi pi-pencil" severity="info" text rounded @click="editPermission(data)" />
-                                            <Button v-if="!data.is_system" icon="pi pi-trash" severity="danger" text rounded @click="confirmDeletePermission(data)" />
+                                            <Button v-if="!data.is_system" icon="pi pi-pencil" severity="info" text rounded v-tooltip="'Edit permission'" @click="editPermission(data)" />
+                                            <Button v-if="!data.is_system" icon="pi pi-trash" severity="danger" text rounded v-tooltip="'Delete permission'" @click="confirmDeletePermission(data)" />
                                         </template>
                                     </Column>
                                 </DataTable>

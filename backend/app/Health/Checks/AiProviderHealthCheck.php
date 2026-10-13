@@ -62,7 +62,7 @@ class AiProviderHealthCheck extends AbstractHealthCheck
 
         try {
             $response = Http::timeout($timeout)
-                ->withHeaders($this->headers($provider, $key, $url))
+                ->withHeaders($this->headers($provider, $key))
                 ->acceptJson()
                 ->get($url);
         } catch (ConnectionException $e) {
@@ -75,7 +75,7 @@ class AiProviderHealthCheck extends AbstractHealthCheck
         }
 
         $metadata['probe'] = [
-            'url'    => $url,
+            'url' => $this->redactUrl($url),
             'status' => $response->status(),
         ];
 
@@ -110,17 +110,19 @@ class AiProviderHealthCheck extends AbstractHealthCheck
         }
 
         $defaultBase = [
-            'openai'    => 'https://api.openai.com/v1',
-            'groq'      => 'https://api.groq.com/openai/v1',
+            'openai' => 'https://api.openai.com/v1',
+            'groq' => 'https://api.groq.com/openai/v1',
             'anthropic' => 'https://api.anthropic.com/v1',
-            'gemini'    => 'https://generativelanguage.googleapis.com/v1beta',
-            'ollama'    => 'http://localhost:11434',
+            'gemini' => 'https://generativelanguage.googleapis.com/v1beta',
+            'ollama' => 'http://localhost:11434',
         ];
 
         $base = rtrim((string) ($providerConfig['url'] ?? $defaultBase[$provider] ?? ''), '/');
 
         if ($provider === 'gemini') {
-            return $base.'/models?key='.rawurlencode((string) $providerConfig['key']);
+            // The API key is sent via the x-goog-api-key header, never the URL,
+            // so it cannot leak through access logs or stored metadata.
+            return $base.'/models';
         }
 
         if ($provider === 'ollama') {
@@ -130,20 +132,34 @@ class AiProviderHealthCheck extends AbstractHealthCheck
         return $base.'/'.$paths[$provider];
     }
 
-    protected function headers(string $provider, string $key, string $url): array
+    /**
+     * Strip any credential that could appear as a query parameter before a URL
+     * is written to health metadata. Provider URLs must never carry the key,
+     * but stored metadata must be safe regardless of the provider's format.
+     */
+    protected function redactUrl(string $url): string
+    {
+        return (string) preg_replace(
+            '/([?&](?:[^=&#]*(?:key|token|secret|password|signature|auth)[^=&#]*)=)[^&#]*/i',
+            '$1REDACTED',
+            $url,
+        );
+    }
+
+    protected function headers(string $provider, string $key): array
     {
         if ($provider === 'anthropic') {
             return [
-                'x-api-key'         => $key,
+                'x-api-key' => $key,
                 'anthropic-version' => '2023-06-01',
             ];
         }
 
-        if ($provider === 'ollama') {
-            return [];
+        if ($provider === 'gemini') {
+            return ['x-goog-api-key' => $key];
         }
 
-        if (str_contains($url, 'generativelanguage')) {
+        if ($provider === 'ollama') {
             return [];
         }
 

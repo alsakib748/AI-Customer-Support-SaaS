@@ -93,7 +93,7 @@ onMounted(loadExports);
 
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
-                    <Button v-if="data.is_ready" icon="pi pi-download" severity="primary" text rounded @click="download(data)" tooltip="Download" />
+                    <Button v-if="data.is_ready" icon="pi pi-download" severity="primary" text rounded @click="download(data)" v-tooltip="'Download'" />
                     <span v-else-if="data.status === 'failed'" class="text-danger text-xs">
                         {{ data.error_message || 'Failed' }}
                     </span>

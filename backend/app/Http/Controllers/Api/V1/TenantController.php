@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
-use App\Services\TenantService;
 use App\Services\AuditLogService;
+use App\Services\TenantService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class TenantController extends Controller
 {
-
     protected TenantService $tenantService;
+
     protected AuditLogService $auditLogService;
 
     public function __construct(TenantService $tenantService, AuditLogService $auditLogService)
@@ -24,15 +24,14 @@ class TenantController extends Controller
     /**
      * Get current tenant details
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function current(Request $request)
     {
         try {
             $tenant = $request->attributes->get('current_tenant');
 
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No workspace found. Please select a workspace.',
@@ -47,7 +46,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch tenant: ' . $e->getMessage(),
+                'message' => 'Failed to fetch tenant: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -55,8 +54,7 @@ class TenantController extends Controller
     /**
      * Create a new tenant
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -85,20 +83,49 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create tenant: ' . $e->getMessage(),
+                'message' => 'Failed to create tenant: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
+     * Cross-tenant guard for routes that carry a tenant id in the URL.
+     *
+     * Authorization is evaluated against the CURRENT tenant (resolved by
+     * TenantAware from the X-Tenant-ID header / current_tenant_id). Without this
+     * check an actor with the relevant permission in tenant A could read or
+     * mutate any other tenant by passing its id in the route. Super Admins are
+     * allowed to manage any tenant.
+     */
+    private function authorizeTenantAccess(string $tenantId): ?JsonResponse
+    {
+        $actor = auth()->user();
+        $currentTenant = app()->bound('current_tenant') ? app('current_tenant') : null;
+
+        if ($actor && ! $actor->isSuperAdmin()) {
+            if (! $currentTenant || (string) $currentTenant->id !== (string) $tenantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this workspace.',
+                ], 403);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Update tenant details
      *
-     * @param Request $request
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $id
+     * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
+        if ($response = $this->authorizeTenantAccess($id)) {
+            return $response;
+        }
+
         try {
             $tenant = $this->tenantService->update($id, $request->all());
 
@@ -124,7 +151,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update tenant: ' . $e->getMessage(),
+                'message' => 'Failed to update tenant: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -132,9 +159,8 @@ class TenantController extends Controller
     /**
      * Switch current tenant
      *
-     * @param Request $request
-     * @param string $tenantId
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $tenantId
+     * @return JsonResponse
      */
     public function switchTenant(Request $request, $tenantId)
     {
@@ -157,7 +183,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to switch tenant: ' . $e->getMessage(),
+                'message' => 'Failed to switch tenant: '.$e->getMessage(),
             ], 403);
         }
     }
@@ -165,8 +191,7 @@ class TenantController extends Controller
     /**
      * Get all tenants for the current user
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getUserTenants(Request $request)
     {
@@ -180,7 +205,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch tenants: ' . $e->getMessage(),
+                'message' => 'Failed to fetch tenants: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -188,12 +213,15 @@ class TenantController extends Controller
     /**
      * Get tenant users
      *
-     * @param Request $request
-     * @param string $tenantId
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $tenantId
+     * @return JsonResponse
      */
     public function getUsers(Request $request, $tenantId)
     {
+        if ($response = $this->authorizeTenantAccess($tenantId)) {
+            return $response;
+        }
+
         try {
             $users = $this->tenantService->getTenantUsers($tenantId);
 
@@ -204,7 +232,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch users: ' . $e->getMessage(),
+                'message' => 'Failed to fetch users: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -212,12 +240,15 @@ class TenantController extends Controller
     /**
      * Invite user to tenant
      *
-     * @param Request $request
-     * @param string $tenantId
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $tenantId
+     * @return JsonResponse
      */
     public function inviteUser(Request $request, $tenantId)
     {
+        if ($response = $this->authorizeTenantAccess($tenantId)) {
+            return $response;
+        }
+
         try {
             $result = $this->tenantService->inviteUser($tenantId, $request->all());
 
@@ -243,7 +274,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to invite user: ' . $e->getMessage(),
+                'message' => 'Failed to invite user: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -251,13 +282,16 @@ class TenantController extends Controller
     /**
      * Remove user from tenant
      *
-     * @param Request $request
-     * @param string $tenantId
-     * @param int $userId
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $tenantId
+     * @param  int  $userId
+     * @return JsonResponse
      */
     public function removeUser(Request $request, $tenantId, $userId)
     {
+        if ($response = $this->authorizeTenantAccess($tenantId)) {
+            return $response;
+        }
+
         try {
             $this->tenantService->removeUser($tenantId, $userId);
 
@@ -276,7 +310,7 @@ class TenantController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to remove user: ' . $e->getMessage(),
+                'message' => 'Failed to remove user: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -284,28 +318,14 @@ class TenantController extends Controller
     /**
      * Update a team member's role within a tenant.
      *
-     * @param Request $request
-     * @param string $tenantId
-     * @param int $userId
-     * @return \Illuminate\Http\JsonResponse
+     * @param  string  $tenantId
+     * @param  int  $userId
+     * @return JsonResponse
      */
     public function updateUserRole(Request $request, $tenantId, $userId)
     {
-        // Cross-tenant guard: the route carries a tenant id, but authorization is
-        // evaluated against the CURRENT tenant (resolved by TenantAware from the
-        // X-Tenant-ID header / current_tenant_id). Without this check an actor
-        // with team.assign_role in tenant A could mutate a member's role in any
-        // other tenant by passing their id in the URL. Super admins bypass.
-        $actor = auth()->user();
-        $currentTenant = app()->bound('current_tenant') ? app('current_tenant') : null;
-
-        if ($actor && ! $actor->isSuperAdmin()) {
-            if (! $currentTenant || (string) $currentTenant->id !== (string) $tenantId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not have access to this workspace.',
-                ], 403);
-            }
+        if ($response = $this->authorizeTenantAccess($tenantId)) {
+            return $response;
         }
 
         try {
@@ -345,5 +365,4 @@ class TenantController extends Controller
             ], 400);
         }
     }
-
 }

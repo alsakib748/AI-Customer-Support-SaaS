@@ -230,8 +230,8 @@ onMounted(load);
             <Column header="Actions" style="width: 120px">
                 <template #body="{ data }">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-eye" severity="info" text rounded @click="openTenant(data)" />
-                        <Button v-if="can(['platform.tenants.manage']) && !data.is_archived" icon="pi pi-eye-slash" severity="secondary" text rounded title="Manage tenant context" @click="manageTenant(data, $event)" />
+                        <Button icon="pi pi-eye" severity="info" text rounded v-tooltip="'View tenant'" @click="openTenant(data)" />
+                        <Button v-if="can(['platform.tenants.manage']) && !data.is_archived" icon="pi pi-eye-slash" severity="secondary" text rounded v-tooltip="'Manage tenant context'" @click="manageTenant(data, $event)" />
                     </div>
                 </template>
             </Column>

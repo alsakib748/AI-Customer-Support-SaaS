@@ -3,21 +3,21 @@
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
-use App\Http\Controllers\Api\V1\Admin\TenantController as AdminTenantController;
-use App\Http\Controllers\Api\V1\Admin\TenantLifecycleController as AdminTenantLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PlatformNotificationController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
-use App\Http\Controllers\Api\V1\Admin\UserRoleController;
-use App\Http\Controllers\Api\V1\Admin\UserPermissionController;
+use App\Http\Controllers\Api\V1\Admin\SystemHealthController;
+use App\Http\Controllers\Api\V1\Admin\SystemSettingsController;
+use App\Http\Controllers\Api\V1\Admin\TenantController as AdminTenantController;
+use App\Http\Controllers\Api\V1\Admin\TenantLifecycleController as AdminTenantLifecycleController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\UserLifecycleController;
+use App\Http\Controllers\Api\V1\Admin\UserPermissionController;
+use App\Http\Controllers\Api\V1\Admin\UserRoleController;
 use App\Http\Controllers\Api\V1\Admin\UserSessionController;
-use App\Http\Controllers\Api\V1\Admin\PlatformNotificationController;
-use App\Http\Controllers\Api\V1\Admin\SystemSettingsController;
-use App\Http\Controllers\Api\V1\Admin\SystemHealthController;
 use App\Http\Controllers\Api\V1\AI\AIConfigurationController;
 use App\Http\Controllers\Api\V1\AI\AIStreamController;
 use App\Http\Controllers\Api\V1\AI\AIUsageController;
@@ -31,7 +31,6 @@ use App\Http\Controllers\Api\V1\Analytics\OverviewController;
 use App\Http\Controllers\Api\V1\Analytics\TicketAnalyticsController;
 use App\Http\Controllers\Api\V1\Analytics\WidgetAnalyticsController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Billing\InvoiceController;
 use App\Http\Controllers\Api\V1\Billing\PaymentController;
 use App\Http\Controllers\Api\V1\Billing\PlanController;
@@ -45,6 +44,8 @@ use App\Http\Controllers\Api\V1\Customer\CustomerController;
 use App\Http\Controllers\Api\V1\KnowledgeBase\ArticleController;
 use App\Http\Controllers\Api\V1\KnowledgeBase\CategoryController;
 use App\Http\Controllers\Api\V1\Message\MessageController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Team\InvitationController;
 use App\Http\Controllers\Api\V1\Team\TeamMemberController;
 use App\Http\Controllers\Api\V1\TenantController;
@@ -52,7 +53,8 @@ use App\Http\Controllers\Api\V1\Ticket\TicketCommentController;
 use App\Http\Controllers\Api\V1\Ticket\TicketController;
 use App\Http\Controllers\Api\V1\Widget\WidgetController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
-use App\Http\Controllers\Api\V1\NotificationController;
+use App\Services\Billing\SubscriptionService;
+use App\Services\Billing\UsageTracker;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/user', function (Request $request) {
@@ -112,16 +114,20 @@ Route::prefix('v1')->group(function () {
     // Public Routes - No Authentication Required
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register'])
-            ->middleware('maintenance.mode:registration');
-        Route::post('/login', [AuthController::class, 'login']);
-        Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+            ->middleware(['maintenance.mode:registration', 'throttle:auth']);
+        Route::post('/login', [AuthController::class, 'login'])
+            ->middleware('throttle:auth');
+        Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:password');
+        Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:password');
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('/verification.verify');
-        Route::post('/validate-token', [AuthController::class, 'validateToken']);
+        Route::post('/validate-token', [AuthController::class, 'validateToken'])
+            ->middleware('throttle:auth');
     });
 
-     Route::middleware(['jwt.auth'])->group(function () {
+    Route::middleware(['jwt.auth'])->group(function () {
         // Auth Routes
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
@@ -138,24 +144,24 @@ Route::prefix('v1')->group(function () {
             Route::put('/', [ProfileController::class, 'update']);
             Route::post('/avatar', [ProfileController::class, 'updateAvatar']);
         });
-     });
+    });
 
     // Protected Routes - Authentication Required
     Route::middleware(['jwt.auth', 'tenant.aware', 'set.permission.team', 'maintenance.mode', 'check.subscription'])->group(function () {
 
         // Tenant Routes
         Route::prefix('tenants')->group(function () {
-            Route::get ('/current',            [TenantController::class, 'current']);
-            Route::get ('/my-tenants',         [TenantController::class, 'getUserTenants']);
-            Route::post('/',                   [TenantController::class, 'store']);
-            Route::put ('/{id}',               [TenantController::class, 'update']);
-            Route::post('/switch/{tenantId}',  [TenantController::class, 'switchTenant']);
-            Route::get ('/{tenantId}/users',   [TenantController::class, 'getUsers']);
-            Route::post('/{tenantId}/invite',  [TenantController::class, 'inviteUser'])
+            Route::get('/current', [TenantController::class, 'current']);
+            Route::get('/my-tenants', [TenantController::class, 'getUserTenants']);
+            Route::post('/', [TenantController::class, 'store']);
+            Route::put('/{id}', [TenantController::class, 'update']);
+            Route::post('/switch/{tenantId}', [TenantController::class, 'switchTenant']);
+            Route::get('/{tenantId}/users', [TenantController::class, 'getUsers']);
+            Route::post('/{tenantId}/invite', [TenantController::class, 'inviteUser'])
                 ->middleware('permission:team.invite');
             Route::delete('/{tenantId}/users/{userId}', [TenantController::class, 'removeUser'])
                 ->middleware('permission:team.remove');
-            Route::put ('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole'])
+            Route::put('/{tenantId}/users/{userId}/role', [TenantController::class, 'updateUserRole'])
                 ->middleware('permission:team.assign_role');
         });
 
@@ -163,60 +169,60 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('workspace')->group(function () {
             // Basic CRUD
-            Route::get('/', [WorkspaceController::class, 'show']);
-            Route::put('/', [WorkspaceController::class, 'update']);
+            Route::get('/', [WorkspaceController::class, 'show'])->middleware('permission:workspace.view');
+            Route::put('/', [WorkspaceController::class, 'update'])->middleware('permission:workspace.update');
 
             // Logo Management
-            Route::post('/logo', [WorkspaceController::class, 'updateLogo']);
-            Route::delete('/logo', [WorkspaceController::class, 'deleteLogo']);
+            Route::post('/logo', [WorkspaceController::class, 'updateLogo'])->middleware('permission:workspace.update');
+            Route::delete('/logo', [WorkspaceController::class, 'deleteLogo'])->middleware('permission:workspace.update');
 
             // Favicon Management
-            Route::post('/favicon', [WorkspaceController::class, 'updateFavicon']);
-            Route::delete('/favicon', [WorkspaceController::class, 'deleteFavicon']);
+            Route::post('/favicon', [WorkspaceController::class, 'updateFavicon'])->middleware('permission:workspace.update');
+            Route::delete('/favicon', [WorkspaceController::class, 'deleteFavicon'])->middleware('permission:workspace.update');
 
             // Business Hours
-            Route::put('/business-hours', [WorkspaceController::class, 'updateBusinessHours']);
+            Route::put('/business-hours', [WorkspaceController::class, 'updateBusinessHours'])->middleware('permission:workspace.update');
 
             // Statistics
-            Route::get('/statistics', [WorkspaceController::class, 'statistics']);
+            Route::get('/statistics', [WorkspaceController::class, 'statistics'])->middleware('permission:workspace.view');
         });
 
         // todo; ===================== TEAM MANAGEMENT ROUTES =====================
         Route::prefix('team')->group(function () {
 
             Route::prefix('members')->group(function () {
-                Route::get('/', [TeamMemberController::class, 'index']);
-                Route::get('/statistics', [TeamMemberController::class, 'statistics']);
-                Route::get('/departments', [TeamMemberController::class, 'departments']);
+                Route::get('/', [TeamMemberController::class, 'index'])->middleware('permission:team.view');
+                Route::get('/statistics', [TeamMemberController::class, 'statistics'])->middleware('permission:team.view');
+                Route::get('/departments', [TeamMemberController::class, 'departments'])->middleware('permission:team.view');
 
-                Route::get('/tenants', [TeamMemberController::class, 'tenants']); // Super Admin only
-                                                                                  // Members
+                Route::get('/tenants', [TeamMemberController::class, 'tenants'])->middleware('permission:team.view'); // Super Admin only
+                // Members
 
-                Route::get('/{id}', [TeamMemberController::class, 'show']);
-                Route::put('/{id}', [TeamMemberController::class, 'update']);
-                Route::delete('/{id}', [TeamMemberController::class, 'destroy']);
+                Route::get('/{id}', [TeamMemberController::class, 'show'])->middleware('permission:team.view');
+                Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
+                Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
             });
 
             // Invitations
             Route::prefix('invitations')->group(function () {
-                Route::get('/', [InvitationController::class, 'index']);
-                Route::post('/', [InvitationController::class, 'store']);
-                Route::post('/{id}/resend', [InvitationController::class, 'resend']);
-                Route::delete('/{id}', [InvitationController::class, 'destroy']);
+                Route::get('/', [InvitationController::class, 'index'])->middleware('permission:team.view');
+                Route::post('/', [InvitationController::class, 'store'])->middleware('permission:team.invite');
+                Route::post('/{id}/resend', [InvitationController::class, 'resend'])->middleware('permission:team.invite');
+                Route::delete('/{id}', [InvitationController::class, 'destroy'])->middleware('permission:team.remove');
             });
 
         });
 
-        //todo; =========== Customer Management Routes ==========
+        // todo; =========== Customer Management Routes ==========
         Route::prefix('customers')->group(function () {
             // Main CRUD
-            Route::get ('/',       [CustomerController::class, 'index'])  ->middleware('permission:customers.view');
-            Route::post('/',       [CustomerController::class, 'store'])  ->middleware('permission:customers.create');
+            Route::get('/', [CustomerController::class, 'index'])->middleware('permission:customers.view');
+            Route::post('/', [CustomerController::class, 'store'])->middleware('permission:customers.create');
             Route::get('/statistics', [CustomerController::class, 'statistics'])->middleware('permission:customers.view');
             Route::get('/tags', [CustomerController::class, 'tags'])->middleware('permission:customers.view');
             Route::get('/export', [CustomerController::class, 'export'])->middleware('permission:customers.view');
-            Route::get ('/{id}',   [CustomerController::class, 'show'])   ->middleware('permission:customers.view');
-            Route::put ('/{id}',   [CustomerController::class, 'update']) ->middleware('permission:customers.update');
+            Route::get('/{id}', [CustomerController::class, 'show'])->middleware('permission:customers.view');
+            Route::put('/{id}', [CustomerController::class, 'update'])->middleware('permission:customers.update');
             Route::delete('/{id}', [CustomerController::class, 'destroy'])->middleware('permission:customers.delete');
 
             // Restore (soft delete)
@@ -237,26 +243,26 @@ Route::prefix('v1')->group(function () {
 
         // todo; ========== Conversation Routes ===========
         Route::prefix('conversations')->group(function () {
-            Route::get('/', [ConversationController::class, 'index']);
-            Route::post('/', [ConversationController::class, 'store']);
-            Route::get('/statistics', [ConversationController::class, 'statistics']);
-            Route::get('/{id}', [ConversationController::class, 'show']);
-            Route::put('/{id}', [ConversationController::class, 'update']);
-            Route::delete('/{id}', [ConversationController::class, 'destroy']);
+            Route::get('/', [ConversationController::class, 'index'])->middleware('permission:conversations.view');
+            Route::post('/', [ConversationController::class, 'store'])->middleware('permission:conversations.create');
+            Route::get('/statistics', [ConversationController::class, 'statistics'])->middleware('permission:conversations.view');
+            Route::get('/{id}', [ConversationController::class, 'show'])->middleware('permission:conversations.view');
+            Route::put('/{id}', [ConversationController::class, 'update'])->middleware('permission:conversations.update');
+            Route::delete('/{id}', [ConversationController::class, 'destroy'])->middleware('permission:conversations.delete');
 
             // Status Actions
-            Route::post('/{id}/resolve', [ConversationController::class, 'resolve']);
-            Route::post('/{id}/reopen', [ConversationController::class, 'reopen']);
-            Route::post('/{id}/close', [ConversationController::class, 'close']);
-
-            // Assignment Actions
-            Route::post('/{id}/assign', [ConversationController::class, 'assign']);
-            Route::post('/{id}/unassign', [ConversationController::class, 'unassign']);
+            Route::post('/{id}/resolve', [ConversationController::class, 'resolve'])->middleware('permission:conversations.resolve');
+            Route::post('/{id}/reopen', [ConversationController::class, 'reopen'])->middleware('permission:conversations.reopen');
+            Route::post('/{id}/close', [ConversationController::class, 'close'])->middleware('permission:conversations.close');
+            Route::post('/{id}/assign', [ConversationController::class, 'assign'])->middleware('permission:conversations.assign');
+            Route::post('/{id}/unassign', [ConversationController::class, 'unassign'])->middleware('permission:conversations.unassign');
         });
 
         // todo; Message Routes - Nested under conversations
         Route::prefix('conversations/{conversation}')->group(function () {
 
+            // Authorization is enforced in MessageService (conversations.* permissions);
+            // message visibility is filtered there so plain members can still read public messages.
             Route::get('/messages', [MessageController::class, 'index']);
             Route::post('/messages', [MessageController::class, 'store']);
             Route::post('/notes', [MessageController::class, 'addNote']);
@@ -270,40 +276,40 @@ Route::prefix('v1')->group(function () {
 
         // todo; Chat Widgets
         Route::prefix('chat-widgets')->group(function () {
-            Route::get('/', [ChatWidgetController::class, 'index']);
-            Route::post('/', [ChatWidgetController::class, 'store']);
-            Route::get('/{chatWidget}', [ChatWidgetController::class, 'show']);
-            Route::put('/{chatWidget}', [ChatWidgetController::class, 'update']);
-            Route::delete('/{chatWidget}', [ChatWidgetController::class, 'destroy']);
+            Route::get('/', [ChatWidgetController::class, 'index'])->middleware('permission:widgets.view');
+            Route::post('/', [ChatWidgetController::class, 'store'])->middleware('permission:widgets.create');
+            Route::get('/{chatWidget}', [ChatWidgetController::class, 'show'])->middleware('permission:widgets.view');
+            Route::put('/{chatWidget}', [ChatWidgetController::class, 'update'])->middleware('permission:widgets.update');
+            Route::delete('/{chatWidget}', [ChatWidgetController::class, 'destroy'])->middleware('permission:widgets.delete');
 
             // Actions
-            Route::post('/{chatWidget}/enable', [ChatWidgetController::class, 'enable']);
-            Route::post('/{chatWidget}/disable', [ChatWidgetController::class, 'disable']);
-            Route::post('/{chatWidget}/regenerate-key', [ChatWidgetController::class, 'regenerateKey']);
-            Route::get('/{chatWidget}/installation-code', [ChatWidgetController::class, 'installationCode']);
+            Route::post('/{chatWidget}/enable', [ChatWidgetController::class, 'enable'])->middleware('permission:widgets.enable');
+            Route::post('/{chatWidget}/disable', [ChatWidgetController::class, 'disable'])->middleware('permission:widgets.disable');
+            Route::post('/{chatWidget}/regenerate-key', [ChatWidgetController::class, 'regenerateKey'])->middleware('permission:widgets.regenerate_key');
+            Route::get('/{chatWidget}/installation-code', [ChatWidgetController::class, 'installationCode'])->middleware('permission:widgets.view');
 
             // Statistics
-            Route::get('/{chatWidget}/statistics', [WidgetStatisticsController::class, 'show']);
-            Route::get('/{chatWidget}/analytics', [WidgetStatisticsController::class, 'analytics']);
+            Route::get('/{chatWidget}/statistics', [WidgetStatisticsController::class, 'show'])->middleware('permission:widgets.view');
+            Route::get('/{chatWidget}/analytics', [WidgetStatisticsController::class, 'analytics'])->middleware('permission:widgets.analytics');
         });
 
         // todo; Ticket Routes
         Route::prefix('tickets')->group(function () {
-            Route::get('/', [TicketController::class, 'index']);
-            Route::post('/', [TicketController::class, 'store']);
-            Route::get('/statistics', [TicketController::class, 'statistics']);
-            Route::get('/{id}', [TicketController::class, 'show']);
-            Route::put('/{id}', [TicketController::class, 'update']);
-            Route::delete('/{id}', [TicketController::class, 'destroy']);
+            Route::get('/', [TicketController::class, 'index'])->middleware('permission:tickets.view');
+            Route::post('/', [TicketController::class, 'store'])->middleware('permission:tickets.create');
+            Route::get('/statistics', [TicketController::class, 'statistics'])->middleware('permission:tickets.view');
+            Route::get('/{id}', [TicketController::class, 'show'])->middleware('permission:tickets.view');
+            Route::put('/{id}', [TicketController::class, 'update'])->middleware('permission:tickets.update');
+            Route::delete('/{id}', [TicketController::class, 'destroy'])->middleware('permission:tickets.delete');
 
             // Status Actions
-            Route::post('/{id}/assign', [TicketController::class, 'assign']);
-            Route::post('/{id}/unassign', [TicketController::class, 'unassign']);
-            Route::post('/{id}/start', [TicketController::class, 'start']);
-            Route::post('/{id}/pending', [TicketController::class, 'pending']);
-            Route::post('/{id}/resolve', [TicketController::class, 'resolve']);
-            Route::post('/{id}/reopen', [TicketController::class, 'reopen']);
-            Route::post('/{id}/close', [TicketController::class, 'close']);
+            Route::post('/{id}/assign', [TicketController::class, 'assign'])->middleware('permission:tickets.assign');
+            Route::post('/{id}/unassign', [TicketController::class, 'unassign'])->middleware('permission:tickets.unassign');
+            Route::post('/{id}/start', [TicketController::class, 'start'])->middleware('permission:tickets.update');
+            Route::post('/{id}/pending', [TicketController::class, 'pending'])->middleware('permission:tickets.update');
+            Route::post('/{id}/resolve', [TicketController::class, 'resolve'])->middleware('permission:tickets.resolve');
+            Route::post('/{id}/reopen', [TicketController::class, 'reopen'])->middleware('permission:tickets.reopen');
+            Route::post('/{id}/close', [TicketController::class, 'close'])->middleware('permission:tickets.close');
 
             // Comment Routes
             Route::get('/{ticket}/comments', [TicketCommentController::class, 'index']);
@@ -311,33 +317,33 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{ticket}/comments/{comment}', [TicketCommentController::class, 'destroy']);
         });
 
-        //todo; Knowledge Base Routes
+        // todo; Knowledge Base Routes
         Route::prefix('knowledge-base')->group(function () {
 
-            //todo; Categories
+            // todo; Categories
             Route::prefix('categories')->group(function () {
-                Route::get('/', [CategoryController::class, 'index']);
-                Route::get('/all', [CategoryController::class, 'all']);
-                Route::post('/', [CategoryController::class, 'store']);
-                Route::get('/{id}', [CategoryController::class, 'show']);
-                Route::put('/{id}', [CategoryController::class, 'update']);
-                Route::delete('/{id}', [CategoryController::class, 'destroy']);
-                Route::post('/{id}/activate', [CategoryController::class, 'activate']);
-                Route::post('/{id}/deactivate', [CategoryController::class, 'deactivate']);
+                Route::get('/', [CategoryController::class, 'index'])->middleware('permission:knowledge_base.view');
+                Route::get('/all', [CategoryController::class, 'all'])->middleware('permission:knowledge_base.view');
+                Route::post('/', [CategoryController::class, 'store'])->middleware('permission:knowledge_base.create');
+                Route::get('/{id}', [CategoryController::class, 'show'])->middleware('permission:knowledge_base.view');
+                Route::put('/{id}', [CategoryController::class, 'update'])->middleware('permission:knowledge_base.update');
+                Route::delete('/{id}', [CategoryController::class, 'destroy'])->middleware('permission:knowledge_base.delete');
+                Route::post('/{id}/activate', [CategoryController::class, 'activate'])->middleware('permission:knowledge_base.update');
+                Route::post('/{id}/deactivate', [CategoryController::class, 'deactivate'])->middleware('permission:knowledge_base.update');
             });
 
-            //todo; Articles
+            // todo; Articles
             Route::prefix('articles')->group(function () {
-                Route::get('/', [ArticleController::class, 'index']);
-                Route::get('/statistics', [ArticleController::class, 'statistics']);
-                Route::get('/search/ai', [ArticleController::class, 'searchForAI']);
-                Route::post('/', [ArticleController::class, 'store']);
-                Route::get('/{id}', [ArticleController::class, 'show']);
-                Route::put('/{id}', [ArticleController::class, 'update']);
-                Route::delete('/{id}', [ArticleController::class, 'destroy']);
-                Route::post('/{id}/publish', [ArticleController::class, 'publish']);
-                Route::post('/{id}/unpublish', [ArticleController::class, 'unpublish']);
-                Route::post('/{id}/archive', [ArticleController::class, 'archive']);
+                Route::get('/', [ArticleController::class, 'index'])->middleware('permission:knowledge_base.view');
+                Route::get('/statistics', [ArticleController::class, 'statistics'])->middleware('permission:knowledge_base.view');
+                Route::get('/search/ai', [ArticleController::class, 'searchForAI'])->middleware('permission:knowledge_base.view');
+                Route::post('/', [ArticleController::class, 'store'])->middleware('permission:knowledge_base.create');
+                Route::get('/{id}', [ArticleController::class, 'show'])->middleware('permission:knowledge_base.view');
+                Route::put('/{id}', [ArticleController::class, 'update'])->middleware('permission:knowledge_base.update');
+                Route::delete('/{id}', [ArticleController::class, 'destroy'])->middleware('permission:knowledge_base.delete');
+                Route::post('/{id}/publish', [ArticleController::class, 'publish'])->middleware('permission:knowledge_base.publish');
+                Route::post('/{id}/unpublish', [ArticleController::class, 'unpublish'])->middleware('permission:knowledge_base.publish');
+                Route::post('/{id}/archive', [ArticleController::class, 'archive'])->middleware('permission:knowledge_base.archive');
             });
 
         });
@@ -345,49 +351,50 @@ Route::prefix('v1')->group(function () {
         // todo; AI Routes
         Route::prefix('ai')->group(function () {
             Route::get('/configuration', [AIConfigurationController::class, 'show'])
-                ->middleware('ai.rate.limit:60,60');
+                ->middleware(['permission:ai.view', 'ai.rate.limit:60,60']);
             Route::put('/configuration', [AIConfigurationController::class, 'update'])
-                ->middleware('ai.rate.limit:20,60');
+                ->middleware(['permission:ai.configure', 'ai.rate.limit:20,60']);
             Route::post('/test', [AIConfigurationController::class, 'test'])
-                ->middleware('ai.rate.limit:10,60');
+                ->middleware(['permission:ai.configure', 'ai.rate.limit:10,60']);
 
             // AI Streaming
             // Route::get('/ai/stream/{conversation}/{message}', [AIStreamController::class, 'stream']);
 
             // Streaming
             Route::get('/stream/{conversation}/{message}', [AIStreamController::class, 'stream'])
-                ->middleware('ai.rate.limit:10,60');
+                ->middleware(['permission:ai.use', 'ai.rate.limit:10,60']);
 
             // Usage & Analytics
             Route::get('/usage', [AIUsageController::class, 'index'])
-                ->middleware('ai.rate.limit:60,60');
+                ->middleware(['permission:ai.view', 'ai.rate.limit:60,60']);
             Route::get('/health', [AIUsageController::class, 'health'])
-                ->middleware('ai.rate.limit:60,60');
+                ->middleware(['permission:ai.view', 'ai.rate.limit:60,60']);
             Route::get('/analytics', [AIUsageController::class, 'analytics'])
-                ->middleware('ai.rate.limit:60,60');
+                ->middleware(['permission:ai.analytics', 'ai.rate.limit:60,60']);
             Route::get('/logs', [AIUsageController::class, 'logs'])
-                ->middleware('ai.rate.limit:60,60');
+                ->middleware(['permission:ai.view', 'ai.rate.limit:60,60']);
         });
 
         // todo; Analytics
         Route::prefix('analytics')->group(function () {
-            Route::get('/overview',      [OverviewController::class, 'index'])              ->middleware('permission:analytics.view');
+            Route::get('/overview', [OverviewController::class, 'index'])->middleware('permission:analytics.view');
             Route::get('/conversations', [ConversationAnalyticsController::class, 'index'])->middleware('permission:analytics.conversations');
-            Route::get('/customers',     [CustomerAnalyticsController::class, 'index'])    ->middleware('permission:analytics.customers');
-            Route::get('/agents', [AgentAnalyticsController::class, 'index']);
-            Route::get('/tickets', [TicketAnalyticsController::class, 'index']);
-            Route::get('/ai', [AIAnalyticsController::class, 'index']);
-            Route::get('/widget', [WidgetAnalyticsController::class, 'index']);
-            Route::get('/knowledge-base', [KnowledgeBaseAnalyticsController::class, 'index']);
+            Route::get('/customers', [CustomerAnalyticsController::class, 'index'])->middleware('permission:analytics.customers');
+            Route::get('/agents', [AgentAnalyticsController::class, 'index'])->middleware('permission:analytics.agents');
+            Route::get('/tickets', [TicketAnalyticsController::class, 'index'])->middleware('permission:analytics.tickets');
+            Route::get('/ai', [AIAnalyticsController::class, 'index'])->middleware('permission:analytics.ai');
+            Route::get('/widget', [WidgetAnalyticsController::class, 'index'])->middleware('permission:analytics.widget');
+            Route::get('/knowledge-base', [KnowledgeBaseAnalyticsController::class, 'index'])->middleware('permission:analytics.knowledge_base');
 
             // todo; Exports
             Route::prefix('exports')->group(function () {
-                Route::get('/', [AnalyticsExportController::class, 'index']);
-                Route::post('/', [AnalyticsExportController::class, 'store']);
+                Route::get('/', [AnalyticsExportController::class, 'index'])->middleware('permission:analytics.export');
+                Route::post('/', [AnalyticsExportController::class, 'store'])->middleware('permission:analytics.export');
                 Route::get('/{export}/download', [AnalyticsExportController::class, 'download'])
+                    ->middleware('permission:analytics.export')
                     ->name('api.v1.analytics.exports.download');
 
-                Route::get('/download-now', [AnalyticsExportController::class, 'downloadNow']);
+                Route::get('/download-now', [AnalyticsExportController::class, 'downloadNow'])->middleware('permission:analytics.export');
             });
 
         });
@@ -407,34 +414,34 @@ Route::prefix('v1')->group(function () {
             Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         });
 
-        //todo; Subscription Routes
+        // todo; Subscription Routes
         Route::prefix('subscription')->group(function () {
-            Route::get('/current', [SubscriptionController::class, 'current']);
-            Route::post('/', [SubscriptionController::class, 'store']);
-            Route::post('/upgrade', [SubscriptionController::class, 'upgrade']);
-            Route::post('/downgrade', [SubscriptionController::class, 'downgrade']);
-            Route::post('/cancel', [SubscriptionController::class, 'cancel']);
-            Route::post('/resume', [SubscriptionController::class, 'resume']);
-            Route::post('/validate-coupon', [SubscriptionController::class, 'validateCoupon']);
+            Route::get('/current', [SubscriptionController::class, 'current'])->middleware('permission:billing.view');
+            Route::post('/', [SubscriptionController::class, 'store'])->middleware('permission:billing.subscription');
+            Route::post('/upgrade', [SubscriptionController::class, 'upgrade'])->middleware('permission:billing.subscription');
+            Route::post('/downgrade', [SubscriptionController::class, 'downgrade'])->middleware('permission:billing.subscription');
+            Route::post('/cancel', [SubscriptionController::class, 'cancel'])->middleware('permission:billing.subscription');
+            Route::post('/resume', [SubscriptionController::class, 'resume'])->middleware('permission:billing.subscription');
+            Route::post('/validate-coupon', [SubscriptionController::class, 'validateCoupon'])->middleware('permission:billing.subscription');
 
             // Checkout
-            Route::post('/checkout', [SubscriptionController::class, 'checkout']);
-            Route::post('/checkout/verify', [SubscriptionController::class, 'verify']);
-            Route::get('/providers', [ProviderController::class, 'index']);
+            Route::post('/checkout', [SubscriptionController::class, 'checkout'])->middleware('permission:billing.subscription');
+            Route::post('/checkout/verify', [SubscriptionController::class, 'verify'])->middleware('permission:billing.subscription');
+            Route::get('/providers', [ProviderController::class, 'index'])->middleware('permission:billing.view');
         });
 
-        //todo; Invoice Routes
+        // todo; Invoice Routes
         Route::prefix('invoices')->group(function () {
-            Route::get('/', [InvoiceController::class, 'index']);
-            Route::get('/statistics', [InvoiceController::class, 'statistics']);
-            Route::get('/{id}', [InvoiceController::class, 'show']);
-            Route::get('/{id}/download', [InvoiceController::class, 'download']);
+            Route::get('/', [InvoiceController::class, 'index'])->middleware('permission:billing.invoices');
+            Route::get('/statistics', [InvoiceController::class, 'statistics'])->middleware('permission:billing.invoices');
+            Route::get('/{id}', [InvoiceController::class, 'show'])->middleware('permission:billing.invoices');
+            Route::get('/{id}/download', [InvoiceController::class, 'download'])->middleware('permission:billing.invoices');
         });
 
-        //todo; Payment Routes
+        // todo; Payment Routes
         Route::prefix('payments')->group(function () {
-            Route::get('/', [PaymentController::class, 'index']);
-            Route::get('/statistics', [PaymentController::class, 'statistics']);
+            Route::get('/', [PaymentController::class, 'index'])->middleware('permission:billing.payments');
+            Route::get('/statistics', [PaymentController::class, 'statistics'])->middleware('permission:billing.payments');
         });
 
         // Usage (for frontend)
@@ -460,7 +467,7 @@ Route::prefix('v1')->group(function () {
             }
 
             // Check for an active subscription first
-            $subscription = app(\App\Services\Billing\SubscriptionService::class)
+            $subscription = app(SubscriptionService::class)
                 ->getActiveSubscription($tenant->id);
 
             // No subscription → return zeroed-out usage, HTTP 200
@@ -468,26 +475,26 @@ Route::prefix('v1')->group(function () {
                 $empty = ['used' => 0, 'limit' => 0, 'percentage' => 0, 'remaining' => 0];
 
                 return response()->json([
-                    'success'         => true,
+                    'success' => true,
                     'no_subscription' => true,
-                    'data'            => [
-                        'ai'            => $empty,
-                        'agents'        => $empty,
-                        'customers'     => $empty,
-                        'widgets'       => $empty,
-                        'documents'     => $empty,
-                        'kb_articles'   => $empty,
+                    'data' => [
+                        'ai' => $empty,
+                        'agents' => $empty,
+                        'customers' => $empty,
+                        'widgets' => $empty,
+                        'documents' => $empty,
+                        'kb_articles' => $empty,
                         'conversations' => $empty,
-                        'storage'       => $empty,
+                        'storage' => $empty,
                     ],
                 ]);
             }
 
-            $tracker = app(\App\Services\Billing\UsageTracker::class);
+            $tracker = app(UsageTracker::class);
 
             return response()->json([
                 'success' => true,
-                'data'    => $tracker->getSummary($tenant->id),
+                'data' => $tracker->getSummary($tenant->id),
             ]);
         });
 
@@ -502,9 +509,9 @@ Route::prefix('v1/admin/billing')
         Route::post('/plans', [AdminBillingController::class, 'storePlan']);
         Route::put('/plans/{plan}', [AdminBillingController::class, 'updatePlan']);
         Route::delete('/plans/{plan}', [AdminBillingController::class, 'destroyPlan']);
-        Route::get   ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'index']);
-        Route::post  ('/plans/{plan}/prices',[PlanProviderPriceController::class, 'store']);
-        Route::delete('/prices/{price}',[PlanProviderPriceController::class, 'destroy']);
+        Route::get('/plans/{plan}/prices', [PlanProviderPriceController::class, 'index']);
+        Route::post('/plans/{plan}/prices', [PlanProviderPriceController::class, 'store']);
+        Route::delete('/prices/{price}', [PlanProviderPriceController::class, 'destroy']);
 
         // Subscriptions
         Route::get('/subscriptions', [AdminBillingController::class, 'subscriptions']);
@@ -529,7 +536,6 @@ Route::prefix('v1/admin/billing')
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy']);
     });
-
 
 Route::prefix('v1/admin/tenants')
     ->middleware(['jwt.auth', 'super.admin'])
@@ -570,7 +576,6 @@ Route::prefix('v1/admin/tenants')
             ->middleware('permission:platform.tenants.manage');
     });
 
-
 Route::prefix('v1/admin/users')
     ->middleware(['jwt.auth', 'super.admin'])
     ->group(function () {
@@ -596,31 +601,30 @@ Route::prefix('v1/admin/users')
             ->middleware('permission:platform.users.revoke_sessions');
     });
 
-
 Route::prefix('v1/admin/rbac')
     ->middleware(['jwt.auth', 'super.admin'])
     ->group(function () {
 
         // Roles
-        Route::get   ('/roles',                     [RoleController::class, 'index']);
-        Route::post  ('/roles',                     [RoleController::class, 'store']);
-        Route::get   ('/roles/{role}',              [RoleController::class, 'show']);
-        Route::put   ('/roles/{role}',              [RoleController::class, 'update']);
-        Route::delete('/roles/{role}',              [RoleController::class, 'destroy']);
-        Route::put   ('/roles/{role}/permissions',  [RoleController::class, 'syncPermissions']);
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::get('/roles/{role}', [RoleController::class, 'show']);
+        Route::put('/roles/{role}', [RoleController::class, 'update']);
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
+        Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
 
         // Permissions
-        Route::get   ('/permissions',               [PermissionController::class, 'index']);
-        Route::post  ('/permissions',               [PermissionController::class, 'store']);
-        Route::put   ('/permissions/{permission}',  [PermissionController::class, 'update']);
-        Route::delete('/permissions/{permission}',  [PermissionController::class, 'destroy']);
+        Route::get('/permissions', [PermissionController::class, 'index']);
+        Route::post('/permissions', [PermissionController::class, 'store']);
+        Route::put('/permissions/{permission}', [PermissionController::class, 'update']);
+        Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy']);
 
         // User ↔ Role
-        Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign']);
-        Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke']);
+        Route::post('/users/{user}/role', [UserRoleController::class, 'assign']);
+        Route::delete('/users/{user}/role', [UserRoleController::class, 'revoke']);
 
         // User ↔ direct Permissions
-        Route::put   ('/users/{user}/permissions',  [UserPermissionController::class, 'sync']);
+        Route::put('/users/{user}/permissions', [UserPermissionController::class, 'sync']);
     });
 
 /*
@@ -633,7 +637,7 @@ Route::prefix('v1/admin/audit-logs')
     ->group(function () {
         Route::get('/statistics', [AdminAuditLogController::class, 'statistics'])
             ->middleware('permission:platform.audit_logs');
-        Route::get('/',           [AdminAuditLogController::class, 'index'])
+        Route::get('/', [AdminAuditLogController::class, 'index'])
             ->middleware('permission:platform.audit_logs');
     });
 
@@ -647,27 +651,27 @@ Route::prefix('v1/rbac')
     ->group(function () {
 
         // Roles — tenant can view global roles + manage their own
-        Route::get   ('/roles',                     [RoleController::class, 'index'])
+        Route::get('/roles', [RoleController::class, 'index'])
             ->middleware('permission:team.view');
-        Route::post  ('/roles',                     [RoleController::class, 'store'])
+        Route::post('/roles', [RoleController::class, 'store'])
             ->middleware('permission:team.assign_role');
-        Route::get   ('/roles/{role}',              [RoleController::class, 'show'])
+        Route::get('/roles/{role}', [RoleController::class, 'show'])
             ->middleware('permission:team.view');
-        Route::put   ('/roles/{role}',              [RoleController::class, 'update'])
+        Route::put('/roles/{role}', [RoleController::class, 'update'])
             ->middleware('permission:team.assign_role');
-        Route::delete('/roles/{role}',              [RoleController::class, 'destroy'])
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
             ->middleware('permission:team.assign_role');
-        Route::put   ('/roles/{role}/permissions',  [RoleController::class, 'syncPermissions'])
+        Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])
             ->middleware('permission:team.assign_role');
 
         // Permissions — read-only for tenant users
-        Route::get   ('/permissions',               [PermissionController::class, 'index'])
+        Route::get('/permissions', [PermissionController::class, 'index'])
             ->middleware('permission:team.view');
 
         // User ↔ Role
-        Route::post  ('/users/{user}/role',         [UserRoleController::class, 'assign'])
+        Route::post('/users/{user}/role', [UserRoleController::class, 'assign'])
             ->middleware('permission:team.assign_role');
-        Route::delete('/users/{user}/role',         [UserRoleController::class, 'revoke'])
+        Route::delete('/users/{user}/role', [UserRoleController::class, 'revoke'])
             ->middleware('permission:team.assign_role');
     });
 
@@ -679,49 +683,49 @@ Route::prefix('v1/rbac')
 Route::prefix('v1/admin/settings')
     ->middleware(['jwt.auth', 'super.admin'])
     ->group(function () {
-        Route::get   ('/', [SystemSettingsController::class, 'index'])
+        Route::get('/', [SystemSettingsController::class, 'index'])
             ->middleware('permission:platform.settings.view');
 
         // General
-        Route::get   ('/general', [SystemSettingsController::class, 'general'])
+        Route::get('/general', [SystemSettingsController::class, 'general'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/general', [SystemSettingsController::class, 'updateGeneral'])
+        Route::put('/general', [SystemSettingsController::class, 'updateGeneral'])
             ->middleware('permission:platform.settings.general');
 
         // Security
-        Route::get   ('/security', [SystemSettingsController::class, 'security'])
+        Route::get('/security', [SystemSettingsController::class, 'security'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/security', [SystemSettingsController::class, 'updateSecurity'])
+        Route::put('/security', [SystemSettingsController::class, 'updateSecurity'])
             ->middleware('permission:platform.settings.security');
 
         // AI defaults
-        Route::get   ('/ai', [SystemSettingsController::class, 'ai'])
+        Route::get('/ai', [SystemSettingsController::class, 'ai'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/ai', [SystemSettingsController::class, 'updateAi'])
+        Route::put('/ai', [SystemSettingsController::class, 'updateAi'])
             ->middleware('permission:platform.settings.ai');
 
         // Email
-        Route::get   ('/email', [SystemSettingsController::class, 'email'])
+        Route::get('/email', [SystemSettingsController::class, 'email'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/email', [SystemSettingsController::class, 'updateEmail'])
+        Route::put('/email', [SystemSettingsController::class, 'updateEmail'])
             ->middleware('permission:platform.settings.email');
-        Route::post  ('/email/test', [SystemSettingsController::class, 'testEmail'])
+        Route::post('/email/test', [SystemSettingsController::class, 'testEmail'])
             ->middleware('permission:platform.settings.email');
 
         // Integrations
-        Route::get   ('/integrations', [SystemSettingsController::class, 'integrations'])
+        Route::get('/integrations', [SystemSettingsController::class, 'integrations'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/integrations', [SystemSettingsController::class, 'updateIntegrations'])
+        Route::put('/integrations', [SystemSettingsController::class, 'updateIntegrations'])
             ->middleware('permission:platform.settings.integrations');
-        Route::post  ('/integrations/{provider}/test', [SystemSettingsController::class, 'testIntegration'])
+        Route::post('/integrations/{provider}/test', [SystemSettingsController::class, 'testIntegration'])
             ->middleware('permission:platform.settings.integrations');
 
         // Operations
-        Route::get   ('/operations', [SystemSettingsController::class, 'operations'])
+        Route::get('/operations', [SystemSettingsController::class, 'operations'])
             ->middleware('permission:platform.settings.view');
-        Route::put   ('/operations', [SystemSettingsController::class, 'updateOperations'])
+        Route::put('/operations', [SystemSettingsController::class, 'updateOperations'])
             ->middleware('permission:platform.settings.operations');
-        Route::get   ('/operations/health', [SystemSettingsController::class, 'health'])
+        Route::get('/operations/health', [SystemSettingsController::class, 'health'])
             ->middleware('permission:platform.settings.view');
     });
 
@@ -745,12 +749,12 @@ Route::prefix('v1/admin/system-health')
             [SystemHealthController::class, 'showCheck'])
             ->middleware('permission:platform.system_health.view');
 
-Route::post('/checks/{check}/run',
-              [SystemHealthController::class, 'runCheck'])
-              ->middleware([
-                  'permission:platform.system_health.run',
-                  'throttle:'.config('health.on_demand.rate_limit', '10,1'),
-              ]);
+        Route::post('/checks/{check}/run',
+            [SystemHealthController::class, 'runCheck'])
+            ->middleware([
+        'permission:platform.system_health.run',
+        'throttle:'.config('health.on_demand.rate_limit', '10,1'),
+    ]);
 
         Route::get('/metrics',
             [SystemHealthController::class, 'metrics'])
