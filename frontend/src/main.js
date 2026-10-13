@@ -21,6 +21,8 @@ import InputMask from 'primevue/inputmask';
 import Vue3Toastify from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
 
+import permission from '@/directives/permission';
+
 import '@/assets/tailwind.css';
 import '@/assets/styles.scss';
 // import { closeButton } from '@primeuix/themes/aura/galleria';
@@ -48,6 +50,7 @@ app.component('InputMask', InputMask);
 // app.component('Toast', Toast);
 app.use(ConfirmationService);
 app.directive('tooltip', Tooltip);
+app.directive('permission', permission);
 app.use(pinia);
 app.use(Vue3Toastify, {
     // autoClose: false,

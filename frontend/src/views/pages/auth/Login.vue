@@ -1,10 +1,15 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
+import TurnstileWidget from '@/components/common/TurnstileWidget.vue';
 import { reactive, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
 
 const authStore = useAuthStore();
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+const turnstileToken = ref('');
+const turnstileRef = ref(null);
 
 const form = reactive({
     email: '',
@@ -18,9 +23,18 @@ const resending = ref(false);
 const handleLogin = async () => {
     notVerified.value = false;
 
+    if (turnstileSiteKey && !turnstileToken.value) {
+        toast.error('Please complete the captcha challenge before signing in.');
+        return;
+    }
+
     try {
-        await authStore.login(form);
+        await authStore.login({ ...form, turnstile_token: turnstileToken.value });
     } catch (err) {
+        // Turnstile tokens are single-use and short-lived; clear it so the user
+        // can solve a fresh challenge on retry.
+        turnstileRef.value?.reset();
+
         // Error toast is fired by the axios response interceptor in services/api.js
         if (err.response?.status === 403 && err.response?.data?.error === 'email_not_verified') {
             notVerified.value = true;
@@ -96,6 +110,7 @@ const resendVerification = async () => {
                                     {{ resending ? 'Sending…' : 'Resend verification email' }}
                                 </button>
                             </div>
+                            <TurnstileWidget v-if="turnstileSiteKey" ref="turnstileRef" v-model="turnstileToken" class="mb-4 flex justify-center" />
                             <div class="pt-2 pb-3 text-center">
                                 <router-link to="/register" class="cursor-pointer text-green-600">Don't have an account? <span class="text-green-400 font-bold">Register</span></router-link>
                             </div>

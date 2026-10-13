@@ -49,6 +49,7 @@ class ProductionConfigValidator
         $this->checkCors($issues, $config, $level);
         $this->checkPayments($issues, $config, $level);
         $this->checkAi($issues, $config);
+        $this->checkBotProtection($issues, $config);
 
         return $issues;
     }
@@ -221,6 +222,29 @@ class ProductionConfigValidator
                     'message' => "PayPal mode is \"{$mode}\"; production must set PAYPAL_MODE=live.",
                 ];
             }
+        }
+    }
+
+    private function checkBotProtection(array &$issues, array $config): void
+    {
+        $turnstile = (array) ($config['turnstile'] ?? []);
+
+        if (($turnstile['enabled'] ?? false) !== true) {
+            $issues[] = [
+                'level' => 'warning',
+                'key' => 'TURNSTILE_ENABLED',
+                'message' => 'Bot protection (Cloudflare Turnstile) is disabled; registration, login and password reset are exposed to automated abuse.',
+            ];
+
+            return;
+        }
+
+        if (empty($turnstile['secret_key'])) {
+            $issues[] = [
+                'level' => 'error',
+                'key' => 'TURNSTILE_SECRET_KEY',
+                'message' => 'Turnstile is enabled but TURNSTILE_SECRET_KEY is not configured.',
+            ];
         }
     }
 

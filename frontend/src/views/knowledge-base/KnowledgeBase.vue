@@ -58,6 +58,8 @@ const archivedCount = computed(() => knowledgeBaseStore.archivedCount);
 const canCreateKnowledge = computed(() => authStore.hasPermission('knowledge_base.create'));
 const canUpdateKnowledge = computed(() => authStore.hasPermission('knowledge_base.update'));
 const canDeleteKnowledge = computed(() => authStore.hasPermission('knowledge_base.delete'));
+const canPublishKnowledge = computed(() => authStore.hasPermission('knowledge_base.publish'));
+const canArchiveKnowledge = computed(() => authStore.hasPermission('knowledge_base.archive'));
 
 const statusOptions = [
     { label: 'All', value: null },
@@ -172,12 +174,6 @@ const confirmDeleteArticle = (article) => {
     if (confirm(`Are you sure you want to delete the article "${article.title}"?`)) {
         knowledgeBaseStore.deleteArticle(article.id);
     }
-};
-
-const openCreateCategory = () => {
-    categoryFormMode.value = 'create';
-    resetCategoryForm();
-    showCategoryDialog.value = true;
 };
 
 const editCategory = (category) => {
@@ -422,9 +418,9 @@ watch(
                             <div class="flex gap-1 flex-wrap">
                                 <Button icon="pi pi-eye" severity="info" text rounded @click="viewArticle(data)" v-tooltip="'View'" />
                                 <Button v-if="canUpdateKnowledge" icon="pi pi-pencil" severity="warning" text rounded @click="editArticle(data)" v-tooltip="'Edit'" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'published'" icon="pi pi-check" severity="success" text rounded @click="publishArticle(data)" v-tooltip="'Publish'" />
-                                <Button v-if="canUpdateKnowledge && data.status === 'published'" icon="pi pi-times" severity="secondary" text rounded @click="unpublishArticle(data)" v-tooltip="'Unpublish'" />
-                                <Button v-if="canUpdateKnowledge && data.status !== 'archived'" icon="pi pi-folder" severity="secondary" text rounded @click="archiveArticle(data)" v-tooltip="'Archive'" />
+                                <Button v-if="canPublishKnowledge && data.status !== 'published'" icon="pi pi-check" severity="success" text rounded @click="publishArticle(data)" v-tooltip="'Publish'" />
+                                <Button v-if="canPublishKnowledge && data.status === 'published'" icon="pi pi-times" severity="secondary" text rounded @click="unpublishArticle(data)" v-tooltip="'Unpublish'" />
+                                <Button v-if="canArchiveKnowledge && data.status !== 'archived'" icon="pi pi-folder" severity="secondary" text rounded @click="archiveArticle(data)" v-tooltip="'Archive'" />
                                 <Button v-if="canDeleteKnowledge" icon="pi pi-trash" severity="danger" text rounded @click="confirmDeleteArticle(data)" v-tooltip="'Delete'" />
                             </div>
                         </template>

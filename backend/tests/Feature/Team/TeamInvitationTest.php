@@ -5,8 +5,10 @@ namespace Tests\Feature\Team;
 use App\Mail\TeamInvitationMail;
 use App\Models\Tenant;
 use App\Models\TenantInvitation;
+use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\Team\InvitationService;
+use Database\Seeders\RbacSeeder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +47,7 @@ class TeamInvitationTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->createCentralSchema();
+        $this->seed(RbacSeeder::class);
 
         $this->tenantId = (string) Str::uuid();
 
@@ -166,6 +169,91 @@ class TeamInvitationTest extends TestCase
             'role' => 'agent',
         ], 'central');
         $this->assertNotNull(TenantInvitation::find($invitation->id)->accepted_at);
+
+        // Regression: the tenant-facing "agent" label must become the canonical
+        // support_agent role (with permissions), never a permission-less alias.
+        setPermissionsTeamId($this->tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $memberUser = User::find($member->user_id);
+        $this->assertTrue($memberUser->hasRole('support_agent'));
+        $this->assertFalse($memberUser->hasRole('agent'));
+        $this->assertContains(
+            'conversations.view',
+            $memberUser->getAllPermissions()->pluck('name')->all()
+        );
+    }
+
+    public function test_accepting_an_agent_invitation_grants_canonical_permissions(): void
+    {
+        $invitation = $this->service()->createInvitation([
+            'email' => 'permissioned@example.test',
+            'role' => 'agent',
+        ]);
+
+        $member = $this->service()->acceptInvitation($invitation->plain_token, [
+            'email' => 'permissioned@example.test',
+            'first_name' => 'Perm',
+            'last_name' => 'Agent',
+            'password' => 'SecretPass!123',
+        ]);
+
+        $this->assertSame('agent', TenantUser::where('tenant_id', $this->tenantId)
+            ->where('user_id', $member->user_id)
+            ->value('role'));
+
+        setPermissionsTeamId($this->tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $memberUser = User::find($member->user_id);
+        $permissions = $memberUser->getAllPermissions()->pluck('name')->all();
+
+        $this->assertTrue($memberUser->hasRole('support_agent'));
+        $this->assertContains('dashboard.view', $permissions);
+        $this->assertContains('analytics.conversations', $permissions);
+    }
+
+    public function test_accepting_a_viewer_invitation_assigns_read_only_role(): void
+    {
+        $invitation = $this->service()->createInvitation([
+            'email' => 'viewer@example.test',
+            'role' => 'viewer',
+        ]);
+
+        $member = $this->service()->acceptInvitation($invitation->plain_token, [
+            'email' => 'viewer@example.test',
+            'first_name' => 'View',
+            'last_name' => 'Only',
+            'password' => 'SecretPass!123',
+        ]);
+
+        setPermissionsTeamId($this->tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $memberUser = User::find($member->user_id);
+        $permissions = $memberUser->getAllPermissions()->pluck('name')->all();
+
+        $this->assertTrue($memberUser->hasRole('viewer'));
+        $this->assertContains('customers.view', $permissions);
+        $this->assertNotContains('customers.delete', $permissions);
+        $this->assertNotContains('conversations.reply', $permissions);
+    }
+
+    public function test_accepting_an_invitation_never_creates_a_permission_less_alias_role(): void
+    {
+        $invitation = $this->service()->createInvitation([
+            'email' => 'aliascheck@example.test',
+            'role' => 'agent',
+        ]);
+
+        $this->service()->acceptInvitation($invitation->plain_token, [
+            'email' => 'aliascheck@example.test',
+            'first_name' => 'Alias',
+            'last_name' => 'Check',
+            'password' => 'SecretPass!123',
+        ]);
+
+        $this->assertSame(0, Role::where('name', 'agent')->count(), 'the legacy "agent" role must not be created');
     }
 
     public function test_resending_regenerates_the_token_and_emails_again(): void

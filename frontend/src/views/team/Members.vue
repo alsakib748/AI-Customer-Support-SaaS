@@ -75,7 +75,10 @@ const totalMembers = computed(() => teamStore.totalMembers);
 const onlineMembers = computed(() => teamStore.onlineMembers);
 const statistics = computed(() => teamStore.statistics);
 const departments = computed(() => teamStore.departments);
-const canManageTeam = computed(() => teamStore.canManageTeam);
+const canInviteMembers = computed(() => authStore.hasPermission('team.invite'));
+const canUpdateMembers = computed(() => authStore.hasPermission('team.update'));
+const canRemoveMembers = computed(() => authStore.hasPermission('team.remove'));
+const canAssignRole = computed(() => authStore.hasPermission('team.assign_role'));
 
 const statusOptions = [
     { label: 'Online', value: 'online' },
@@ -336,7 +339,7 @@ watch(
                 </p>
             </div>
             <div class="flex gap-3">
-                <Button label="Invite Member" icon="pi pi-user-plus" severity="primary" @click="showInviteDialog = true" v-if="canManageTeam && !isSuperAdmin" />
+                <Button v-if="canInviteMembers && !isSuperAdmin" label="Invite Member" icon="pi pi-user-plus" severity="primary" @click="showInviteDialog = true" />
                 <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
@@ -466,7 +469,7 @@ watch(
 
             <Column field="role" header="Role">
                 <template #body="{ data }">
-                    <Select :modelValue="data.role" :options="assignableRoles" optionLabel="label" optionValue="value" :disabled="data.is_owner || !auth.hasPermission('team.assign_role')" @update:modelValue="(role) => changeRole(data, role)" />
+                    <Select :modelValue="data.role" :options="assignableRoles" optionLabel="label" optionValue="value" :disabled="data.is_owner || !canAssignRole" @update:modelValue="(role) => changeRole(data, role)" />
                 </template>
             </Column>
 
@@ -497,9 +500,9 @@ watch(
                 <template #body="{ data }">
                     <div class="flex gap-2">
                         <Button icon="pi pi-eye" severity="info" text rounded @click="viewMember(data)" v-tooltip="'View Details'" />
-                        <Button v-if="canManageTeam && !data.is_owner && !data.email_verified" icon="pi pi-check-circle" severity="success" text rounded @click="verifyMember(data)" v-tooltip="'Verify Email'" :loading="saving" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" v-tooltip="'Edit'" />
-                        <Button v-if="canManageTeam && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" v-tooltip="'Remove'" :loading="deleting" />
+                        <Button v-if="canUpdateMembers && !data.is_owner && !data.email_verified" icon="pi pi-check-circle" severity="success" text rounded @click="verifyMember(data)" v-tooltip="'Verify Email'" :loading="saving" />
+                        <Button v-if="canUpdateMembers && !data.is_owner" icon="pi pi-pencil" severity="warning" text rounded @click="editMember(data)" v-tooltip="'Edit'" />
+                        <Button v-if="canRemoveMembers && !data.is_owner" icon="pi pi-trash" severity="danger" text rounded @click="confirmRemove(data)" v-tooltip="'Remove'" :loading="deleting" />
                     </div>
                 </template>
             </Column>
@@ -575,7 +578,7 @@ watch(
 
             <template #footer>
                 <Button label="Close" icon="pi pi-times" @click="showMemberDialog = false" />
-                <Button v-if="canManageTeam && selectedMember && !selectedMember.is_owner" label="Edit" icon="pi pi-pencil" severity="warning" @click="editMember(selectedMember)" />
+                <Button v-if="canUpdateMembers && selectedMember && !selectedMember.is_owner" label="Edit" icon="pi pi-pencil" severity="warning" @click="editMember(selectedMember)" />
             </template>
         </Dialog>
 

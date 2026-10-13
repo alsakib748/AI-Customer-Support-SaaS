@@ -114,11 +114,11 @@ Route::prefix('v1')->group(function () {
     // Public Routes - No Authentication Required
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register'])
-            ->middleware(['maintenance.mode:registration', 'throttle:auth']);
+            ->middleware(['maintenance.mode:registration', 'throttle:auth', 'turnstile']);
         Route::post('/login', [AuthController::class, 'login'])
-            ->middleware('throttle:auth');
+            ->middleware(['throttle:auth', 'turnstile']);
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
-            ->middleware('throttle:password');
+            ->middleware(['throttle:password', 'turnstile']);
         Route::post('/reset-password', [AuthController::class, 'resetPassword'])
             ->middleware('throttle:password');
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
@@ -200,9 +200,9 @@ Route::prefix('v1')->group(function () {
                 // Members
 
                 Route::get('/{id}', [TeamMemberController::class, 'show'])->middleware('permission:team.view');
-            Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
-            Route::post('/{id}/verify-email', [TeamMemberController::class, 'verifyEmail'])->middleware('permission:team.update');
-            Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
+                Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
+                Route::post('/{id}/verify-email', [TeamMemberController::class, 'verifyEmail'])->middleware('permission:team.update');
+                Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
             });
 
             // Invitations
@@ -756,9 +756,9 @@ Route::prefix('v1/admin/system-health')
         Route::post('/checks/{check}/run',
             [SystemHealthController::class, 'runCheck'])
             ->middleware([
-        'permission:platform.system_health.run',
-        'throttle:'.config('health.on_demand.rate_limit', '10,1'),
-    ]);
+                'permission:platform.system_health.run',
+                'throttle:'.config('health.on_demand.rate_limit', '10,1'),
+            ]);
 
         Route::get('/metrics',
             [SystemHealthController::class, 'metrics'])

@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use App\Models\Permission;
@@ -89,9 +90,9 @@ class RbacSeeder extends Seeder
             'platform.users.activate',
             'platform.users.suspend',
             'platform.users.view_memberships',
-        'platform.users.view_activity',
-        'platform.users.revoke_sessions',
-        'platform.users.verify_email',
+            'platform.users.view_activity',
+            'platform.users.revoke_sessions',
+            'platform.users.verify_email',
             'platform.billing.view', 'platform.billing.plans',
             'platform.billing.subscriptions', 'platform.billing.invoices',
             'platform.billing.payments', 'platform.billing.coupons',
@@ -118,15 +119,15 @@ class RbacSeeder extends Seeder
         ];
 
         foreach ($permissions as $name) {
-            $parts  = explode('.', $name);
+            $parts = explode('.', $name);
             $module = $parts[0];
             $action = $parts[1] ?? '';
 
             Permission::updateOrCreate(
                 ['name' => $name, 'guard_name' => $guard],
                 [
-                    'module'    => $module,
-                    'label'     => ucwords(str_replace('_', ' ', $action)),
+                    'module' => $module,
+                    'label' => ucwords(str_replace('_', ' ', $action)),
                     'is_system' => true,
                 ]
             );
@@ -146,6 +147,7 @@ class RbacSeeder extends Seeder
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
         Role::firstOrCreate(['name' => 'manager', 'guard_name' => $guard]);
         Role::firstOrCreate(['name' => 'support_agent', 'guard_name' => $guard]);
+        Role::firstOrCreate(['name' => 'viewer', 'guard_name' => $guard]);
 
         // ==================================================
         // ROLE -> PERMISSION MAPPINGS
@@ -155,6 +157,7 @@ class RbacSeeder extends Seeder
         $this->assignAdminPermissions();
         $this->assignManagerPermissions();
         $this->assignAgentPermissions();
+        $this->assignViewerPermissions();
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
@@ -275,6 +278,30 @@ class RbacSeeder extends Seeder
             'ai.view', 'ai.use',
 
             'analytics.view', 'analytics.conversations', 'analytics.customers',
+        ]);
+    }
+
+    /**
+     * Viewer: read-only tenant role. Cannot mutate any tenant resource.
+     */
+    protected function assignViewerPermissions(): void
+    {
+        Role::findByName('viewer', 'api')->syncPermissions([
+            'dashboard.view',
+
+            'customers.view',
+
+            'conversations.view',
+
+            'tickets.view',
+
+            'knowledge_base.view',
+
+            'widgets.view',
+
+            'ai.view',
+
+            'analytics.view',
         ]);
     }
 }

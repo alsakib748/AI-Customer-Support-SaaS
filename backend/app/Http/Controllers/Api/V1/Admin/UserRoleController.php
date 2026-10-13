@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Rbac\TenantRoleMap;
+use App\Traits\GuardsSystemUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
 use Spatie\Permission\PermissionRegistrar;
-use App\Traits\GuardsSystemUsers;
 
 class UserRoleController extends Controller
 {
@@ -25,36 +27,60 @@ class UserRoleController extends Controller
         }
 
         $data = $request->validate([
-            'role' => ['required', 'string', 'exists:roles,name'],
+            'role' => ['required', 'string'],
         ]);
 
         $actor = $request->user();
-        $role  = Role::findByName($data['role'], 'api');
 
-        // Guard: super_admin only assignable by super_admin
-        if ($role->name === 'super_admin' && !$actor->isSuperAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only Super Admin can assign the super_admin role.',
-            ], 403);
+        // Canonicalise the tenant-facing vocabulary (agent -> support_agent).
+        // Unknown names fall back to the raw value so seeded/canonical roles
+        // keep working unchanged.
+        $roleName = TenantRoleMap::toSpatie($data['role']) ?? $data['role'];
+
+        // Resolve the team the role must live in. Tenant actors already have
+        // their team set by SetPermissionTeam; a platform admin assigning to a
+        // tenant member must scope to that member's tenant.
+        $previousTeamId = getPermissionsTeamId();
+        $teamId = $previousTeamId;
+        if ($actor->isSuperAdmin() && ! $teamId) {
+            $teamId = $user->current_tenant_id ?? $user->tenants()->value('tenants.id');
         }
+        setPermissionsTeamId($teamId);
 
-        // Guard: tenant users can only assign global or their-tenant roles
-        if (!$actor->isSuperAdmin()) {
-            $teamId  = getPermissionsTeamId();
-            $teamKey = config('permission.column_names.team_foreign_key');
-            if ($role->{$teamKey} !== null && $role->{$teamKey} !== $teamId) {
+        try {
+            $role = Role::findByName($roleName, 'api');
+
+            // Guard: super_admin only assignable by super_admin
+            if ($role->name === 'super_admin' && ! $actor->isSuperAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You cannot assign this role.',
+                    'message' => 'Only Super Admin can assign the super_admin role.',
                 ], 403);
             }
-        }
 
-        DB::connection('central')->transaction(function () use ($user, $role) {
-            $user->syncRoles([$role->name]);
-            app(PermissionRegistrar::class)->forgetCachedPermissions();
-        });
+            // Guard: tenant users can only assign global or their-tenant roles
+            if (! $actor->isSuperAdmin()) {
+                $teamKey = config('permission.column_names.team_foreign_key');
+                if ($role->{$teamKey} !== null && $role->{$teamKey} !== $teamId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You cannot assign this role.',
+                    ], 403);
+                }
+            }
+
+            DB::connection('central')->transaction(function () use ($user, $role) {
+                $user->syncRoles([$role->name]);
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
+            });
+        } catch (RoleDoesNotExist $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "The role '{$data['role']}' does not exist.",
+            ], 422);
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
 
         return response()->json([
             'success' => true,

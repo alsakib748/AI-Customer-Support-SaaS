@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\TenantService;
+use Database\Seeders\RbacSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,7 @@ class UpdateUserRoleTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->createCentralSchema();
+        $this->seed(RbacSeeder::class);
 
         $this->tenantId = (string) Str::uuid();
 
@@ -120,6 +122,40 @@ class UpdateUserRoleTest extends TestCase
         $member = $this->member->fresh();
         $this->assertTrue($member->hasRole('manager'), 'the Spatie role must be synced to the new role');
         $this->assertFalse($member->hasRole('agent'), 'the previous Spatie role must be removed');
+    }
+
+    public function test_service_maps_the_agent_pivot_role_to_support_agent(): void
+    {
+        $service = app(TenantService::class);
+
+        $result = $service->updateUserRole($this->tenantId, $this->member->id, 'agent');
+
+        $this->assertSame('agent', $result['new_role'], 'the pivot keeps the tenant-facing label');
+
+        setPermissionsTeamId($this->tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $member = $this->member->fresh();
+        $this->assertTrue($member->hasRole('support_agent'), 'agent must map to canonical support_agent');
+        $this->assertFalse($member->hasRole('manager'));
+        $this->assertContains('conversations.view', $member->getAllPermissions()->pluck('name')->all());
+    }
+
+    public function test_service_maps_viewer_pivot_role_to_seeded_read_only_role(): void
+    {
+        $service = app(TenantService::class);
+
+        $service->updateUserRole($this->tenantId, $this->member->id, 'viewer');
+
+        setPermissionsTeamId($this->tenantId);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $member = $this->member->fresh();
+        $permissions = $member->getAllPermissions()->pluck('name')->all();
+
+        $this->assertTrue($member->hasRole('viewer'));
+        $this->assertContains('customers.view', $permissions);
+        $this->assertNotContains('customers.delete', $permissions);
     }
 
     public function test_service_refuses_to_demote_the_last_owner(): void

@@ -64,7 +64,7 @@ const tenantModel = () => [
                 label: 'AI Settings',
                 icon: 'pi pi-cog',
                 to: '/settings/ai',
-                permission: 'ai.configuration'
+                permission: 'ai.configure'
             },
             {
                 label: 'AI Analytics',
@@ -88,7 +88,7 @@ const tenantModel = () => [
                 label: 'My Analytics',
                 icon: 'pi pi-user',
                 to: '/analytics/my',
-                permission: 'analytics.view'
+                permission: 'analytics.agents'
             },
             {
                 label: 'Export History',

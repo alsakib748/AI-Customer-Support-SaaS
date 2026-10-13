@@ -46,7 +46,7 @@ const formatDate = (date) => {
                 </div>
             </div>
             <div class="flex gap-2">
-                <Button icon="pi pi-pencil" severity="warning" v-tooltip="'Edit customer'" @click="emit('edit')" />
+                <Button v-permission="'customers.update'" icon="pi pi-pencil" severity="warning" v-tooltip="'Edit customer'" @click="emit('edit')" />
                 <Button icon="pi pi-times" severity="secondary" v-tooltip="'Close'" @click="emit('close')" />
             </div>
         </div>

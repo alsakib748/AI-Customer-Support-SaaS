@@ -16,6 +16,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetPermissionTeam;
 use App\Http\Middleware\TenantAware;
 use App\Http\Middleware\TrackUsage;
+use App\Http\Middleware\VerifyTurnstile;
 use App\Http\Middleware\WidgetRateLimit;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -47,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'set.permission.team' => SetPermissionTeam::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'turnstile' => VerifyTurnstile::class,
         ]);
 
         $middleware->append(SecurityHeaders::class);

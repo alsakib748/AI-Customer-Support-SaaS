@@ -104,6 +104,23 @@ class ProductionConfigValidatorTest extends TestCase
         $this->assertError($issues, 'AI_PROVIDER (openai)');
     }
 
+    public function test_disabled_bot_protection_is_a_warning_in_production(): void
+    {
+        $issues = $this->validate(['turnstile' => ['enabled' => false]]);
+
+        $this->assertTrue(
+            collect($issues)->contains(fn ($issue) => $issue['key'] === 'TURNSTILE_ENABLED' && $issue['level'] === 'warning'),
+            'Expected a warning-level TURNSTILE_ENABLED issue when bot protection is disabled.',
+        );
+    }
+
+    public function test_enabled_bot_protection_without_secret_key_is_an_error(): void
+    {
+        $issues = $this->validate(['turnstile' => ['enabled' => true, 'secret_key' => '']]);
+
+        $this->assertError($issues, 'TURNSTILE_SECRET_KEY');
+    }
+
     public function test_non_production_environment_is_an_error_without_opt_in(): void
     {
         $this->assertError($this->validate(['environment' => 'local']), 'APP_ENV');
@@ -150,6 +167,7 @@ class ProductionConfigValidatorTest extends TestCase
             'cors_origins' => ['https://app.example.test'],
             'session_secure' => true,
             'session_encrypt' => true,
+            'turnstile' => ['enabled' => true, 'secret_key' => 'ts-secret'],
             'stripe' => ['enabled' => false],
             'paypal' => ['enabled' => false],
             'ai_enabled' => false,

@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\TenantInvitation;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Support\Rbac\TenantRoleMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -250,8 +251,17 @@ class InvitationService
         setPermissionsTeamId($invitation->tenant_id);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        $roleName = TenantRoleMap::toSpatie($invitation->role);
+        if ($roleName === null) {
+            Log::warning('Invitation accepted with an unmapped role; defaulting to support_agent', [
+                'invitation_id' => $invitation->id,
+                'role' => $invitation->role,
+            ]);
+            $roleName = 'support_agent';
+        }
+
         $role = Role::firstOrCreate([
-            'name' => $invitation->role,
+            'name' => $roleName,
             'guard_name' => 'api',
         ]);
         $user->assignRole($role);

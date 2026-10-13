@@ -105,12 +105,37 @@ class TenantPermissionMatrixTest extends TestCase
     public function test_user_without_a_seeded_role_is_forbidden(): void
     {
         $tenant = $this->newTenant();
-        $outsider = $this->newTenantUser($tenant, 'viewer');
+        $outsider = $this->newTenantUser($tenant, 'ghost_role');
         $this->newSubscription($tenant);
 
         $this->establishTenantContext($tenant, $outsider);
         $this->withoutMiddleware($this->tenantHttpMiddlewareToBypass());
 
         $this->getJson('/api/v1/customers')->assertForbidden();
+    }
+
+    public function test_viewer_can_view_but_not_delete_customers(): void
+    {
+        $tenant = $this->newTenant();
+        $viewer = $this->newTenantUser($tenant, 'viewer');
+        $this->newSubscription($tenant);
+
+        $this->establishTenantContext($tenant, $viewer);
+        $this->withoutMiddleware($this->tenantHttpMiddlewareToBypass());
+
+        $this->getJson('/api/v1/customers')->assertOk();
+
+        DB::connection('tenant')->table('customers')->insert([
+            'first_name' => 'Keep-Me', 'email' => 'keep-viewer@example.test', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $id = (int) DB::connection('tenant')->table('customers')->value('id');
+
+        $this->deleteJson("/api/v1/customers/{$id}")->assertForbidden();
+
+        $this->assertSame(
+            1,
+            DB::connection('tenant')->table('customers')->where('id', $id)->count(),
+            'a denied delete must not remove the row'
+        );
     }
 }

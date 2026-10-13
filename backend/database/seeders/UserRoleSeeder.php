@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Role;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Support\Rbac\TenantRoleMap;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -30,28 +31,19 @@ class UserRoleSeeder extends Seeder
             });
 
         // 2. Tenant members — derive the role from the tenant_user pivot
-        $roleMap = [
-            'owner'          => 'owner',
-            'admin'          => 'admin',
-            'manager'        => 'manager',
-            'agent'          => 'support_agent',
-            'support_agent'  => 'support_agent',
-            'super_admin'    => 'super_admin',
-        ];
-
         TenantUser::query()
             ->whereNull('deleted_at')
             ->select('user_id', 'tenant_id', 'role')
             ->get()
-            ->each(function (TenantUser $pivot) use ($roleMap) {
-                $roleName = $roleMap[strtolower((string) $pivot->role)] ?? null;
-                if (!$roleName) {
+            ->each(function (TenantUser $pivot) {
+                $roleName = TenantRoleMap::toSpatie($pivot->role);
+                if (! $roleName) {
                     return;
                 }
 
                 $user = User::find($pivot->user_id);
                 $role = Role::findByName($roleName, 'api');
-                if (!$user || !$role) {
+                if (! $user || ! $role) {
                     return;
                 }
 
@@ -59,6 +51,7 @@ class UserRoleSeeder extends Seeder
                     setPermissionsTeamId(null);
                     $user->syncRoles([$role]);
                     $user->tenants()->detach($pivot->tenant_id);
+
                     return;
                 }
 

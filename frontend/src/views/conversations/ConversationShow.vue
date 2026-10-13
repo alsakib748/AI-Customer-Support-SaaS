@@ -61,6 +61,18 @@ const canReply = computed(() => {
     return authStore.hasPermission('conversations.reply');
 });
 
+const canResolveConversation = computed(() => {
+    return authStore.hasPermission('conversations.resolve');
+});
+
+const canReopenConversation = computed(() => {
+    return authStore.hasPermission('conversations.reopen');
+});
+
+const canCloseConversation = computed(() => {
+    return authStore.hasPermission('conversations.close');
+});
+
 // ============================================
 // METHODS
 // ============================================
@@ -405,11 +417,11 @@ onUnmounted(() => {
                     <Tag :value="currentConversation.status_label" :severity="currentConversation.status_color" />
                     <Tag :value="currentConversation.priority_label" :severity="currentConversation.priority_color" />
 
-                    <Button v-if="canReply && (currentConversation.status === 'open' || currentConversation.status === 'pending')" icon="pi pi-check" label="Resolve" severity="success" size="small" @click="handleResolve" />
+                    <Button v-if="canResolveConversation && (currentConversation.status === 'open' || currentConversation.status === 'pending')" icon="pi pi-check" label="Resolve" severity="success" size="small" @click="handleResolve" />
 
-                    <Button v-if="canReply && (currentConversation.status === 'resolved' || currentConversation.status === 'closed')" icon="pi pi-refresh" label="Reopen" severity="warning" size="small" @click="handleReopen" />
+                    <Button v-if="canReopenConversation && (currentConversation.status === 'resolved' || currentConversation.status === 'closed')" icon="pi pi-refresh" label="Reopen" severity="warning" size="small" @click="handleReopen" />
 
-                    <Button v-if="canReply && currentConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose" />
+                    <Button v-if="canCloseConversation && currentConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose" />
 
                     <Button icon="pi pi-ellipsis-v" severity="secondary" text rounded v-tooltip="'More actions'" @click="showActionsMenu = !showActionsMenu" />
                 </div>
