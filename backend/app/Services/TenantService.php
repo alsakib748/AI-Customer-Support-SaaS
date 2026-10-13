@@ -1,30 +1,33 @@
 <?php
+
 // app/Services/TenantService.php
 
 namespace App\Services;
 
-use App\Models\Tenant;
-use App\Models\TenantUser;
+use App\Mail\TenantMemberAddedMail;
 use App\Models\Domain;
+use App\Models\Tenant;
+use App\Models\Tenant\AIConfiguration;
+use App\Models\TenantUser;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
-use Stancl\Tenancy\Facades\Tenancy;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class TenantService
 {
-
     public function initializeDefaultAIConfiguration(Tenant $tenant): void
     {
-        \Stancl\Tenancy\Facades\Tenancy::initialize($tenant);
+        Tenancy::initialize($tenant);
 
         try {
-            if (!\App\Models\Tenant\AIConfiguration::exists()) {
-                \App\Models\Tenant\AIConfiguration::create([
+            if (! AIConfiguration::exists()) {
+                AIConfiguration::create([
                     'provider' => 'gemini',
                     'model' => 'gemini-1.5-flash',
                     'enabled' => true,
@@ -37,7 +40,7 @@ class TenantService
                 ]);
             }
         } finally {
-            \Stancl\Tenancy\Facades\Tenancy::end();
+            Tenancy::end();
         }
     }
 
@@ -46,9 +49,9 @@ class TenantService
      */
     public function createDefaultTenant(User $user, array $data): Tenant
     {
-        $tenantName = $data['company_name'] ?? $user->full_name . "'s Workspace";
-        $slug = Str::slug($tenantName) . '-' . Str::random(4);
-        $subdomain = $data['subdomain'] ?? Str::slug($tenantName) . '-' . Str::random(4);
+        $tenantName = $data['company_name'] ?? $user->full_name."'s Workspace";
+        $slug = Str::slug($tenantName).'-'.Str::random(4);
+        $subdomain = $data['subdomain'] ?? Str::slug($tenantName).'-'.Str::random(4);
 
         // Create tenant - Stancl will auto-generate the ID
         $tenant = Tenant::create([
@@ -80,7 +83,7 @@ class TenantService
         // Create domain for subdomain
         $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';
         Domain::create([
-            'domain' => $subdomain . '.' . $centralDomain,
+            'domain' => $subdomain.'.'.$centralDomain,
             'tenant_id' => $tenant->id,
             'is_primary' => false,
             'status' => 'active',
@@ -126,7 +129,7 @@ class TenantService
             throw new ValidationException($validator);
         }
 
-        $slug = $data['slug'] ?? Str::slug($data['name']) . '-' . Str::random(4);
+        $slug = $data['slug'] ?? Str::slug($data['name']).'-'.Str::random(4);
         $subdomain = $data['subdomain'] ?? $slug;
 
         // Create tenant
@@ -145,7 +148,7 @@ class TenantService
 
         // Create subdomain domain
         Domain::create([
-            'domain' => $subdomain . '.' . config('tenancy.central_domains')[0],
+            'domain' => $subdomain.'.'.config('tenancy.central_domains')[0],
             'tenant_id' => $tenant->id,
             'is_primary' => false,
             'status' => 'active',
@@ -184,15 +187,15 @@ class TenantService
     {
         $tenant = Tenant::find($tenantId);
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('Tenant not found');
         }
 
         $validator = Validator::make($data, [
             'name' => 'sometimes|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:tenants,slug,' . $tenantId . ',id',
-            'subdomain' => 'sometimes|string|max:255|unique:tenants,subdomain,' . $tenantId . ',id',
-            'domain' => 'sometimes|string|max:255|unique:tenants,domain,' . $tenantId . ',id',
+            'slug' => 'sometimes|string|max:255|unique:tenants,slug,'.$tenantId.',id',
+            'subdomain' => 'sometimes|string|max:255|unique:tenants,subdomain,'.$tenantId.',id',
+            'domain' => 'sometimes|string|max:255|unique:tenants,domain,'.$tenantId.',id',
             'logo_url' => 'nullable|url',
             'favicon_url' => 'nullable|url',
             'industry' => 'nullable|string|max:100',
@@ -249,7 +252,7 @@ class TenantService
         if ($user && $user->hasRole('super_admin')) {
             $tenant = Tenant::find($tenantId);
 
-            if (!$tenant) {
+            if (! $tenant) {
                 throw new \Exception('Tenant not found');
             }
 
@@ -267,7 +270,7 @@ class TenantService
             ->where('tenant_id', $tenantId)
             ->first();
 
-        if (!$tenantUser) {
+        if (! $tenantUser) {
             throw new \Exception('User does not have access to this tenant');
         }
 
@@ -288,7 +291,7 @@ class TenantService
     {
         $tenant = Tenant::find($tenantId);
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('Tenant not found');
         }
 
@@ -332,7 +335,7 @@ class TenantService
         }
 
         $tenant = Tenant::find($tenantId);
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('Tenant not found');
         }
 
@@ -356,6 +359,8 @@ class TenantService
             'invited_at' => now(),
         ]);
 
+        $this->sendMemberAddedEmail($tenant, $user);
+
         // Assign role in Spatie
         $role = Role::firstOrCreate([
             'name' => $data['role'],
@@ -363,13 +368,36 @@ class TenantService
         ]);
         $user->assignRole($role);
 
-        // TODO: Send invitation email
-
         return [
             'user' => $user,
             'role' => $data['role'],
             'tenant' => $tenant,
         ];
+    }
+
+    /**
+     * Notify a user (and never block the invitation) that they have been added
+     * to a tenant. Failures are logged so an SMTP outage cannot roll back or
+     * break the membership that was just created.
+     */
+    protected function sendMemberAddedEmail(Tenant $tenant, User $user): void
+    {
+        try {
+            $base = config('app.frontend_url') ?: config('app.url');
+
+            Mail::to($user->email)->queue(new TenantMemberAddedMail(
+                userName: $user->full_name ?: $user->first_name,
+                tenantName: $tenant->name,
+                dashboardUrl: rtrim((string) $base, '/').'/dashboard',
+                inviterName: auth()->user()?->full_name,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send tenant member added email', [
+                'tenant_id' => $tenant->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -381,7 +409,7 @@ class TenantService
             ->where('user_id', $userId)
             ->first();
 
-        if (!$tenantUser) {
+        if (! $tenantUser) {
             throw new \Exception('User not found in this tenant');
         }
 
@@ -414,7 +442,7 @@ class TenantService
             ->where('user_id', $userId)
             ->first();
 
-        if (!$tenantUser) {
+        if (! $tenantUser) {
             throw new \Exception('User not found in this tenant');
         }
 
@@ -477,7 +505,7 @@ class TenantService
     {
         $tenant = Tenant::find($tenantId);
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('Tenant not found');
         }
 
@@ -491,7 +519,7 @@ class TenantService
     {
         $tenant = Tenant::find($tenantId);
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('Tenant not found');
         }
 
