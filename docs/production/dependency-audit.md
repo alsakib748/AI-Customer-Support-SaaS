@@ -107,17 +107,45 @@ semver-major upgrades and are recorded as accepted exceptions below.
   networks (relevant to the esbuild advisory), and is never exposed in
   production.
 
-Follow-up: schedule `npm audit fix --force` (or a manual toolchain bump) in a
-dedicated change with a full build + smoke test.
+### Environment impact assessment
+
+| Environment | Affected? | Detail |
+| --- | --- | --- |
+| Shipped runtime (built `dist/` served to users) | **No** | vulnerabilities are in build/lint tooling, not in bundled runtime code |
+| Local development | **Yes** | `vite`/`esbuild` dev server advisories; bind to localhost/trusted networks only |
+| Build/CI pipeline | **Yes** | `vite`, `esbuild`, `unplugin-vue-components`, `braces`, `chokidar`, `fast-glob`, `micromatch` execute during `npm run build` / `npm run lint` |
+| Deployment environment | **Yes (build step only)** | the release build runs the toolchain; the deployed artifact itself is not exposed. Builds run from immutable, audited CI runners with no untrusted input |
+
+Net assessment: the exceptions do **not** expose the running application or end
+users, but they do run in the build/deploy pipeline, so remediation is
+scheduled rather than dismissed.
+
+### Exception record (approval required)
+
+| Field | Value |
+| --- | --- |
+| Owner (remediation) | Frontend Platform maintainer (named in the remediation change ticket) |
+| Security approver | Security lead (sign-off recorded on the change ticket) |
+| Deadline | 2026-11-13 (30 days) |
+| Remediation | dedicated toolchain-upgrade change: `npm audit fix --force` / manual bump to `vite` 8, `unplugin-vue-components` 32, `eslint-plugin-vue` 10, with full build + manual smoke test |
+| Re-review trigger | any new advisory in a **production/runtime** dependency, or before the deadline, whichever is first |
+
+Status: **approval placeholder — must be countersigned on the change ticket
+before go-live** (see `staging-acceptance-runbook.md`, section 0/7).
+
+After `npm audit fix` the frontend dependency correctness is validated by the
+production build only; there is still no frontend test runner (recorded as a
+gaps item in the sign-off checklist).
 
 ### Frontend validation state
 
 - `npm run build` — **passes**.
-- `npm run lint:ci` — **fails with 26 pre-existing errors / 25 warnings** in
-  existing source files (`frontend/widget/src/App.vue`, several views). These are
-  unrelated to the audit fix (no source files were touched) and were not
-  introduced by WS6. The frontend still has no test runner; the build is the only
-  automated frontend gate.
+- `npm run lint:ci` — **fails with 26 pre-existing errors / 25 warnings** across
+  19 existing files, none of which were changed by WS6. The baseline is recorded
+  in `docs/production/lint-baseline.md`; the CI job lints only **changed** files,
+  so new errors in touched files are blocked while the pre-existing baseline is
+  tracked. The frontend still has no test runner; the build is the only
+  full-app automated frontend gate.
 
 ---
 

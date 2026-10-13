@@ -128,7 +128,7 @@ const handleClose = async () => {
 
     try {
         await conversationStore.closeConversation(currentConversation.value.id);
-        toast.success('Conversation closed successfully 🔒');
+        // toast.success('Conversation closed successfully 🔒');
         await loadConversation(currentConversation.value.id);
     } catch (error) {
         // Error handled in store
