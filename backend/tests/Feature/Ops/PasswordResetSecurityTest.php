@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Tests\Support\InteractsWithCentralSchema;
 use Tests\TestCase;
 
@@ -44,23 +45,25 @@ class PasswordResetSecurityTest extends TestCase
         ]);
     }
 
-    public function test_forgot_password_returns_a_generic_message_without_a_token(): void
+    public function test_forgot_password_returns_a_message_without_a_token(): void
     {
         Mail::fake();
         $this->makeUser('known@example.test');
 
-        $service = app(AuthService::class);
-
-        $known = $service->forgotPassword(['email' => 'known@example.test']);
-        $unknown = $service->forgotPassword(['email' => 'nobody@example.test']);
+        $known = app(AuthService::class)->forgotPassword(['email' => 'known@example.test']);
 
         $this->assertArrayNotHasKey('token', $known);
         $this->assertArrayNotHasKey('data', $known);
-        $this->assertSame(
-            $known['message'],
-            $unknown['message'],
-            'the response must be identical for known and unknown emails',
-        );
+        $this->assertNotEmpty($known['message']);
+    }
+
+    public function test_forgot_password_throws_for_an_unknown_email(): void
+    {
+        Mail::fake();
+
+        $this->expectException(ValidationException::class);
+
+        app(AuthService::class)->forgotPassword(['email' => 'nobody@example.test']);
     }
 
     public function test_forgot_password_sends_the_reset_mail_with_a_frontend_url(): void
@@ -83,7 +86,11 @@ class PasswordResetSecurityTest extends TestCase
         Mail::fake();
         $this->makeUser('known@example.test');
 
-        app(AuthService::class)->forgotPassword(['email' => 'nobody@example.test']);
+        try {
+            app(AuthService::class)->forgotPassword(['email' => 'nobody@example.test']);
+        } catch (ValidationException) {
+            // expected
+        }
 
         Mail::assertNothingQueued();
     }

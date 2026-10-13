@@ -102,7 +102,7 @@ const resendVerification = async () => {
                                     <Checkbox v-model="form.remember" id="rememberme" binary class="mr-2"></Checkbox>
                                     <label for="rememberme">Remember me</label>
                                 </div>
-                                <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
+                                <router-link to="/forgot-password" class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</router-link>
                             </div>
                             <div v-if="notVerified" class="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
                                 <p class="mb-2">Your email address is not verified yet. Please verify it before signing in.</p>

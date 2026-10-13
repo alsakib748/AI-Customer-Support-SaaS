@@ -487,6 +487,18 @@ const router = createRouter({
             meta: { requiresGuest: true, title: 'Register' }
         },
         {
+            path: '/forgot-password',
+            name: 'ForgotPassword',
+            component: () => import('@/views/pages/auth/ForgotPassword.vue'),
+            meta: { requiresGuest: true, title: 'Forgot Password' }
+        },
+        {
+            path: '/reset-password',
+            name: 'ResetPassword',
+            component: () => import('@/views/pages/auth/ResetPassword.vue'),
+            meta: { requiresGuest: true, title: 'Reset Password' }
+        },
+        {
             path: '/team/invitations/accept/:token',
             name: 'AcceptTeamInvitation',
             component: () => import('@/views/pages/auth/AcceptInvitation.vue'),

@@ -376,6 +376,53 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     // =========================================================
+    // PASSWORD RESET
+    // =========================================================
+    const forgotPassword = async (payload) => {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const data = typeof payload === 'string' ? { email: payload } : payload;
+            const response = await api.post('/auth/forgot-password', data);
+
+            return response.data;
+        } catch (err) {
+            error.value = err.response?.data?.errors || err.response?.data?.message || 'Could not send the reset link.';
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const resetPassword = async (payload) => {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const response = await api.post('/auth/reset-password', payload);
+            const data = response.data?.data ?? {};
+
+            // The backend issues a fresh JWT after a successful reset so the
+            // user is signed straight in rather than being sent back to login.
+            if (data.token) {
+                token.value = data.token;
+                localStorage.setItem('auth_token', data.token);
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
+                await fetchMe().catch(() => {});
+            }
+
+            return response.data;
+        } catch (err) {
+            error.value = err.response?.data?.errors || err.response?.data?.message || 'Password reset failed.';
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    // =========================================================
     // INIT (called once per app boot by router guard)
     // =========================================================
     const init = async () => {
@@ -450,6 +497,8 @@ export const useAuthStore = defineStore('auth', () => {
         changePassword,
         verifyEmail,
         resendVerification,
+        forgotPassword,
+        resetPassword,
         init,
         applyMe
     };

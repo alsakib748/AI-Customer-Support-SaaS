@@ -669,19 +669,25 @@ class AuthService
 
         $user = User::where('email', $data['email'])->first();
 
-        // The response is intentionally identical whether or not the account
-        // exists, to prevent user enumeration. The token is never returned to
-        // the caller — it is delivered only to the account owner by email.
-        if ($user) {
-            $token = Password::createToken($user);
-
-            Mail::to($user->email)->send(
-                new PasswordResetMail($user, $this->buildPasswordResetUrl($user, $token))
-            );
+        // The reset flow tells the caller when the address is unknown so the
+        // user gets immediate feedback instead of waiting for an email that
+        // will never arrive. No mail is sent for an unknown address. The token
+        // itself is never returned to the caller — it is delivered only to the
+        // account owner by email.
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => 'No account was found with that email address.',
+            ]);
         }
 
+        $token = Password::createToken($user);
+
+        Mail::to($user->email)->send(
+            new PasswordResetMail($user, $this->buildPasswordResetUrl($user, $token))
+        );
+
         return [
-            'message' => 'If an account exists for that email, a password reset link has been sent.',
+            'message' => 'A password reset link has been sent to your email address.',
         ];
     }
 
@@ -816,6 +822,6 @@ class AuthService
     {
         $base = config('app.frontend_url') ?: config('app.url');
 
-        return rtrim($base, '/') . '/verify-email/' . $user->id . '/' . sha1($user->getEmailForVerification());
+        return rtrim($base, '/').'/verify-email/'.$user->id.'/'.sha1($user->getEmailForVerification());
     }
 }
