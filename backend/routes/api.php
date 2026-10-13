@@ -123,6 +123,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:password');
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('/verification.verify');
+        Route::post('/resend-verification', [AuthController::class, 'resendVerification'])
+            ->middleware('throttle:6,1');
         Route::post('/validate-token', [AuthController::class, 'validateToken'])
             ->middleware('throttle:auth');
     });
@@ -134,7 +136,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/refresh', [AuthController::class, 'refresh']);
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/change-password', [AuthController::class, 'changePassword']);
-            Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
         });
 
         // Profile Routes — available to every authenticated role
@@ -199,8 +200,9 @@ Route::prefix('v1')->group(function () {
                 // Members
 
                 Route::get('/{id}', [TeamMemberController::class, 'show'])->middleware('permission:team.view');
-                Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
-                Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
+            Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
+            Route::post('/{id}/verify-email', [TeamMemberController::class, 'verifyEmail'])->middleware('permission:team.update');
+            Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
             });
 
             // Invitations
@@ -599,6 +601,8 @@ Route::prefix('v1/admin/users')
             ->middleware('permission:platform.users.suspend');
         Route::post('/{user}/revoke-sessions', [UserSessionController::class, 'revokeAll'])
             ->middleware('permission:platform.users.revoke_sessions');
+        Route::post('/{user}/verify-email', [UserLifecycleController::class, 'verifyEmail'])
+            ->middleware('permission:platform.users.verify_email');
     });
 
 Route::prefix('v1/admin/rbac')

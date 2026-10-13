@@ -188,6 +188,48 @@ class TeamMemberController extends Controller
     }
 
     /**
+     * Mark a team member's email address as verified.
+     */
+    public function verifyEmail(Request $request, $id)
+    {
+        try {
+            $member = $this->service->verifyMember($id);
+
+            return (new TeamMemberResource($member))
+                ->additional([
+                    'message' => "Team member's email verified successfully.",
+                ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Team member not found.',
+            ], 404);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to verify member.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No workspace found.',
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to verify team member:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to verify team member.',
+            ], 500);
+        }
+    }
+
+    /**
      * Remove a team member
      */
     public function destroy(Request $request, $id)

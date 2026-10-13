@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\EmailNotVerifiedException;
+use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -106,6 +108,12 @@ class AuthController extends Controller
                 'message' => 'Login successful! Welcome back, '.$result['user']['first_name'],
                 'data' => $result,
             ]);
+        } catch (EmailNotVerifiedException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => 'email_not_verified',
+            ], 403);
         } catch (ValidationException $e) {
             Log::warning('Login validation failed', ['errors' => $e->errors()]);
 
@@ -363,21 +371,27 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function verifyEmail(Request $request)
+    public function verifyEmail(Request $request, string $id, string $hash)
     {
         try {
-            $result = $this->authService->verifyEmail($request->only(['id', 'hash']));
+            $result = $this->authService->verifyEmail(['id' => $id, 'hash' => $hash]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Email verified successfully',
+                'message' => $result['message'] ?? 'Email verified successfully',
                 'data' => $result,
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email verification failed.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Email verification failed: '.$e->getMessage(),
-            ], 500);
+            ], 400);
         }
     }
 
@@ -388,20 +402,29 @@ class AuthController extends Controller
      */
     public function resendVerification(Request $request)
     {
-        try {
-            $user = auth()->user();
-            $result = $this->authService->resendVerification($user);
+        $request->validate([
+            'email' => 'required|email',
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Verification email resent successfully',
-                'data' => $result,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to resend verification: '.$e->getMessage(),
-            ], 500);
+        $user = User::where('email', $request->input('email'))->first();
+
+        // Only send to an existing, still-unverified account. The response is
+        // identical either way so this endpoint cannot be used to enumerate
+        // registered email addresses.
+        if ($user && ! $user->hasVerifiedEmail()) {
+            try {
+                $this->authService->resendVerification($user);
+            } catch (\Exception $e) {
+                Log::warning('Failed to resend verification email', [
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'If an account exists for that email address, a verification link has been sent.',
+        ]);
     }
 }

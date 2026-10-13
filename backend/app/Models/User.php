@@ -28,6 +28,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
     'timezone',
     'language',
     'is_active',
+    'email_verified_at',
     'last_login_at',
     'last_login_ip',
     'current_tenant_id',

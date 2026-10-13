@@ -27,6 +27,7 @@ class TeamMemberResource extends JsonResource
             'role' => $this->role,
             'role_label' => $this->role_label,
             'is_owner' => $this->is_owner,
+            'email_verified' => $user ? (bool) $user->email_verified_at : false,
             'department' => $this->department,
             'position' => $this->position,
             'availability_status' => $this->availability_status,

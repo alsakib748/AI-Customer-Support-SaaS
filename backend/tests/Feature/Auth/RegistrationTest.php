@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\EmailVerificationMail;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\SystemSettings\SystemSettingsService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\PermissionRegistrar;
 use Stancl\Tenancy\Events\TenantCreated;
 use Tests\Support\InteractsWithCentralSchema;
@@ -41,13 +43,15 @@ class RegistrationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonStructure([
                 'data' => [
-                    'role', 'scope', 'token',
+                    'role', 'scope', 'email_verification_required',
                     'user' => ['id', 'email', 'full_name', 'roles'],
                     'tenant' => ['id', 'name', 'subdomain', 'logo_url', 'status'],
                 ],
             ])
             ->assertJsonPath('data.role', 'owner')
-            ->assertJsonPath('data.scope', 'tenant');
+            ->assertJsonPath('data.scope', 'tenant')
+            ->assertJsonPath('data.email_verification_required', true)
+            ->assertJsonMissingPath('data.token');
 
         $user = User::query()->where('email', $response->json('data.user.email'))->firstOrFail();
 
@@ -74,20 +78,33 @@ class RegistrationTest extends TestCase
         $this->assertSame(1, DB::connection('central')->table('domains')->where('tenant_id', $tenantId)->count());
     }
 
-    public function test_registered_user_can_access_me_with_returned_token(): void
+    public function test_registration_emails_a_verification_link_and_blocks_login_until_verified(): void
     {
-        $response = $this->postJson('/api/v1/auth/register', $this->registrationPayload());
+        Mail::fake();
+        config(['app.frontend_url' => 'https://app.example.test']);
 
-        $token = $response->json('data.token');
-        $this->assertNotEmpty($token);
+        $response = $this->postJson('/api/v1/auth/register', $this->registrationPayload([
+            'email' => 'verify-me@example.test',
+        ]));
 
-        $me = $this->withToken($token)->getJson('/api/v1/auth/me');
+        $response->assertStatus(201)
+            ->assertJsonPath('data.email_verification_required', true);
 
-        $me->assertOk()
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('data.role', 'owner')
-            ->assertJsonPath('data.scope', 'tenant')
-            ->assertJsonPath('data.tenant.status', 'trial');
+        $user = User::query()->where('email', 'verify-me@example.test')->firstOrFail();
+        $this->assertNull($user->email_verified_at, 'a new registration must start unverified');
+
+        Mail::assertQueued(EmailVerificationMail::class, function (EmailVerificationMail $mail) use ($user) {
+            return $mail->hasTo($user->email)
+                && str_contains($mail->verifyUrl, "/verify-email/{$user->id}/");
+        });
+
+        // Correct credentials, but the account is not verified yet.
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'verify-me@example.test',
+            'password' => 'SecretPass!123',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('error', 'email_not_verified');
     }
 
     public function test_registration_assigns_default_plan_and_trial_status(): void
