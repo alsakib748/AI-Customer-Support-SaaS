@@ -193,7 +193,7 @@ class ChatWidgetController extends Controller
     {
         try {
             // Check permission
-            if (!auth()->user()->hasPermissionTo('widgets.delete')) {
+            if (! auth()->user()->hasPermissionTo('widgets.delete')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to delete widgets.',
@@ -284,7 +284,7 @@ class ChatWidgetController extends Controller
     {
         try {
             // Check permission
-            if (!auth()->user()->hasPermissionTo('widgets.manage')) {
+            if (! auth()->user()->hasPermissionTo('widgets.disable')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to disable widgets.',
@@ -383,7 +383,7 @@ class ChatWidgetController extends Controller
                 'success' => true,
                 'data' => [
                     'code' => $chatWidget->getInstallationCode(),
-                    'url' => config('app.url') . '/widget/chat.js',
+                    'url' => config('app.url').'/widget/chat.js',
                     'widget_id' => $chatWidget->public_key,
                 ],
             ]);

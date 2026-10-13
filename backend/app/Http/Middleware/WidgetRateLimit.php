@@ -5,15 +5,11 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 // use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
 use Symfony\Component\HttpFoundation\Response;
 
 class WidgetRateLimit
 {
-    /**
-     * @var RateLimiter
-     */
     protected RateLimiter $limiter;
 
     public function __construct(RateLimiter $limiter)
@@ -42,7 +38,7 @@ class WidgetRateLimit
 
             return response()->json([
                 'success' => false,
-                'message' => 'Too many requests. Please try again in ' . $seconds . ' seconds.',
+                'message' => 'Too many requests. Please try again in '.$seconds.' seconds.',
                 'retry_after' => $seconds,
             ], 429);
         }
@@ -57,11 +53,11 @@ class WidgetRateLimit
 
     protected function resolveRequestSignature(Request $request): string
     {
-        $identifier = auth()->id()
-            ?? $request->input('session_token')
-            ?? $request->ip();
+        // Key on the authenticated user id or the client IP — never on a
+        // caller-supplied session token, which an attacker can rotate to obtain
+        // an unlimited number of fresh buckets.
+        $identifier = auth()->id() ?? $request->ip();
 
-        return 'widget.rate.limit:' . sha1($identifier . '|' . $request->path());
+        return 'widget.rate.limit:'.sha1($identifier.'|'.$request->path());
     }
-
 }
