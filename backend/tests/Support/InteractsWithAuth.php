@@ -57,6 +57,7 @@ trait InteractsWithAuth
             'email' => 'user'.uniqid().'@example.test',
             'password' => 'SecretPass!123',
             'is_active' => true,
+            'email_verified_at' => now(),
             'current_tenant_id' => $tenant->id,
         ], $userOverrides));
 

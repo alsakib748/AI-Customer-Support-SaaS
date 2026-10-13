@@ -61,12 +61,28 @@ const canCreateConversations = computed(() => {
     return authStore.hasPermission('conversations.create');
 });
 
-const canUpdateConversations = computed(() => {
-    return authStore.hasPermission('conversations.update');
-});
-
 const canDeleteConversations = computed(() => {
     return authStore.hasPermission('conversations.delete');
+});
+
+const canResolveConversations = computed(() => {
+    return authStore.hasPermission('conversations.resolve');
+});
+
+const canReopenConversations = computed(() => {
+    return authStore.hasPermission('conversations.reopen');
+});
+
+const canCloseConversations = computed(() => {
+    return authStore.hasPermission('conversations.close');
+});
+
+const canAssignConversations = computed(() => {
+    return authStore.hasPermission('conversations.assign');
+});
+
+const canUnassignConversations = computed(() => {
+    return authStore.hasPermission('conversations.unassign');
 });
 
 const statusOptions = [
@@ -407,19 +423,19 @@ watch(
                         <Button icon="pi pi-eye" severity="info" text rounded @click="viewConversation(data)" v-tooltip="'View Details'" />
 
                         <!-- Resolve Button (Open/Pending only) -->
-                        <Button v-if="canUpdateConversations && (data.status === 'open' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="handleResolve(data)" v-tooltip="'Resolve'" />
+                        <Button v-if="canResolveConversations && (data.status === 'open' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="handleResolve(data)" v-tooltip="'Resolve'" />
 
                         <!-- Reopen Button (Resolved/Closed only) -->
-                        <Button v-if="canUpdateConversations && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="handleReopen(data)" v-tooltip="'Reopen'" />
+                        <Button v-if="canReopenConversations && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="handleReopen(data)" v-tooltip="'Reopen'" />
 
                         <!-- Close Button (Open/Pending/Resolved only) -->
-                        <Button v-if="canUpdateConversations && data.status !== 'closed'" icon="pi pi-times" severity="secondary" text rounded @click="handleClose(data)" v-tooltip="'Close'" />
+                        <Button v-if="canCloseConversations && data.status !== 'closed'" icon="pi pi-times" severity="secondary" text rounded @click="handleClose(data)" v-tooltip="'Close'" />
 
                         <!-- Assign to Me Button (in list) -->
-                        <Button v-if="canUpdateConversations && !data.assigned_user_id" icon="pi pi-user-plus" severity="primary" text rounded @click="handleAssignToMe(data)" v-tooltip="'Assign to Me'" />
+                        <Button v-if="canAssignConversations && !data.assigned_user_id" icon="pi pi-user-plus" severity="primary" text rounded @click="handleAssignToMe(data)" v-tooltip="'Assign to Me'" />
 
                         <!-- Unassign Button (in list) -->
-                        <Button v-if="canUpdateConversations && data.assigned_user_id" icon="pi pi-user-minus" severity="secondary" text rounded @click="handleUnassign(data)" v-tooltip="'Unassign'" />
+                        <Button v-if="canUnassignConversations && data.assigned_user_id" icon="pi pi-user-minus" severity="secondary" text rounded @click="handleUnassign(data)" v-tooltip="'Unassign'" />
 
                         <!-- Delete Button -->
                         <Button v-if="canDeleteConversations" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
@@ -482,7 +498,7 @@ watch(
                     </div>
                     <div class="flex gap-2">
                         <Button
-                            v-if="canUpdateConversations && (selectedConversation.status === 'open' || selectedConversation.status === 'pending')"
+                            v-if="canResolveConversations && (selectedConversation.status === 'open' || selectedConversation.status === 'pending')"
                             icon="pi pi-check"
                             label="Resolve"
                             severity="success"
@@ -490,14 +506,14 @@ watch(
                             @click="handleResolve(selectedConversation)"
                         />
                         <Button
-                            v-if="canUpdateConversations && (selectedConversation.status === 'resolved' || selectedConversation.status === 'closed')"
+                            v-if="canReopenConversations && (selectedConversation.status === 'resolved' || selectedConversation.status === 'closed')"
                             icon="pi pi-refresh"
                             label="Reopen"
                             severity="warning"
                             size="small"
                             @click="handleReopen(selectedConversation)"
                         />
-                        <Button v-if="canUpdateConversations && selectedConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose(selectedConversation)" />
+                        <Button v-if="canCloseConversations && selectedConversation.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" size="small" @click="handleClose(selectedConversation)" />
                         <Button icon="pi pi-times" severity="secondary" text v-tooltip="'Close'" @click="showDetailsDialog = false" />
                     </div>
                 </div>
@@ -538,8 +554,8 @@ watch(
 
                 <!-- Quick Actions -->
                 <div class="flex gap-2">
-                    <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
-                    <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
+                    <Button v-if="canAssignConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
+                    <Button v-if="canUnassignConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
                 </div>
             </div>
         </Dialog>
@@ -549,10 +565,10 @@ watch(
             <!-- ... -->
             <div class="flex gap-2">
                 <!-- ✅ Assign to Me button -->
-                <Button v-if="canUpdateConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
+                <Button v-if="canAssignConversations && !selectedConversation.assigned_user_id" icon="pi pi-user-plus" label="Assign to Me" severity="primary" size="small" @click="handleAssignToMe(selectedConversation)" />
 
                 <!-- ✅ Unassign button -->
-                <Button v-if="canUpdateConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
+                <Button v-if="canUnassignConversations && selectedConversation.assigned_user_id" icon="pi pi-user-minus" label="Unassign" severity="secondary" size="small" @click="handleUnassign(selectedConversation)" />
             </div>
         </Dialog>
 

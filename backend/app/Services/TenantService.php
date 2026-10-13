@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Models\Tenant\AIConfiguration;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Support\Rbac\TenantRoleMap;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -361,12 +362,24 @@ class TenantService
 
         $this->sendMemberAddedEmail($tenant, $user);
 
-        // Assign role in Spatie
-        $role = Role::firstOrCreate([
-            'name' => $data['role'],
-            'guard_name' => 'api',
-        ]);
-        $user->assignRole($role);
+        // Assign the Spatie role inside the tenant team. The pivot keeps the
+        // tenant-facing label (e.g. "agent"); Spatie uses canonical names.
+        $roleName = TenantRoleMap::toSpatie($data['role']) ?? 'support_agent';
+
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($tenantId);
+
+        try {
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'api',
+            ]);
+            $user->assignRole($role);
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return [
             'user' => $user,
@@ -470,8 +483,9 @@ class TenantService
             $tenantUser->update(['role' => $newRole]);
 
             $user = User::find($userId);
+            $roleName = TenantRoleMap::toSpatie($newRole) ?? 'support_agent';
             $role = Role::firstOrCreate([
-                'name' => $newRole,
+                'name' => $roleName,
                 'guard_name' => 'api',
             ]);
             $user->syncRoles([$role]);

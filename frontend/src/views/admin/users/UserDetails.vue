@@ -168,6 +168,22 @@ const handleRevoke = async () => {
         actionBusy.value = false;
     }
 };
+
+const handleVerifyEmail = async () => {
+    if (!confirm("Mark this user's email address as verified?")) {
+        return;
+    }
+
+    actionBusy.value = true;
+    try {
+        await usersStore.verifyUserEmail(id.value);
+        toast.success('Email marked as verified.');
+    } catch (e) {
+        // handled by interceptor
+    } finally {
+        actionBusy.value = false;
+    }
+};
 </script>
 
 <template>
@@ -215,6 +231,8 @@ const handleRevoke = async () => {
                         <Button v-if="user.is_active && can(['platform.users.suspend'])" icon="pi pi-pause" label="Suspend" severity="warning" @click="showSuspendDialog = true" />
 
                         <Button v-if="!user.is_active && can(['platform.users.activate'])" icon="pi pi-play" label="Activate" severity="success" @click="handleActivate" />
+
+                        <Button v-if="!user.email_verified && can(['platform.users.verify_email'])" icon="pi pi-check-circle" label="Verify Email" severity="success" outlined :loading="actionBusy" @click="handleVerifyEmail" />
 
                         <Button v-if="can(['platform.users.revoke_sessions'])" icon="pi pi-shield" label="Revoke Sessions" severity="danger" outlined @click="showRevokeDialog = true" />
                     </template>

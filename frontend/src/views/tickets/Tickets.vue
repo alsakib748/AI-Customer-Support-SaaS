@@ -68,7 +68,6 @@ const totalTickets = computed(() => ticketStore.totalTickets);
 const openCount = computed(() => ticketStore.openCount);
 const inProgressCount = computed(() => ticketStore.inProgressCount);
 const pendingCount = computed(() => ticketStore.pendingCount);
-const resolvedCount = computed(() => ticketStore.resolvedCount);
 const overdueCount = computed(() => ticketStore.overdueCount);
 const customers = computed(() => customerStore.customers);
 const conversations = computed(() => conversationStore.conversations);
@@ -78,6 +77,12 @@ const canCreateTickets = computed(() => authStore.hasPermission('tickets.create'
 const canUpdateTickets = computed(() => authStore.hasPermission('tickets.update'));
 const canDeleteTickets = computed(() => authStore.hasPermission('tickets.delete'));
 const canAssignTickets = computed(() => authStore.hasPermission('tickets.assign'));
+const canUnassignTickets = computed(() => authStore.hasPermission('tickets.unassign'));
+const canResolveTickets = computed(() => authStore.hasPermission('tickets.resolve'));
+const canReopenTickets = computed(() => authStore.hasPermission('tickets.reopen'));
+const canCloseTickets = computed(() => authStore.hasPermission('tickets.close'));
+const canCommentTickets = computed(() => authStore.hasPermission('tickets.comment'));
+const canViewTeam = computed(() => authStore.hasPermission('team.view'));
 
 const statusOptions = [
     { label: 'Open', value: 'open' },
@@ -114,7 +119,13 @@ const commentTypeOptions = [
 // ============================================
 
 const loadData = async () => {
-    await Promise.all([ticketStore.fetchTickets({ ...filters }), ticketStore.fetchStatistics(), customerStore.fetchCustomers({ per_page: 100 }), conversationStore.fetchConversations({ per_page: 50 }), teamStore.fetchMembers()]);
+    const requests = [ticketStore.fetchTickets({ ...filters }), ticketStore.fetchStatistics(), customerStore.fetchCustomers({ per_page: 100 }), conversationStore.fetchConversations({ per_page: 50 })];
+
+    if (canAssignTickets.value && canViewTeam.value) {
+        requests.push(teamStore.fetchMembers());
+    }
+
+    await Promise.all(requests);
 };
 
 const refreshData = () => {
@@ -472,7 +483,7 @@ watch(
                         />
 
                         <Button
-                            v-if="canAssignTickets && data.assigned_user_id && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')"
+                            v-if="canUnassignTickets && data.assigned_user_id && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')"
                             icon="pi pi-user-minus"
                             severity="secondary"
                             text
@@ -483,9 +494,17 @@ watch(
 
                         <Button v-if="canUpdateTickets && data.status === 'open'" icon="pi pi-play" severity="success" text rounded @click="startTicket(data)" v-tooltip="'Start'" />
 
-                        <Button v-if="canUpdateTickets && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')" icon="pi pi-check" severity="success" text rounded @click="resolveTicket(data)" v-tooltip="'Resolve'" />
+                        <Button
+                            v-if="canResolveTickets && (data.status === 'open' || data.status === 'in_progress' || data.status === 'pending')"
+                            icon="pi pi-check"
+                            severity="success"
+                            text
+                            rounded
+                            @click="resolveTicket(data)"
+                            v-tooltip="'Resolve'"
+                        />
 
-                        <Button v-if="canUpdateTickets && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="reopenTicket(data)" v-tooltip="'Reopen'" />
+                        <Button v-if="canReopenTickets && (data.status === 'resolved' || data.status === 'closed')" icon="pi pi-refresh" severity="warning" text rounded @click="reopenTicket(data)" v-tooltip="'Reopen'" />
 
                         <Button v-if="canDeleteTickets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
                     </div>
@@ -532,7 +551,7 @@ watch(
                     <Select v-model="createForm.conversation_id" :options="conversations" optionLabel="subject" optionValue="id" class="w-full" placeholder="Select Conversation" filter />
                 </div>
 
-                <div>
+                <div v-if="canAssignTickets && canViewTeam">
                     <label class="block text-sm font-medium mb-1">Assign To</label>
                     <Select v-model="createForm.assigned_user_id" :options="teamMembers" optionLabel="name" optionValue="id" class="w-full" placeholder="Select Agent" filter />
                 </div>
@@ -568,7 +587,7 @@ watch(
                         />
                         <Button v-if="canUpdateTickets && selectedTicket.status === 'open'" icon="pi pi-play" label="Start" severity="success" size="small" @click="startTicket(selectedTicket)" />
                         <Button
-                            v-if="canUpdateTickets && (selectedTicket.status === 'open' || selectedTicket.status === 'in_progress' || selectedTicket.status === 'pending')"
+                            v-if="canResolveTickets && (selectedTicket.status === 'open' || selectedTicket.status === 'in_progress' || selectedTicket.status === 'pending')"
                             icon="pi pi-check"
                             label="Resolve"
                             severity="success"
@@ -624,7 +643,7 @@ watch(
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-sm text-surface-500">Comments</label>
-                        <Button icon="pi pi-plus" label="Add Comment" severity="primary" size="small" @click="showCommentDialog = true" />
+                        <Button v-if="canCommentTickets" icon="pi pi-plus" label="Add Comment" severity="primary" size="small" @click="showCommentDialog = true" />
                     </div>
                     <div class="space-y-2 max-h-60 overflow-y-auto">
                         <div
@@ -651,7 +670,7 @@ watch(
             </div>
 
             <template #footer>
-                <Button v-if="selectedTicket && canUpdateTickets && selectedTicket.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" @click="closeTicket(selectedTicket)" />
+                <Button v-if="selectedTicket && canCloseTickets && selectedTicket.status !== 'closed'" icon="pi pi-times" label="Close" severity="secondary" @click="closeTicket(selectedTicket)" />
                 <Button label="Close" icon="pi pi-times" severity="secondary" @click="showDetailsDialog = false" />
             </template>
         </Dialog>

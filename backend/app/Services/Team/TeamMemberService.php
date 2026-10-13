@@ -424,6 +424,39 @@ class TeamMemberService
     }
 
     /**
+     * Mark a team member's email address as verified.
+     */
+    public function verifyMember(int $id): TenantUser
+    {
+        $member = $this->getMember($id);
+
+        $user = $member->user;
+
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'member' => ['This member has no associated user account.'],
+            ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => ["This member's email address is already verified."],
+            ]);
+        }
+
+        $user->markEmailAsVerified();
+
+        Log::info('Team member email verified', [
+            'tenant_id' => $member->tenant_id,
+            'member_id' => $member->id,
+            'user_id' => $user->id,
+            'verified_by' => auth()->id(),
+        ]);
+
+        return $member->fresh()->load('user');
+    }
+
+    /**
      * Remove a team member
      */
     public function removeMember(int $id): bool

@@ -1,10 +1,15 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
-import { reactive } from 'vue';
+import TurnstileWidget from '@/components/common/TurnstileWidget.vue';
+import { reactive, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
 
 const authStore = useAuthStore();
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+const turnstileToken = ref('');
+const turnstileRef = ref(null);
 
 const form = reactive({
     first_name: '',
@@ -98,13 +103,22 @@ const onFormSubmit = async () => {
         return;
     }
 
+    if (turnstileSiteKey && !turnstileToken.value) {
+        toast.error('Please complete the captcha challenge before continuing.');
+        return;
+    }
+
     try {
-        await authStore.register(form);
+        await authStore.register({ ...form, turnstile_token: turnstileToken.value });
     } catch (err) {
+        // Turnstile tokens are single-use and short-lived; clear it so the user
+        // can solve a fresh challenge on retry.
+        turnstileRef.value?.reset();
+
         if (err.response?.status === 422 && err.response.data?.errors) {
             const serverErrors = err.response.data.errors;
             Object.keys(serverErrors).forEach((key) => {
-                if (errors.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(errors, key)) {
                     errors[key] = serverErrors[key][0];
                 }
             });
@@ -237,6 +251,7 @@ const onFormSubmit = async () => {
                             </div>
                         </div>
                         <div class="flex flex-col items-center justify-center">
+                            <TurnstileWidget v-if="turnstileSiteKey" ref="turnstileRef" v-model="turnstileToken" class="mb-4" />
                             <div class="pt-2 pb-3 text-center">
                                 <router-link to="/login" class="cursor-pointer text-green-600">Already have an account? <span class="text-green-400 font-bold">Sign In</span></router-link>
                             </div>

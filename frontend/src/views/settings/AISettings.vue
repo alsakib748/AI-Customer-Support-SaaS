@@ -2,9 +2,14 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAIStore } from '@/stores/ai';
+import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 
 const aiStore = useAIStore();
+const authStore = useAuthStore();
+
+const canConfigureAI = computed(() => authStore.hasPermission('ai.configure'));
+
 // const toast = useToast();
 
 // ============================================
@@ -33,7 +38,6 @@ const form = reactive({
 // COMPUTED
 // ============================================
 
-const loading = computed(() => aiStore.loading);
 const saving = computed(() => aiStore.saving);
 const testing = computed(() => aiStore.testing);
 const health = computed(() => aiStore.health);
@@ -165,10 +169,6 @@ const handleTest = async () => {
     }
 };
 
-const getFieldError = (field) => {
-    return aiStore.getFieldError(field);
-};
-
 // ============================================
 // LIFECYCLE
 // ============================================
@@ -185,7 +185,7 @@ onMounted(() => {
                 <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0">AI Settings</h1>
                 <p class="text-surface-600 dark:text-surface-400">Configure AI assistant for your workspace</p>
             </div>
-            <div class="flex gap-3">
+            <div v-if="canConfigureAI" class="flex gap-3">
                 <Button label="Test AI" icon="pi pi-play" severity="secondary" outlined @click="testAI" :loading="testing" />
                 <Button label="Save" icon="pi pi-save" severity="primary" @click="saveConfiguration" :loading="saving" />
             </div>

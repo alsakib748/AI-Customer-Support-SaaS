@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\EmailNotVerifiedException;
+use App\Mail\EmailVerificationMail;
 use App\Mail\PasswordResetMail;
 use App\Models\Domain;
 use App\Models\Plan;
@@ -109,8 +111,11 @@ class AuthService
                     : Tenant::STATUS_ACTIVE,
             ]);
 
-            // 5. Generate JWT token
-            $token = JWTAuth::fromUser($user);
+            // 5. Email the verification link. The account exists and is an
+            //    owner, but it cannot log in until the email is verified. A
+            //    mail delivery failure is logged and must not roll back an
+            //    otherwise valid registration.
+            $this->sendVerificationEmail($user);
 
             ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
                 = $this->authContext($user, $tenant->id);
@@ -120,6 +125,7 @@ class AuthService
                 'roles' => $roles,
                 'permissions' => $permissions,
                 'scope' => $scope,
+                'email_verification_required' => true,
                 'user' => [
                     'id' => $user->id,
                     'uuid' => $user->uuid,
@@ -146,7 +152,6 @@ class AuthService
                     'logo_url' => $tenant->logo_url,
                     'status' => $tenant->status,
                 ],
-                'token' => $token,
             ];
         } catch (\Throwable $e) {
             // Compensating cleanup — roll back anything created so far.
@@ -327,22 +332,23 @@ class AuthService
             ]);
         }
 
-        // // Check email verification
-        // if (!$user->hasVerifiedEmail()) {
-        //     // throw ValidationException::withMessages([
-        //     // 'email' => ['Please verify your email address before logging in.']
-        //     // ]);
-        //     throw ValidationException::withMessages([
-        //         'email' => ['Please verify your email address before logging in.']
-        //         // 'Please verify your email address before logging in.'
-        //     ]);
-        // }
+        // Verify the password first so an unverified account cannot be
+        // enumerated without knowing the correct credentials.
+        if (! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['The password you entered is incorrect.'],
+            ]);
+        }
+
+        // Check email verification — unverified accounts cannot log in.
+        if (! $user->hasVerifiedEmail()) {
+            throw new EmailNotVerifiedException('Please verify your email address before logging in.');
+        }
 
         // Attempt login with JWT
         if (! $token = JWTAuth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'password' => ['The password you entered is incorrect.'],
-                // 'The password you entered is incorrect.'
             ]);
         }
 
@@ -730,7 +736,7 @@ class AuthService
     }
 
     /**
-     * Verify email
+     * Verify an email address from a verification link.
      */
     public function verifyEmail(array $data): array
     {
@@ -745,19 +751,26 @@ class AuthService
 
         $user = User::find($data['id']);
 
-        // Verify hash matches
+        // Compare against the hash derived from the address the link was issued
+        // for. hash_equals avoids leaking the expected hash through timing.
         if (! hash_equals((string) $data['hash'], sha1($user->getEmailForVerification()))) {
-            throw new \Exception('Invalid verification link');
+            throw new \Exception('Invalid or expired verification link');
         }
 
         if ($user->hasVerifiedEmail()) {
-            throw new \Exception('Email already verified');
+            return [
+                'message' => 'Email already verified',
+                'already_verified' => true,
+            ];
         }
 
         $user->markEmailAsVerified();
 
+        Log::info('Email verified', ['user_id' => $user->id]);
+
         return [
             'message' => 'Email verified successfully',
+            'already_verified' => false,
         ];
     }
 
@@ -770,11 +783,39 @@ class AuthService
             throw new \Exception('Email already verified');
         }
 
-        // Send verification email
-        // Mail::to($user->email)->send(new EmailVerificationMail($user));
+        $this->sendVerificationEmail($user);
 
         return [
             'message' => 'Verification email sent',
         ];
+    }
+
+    /**
+     * Send (queue) the verification email with a link back to the front-end.
+     */
+    public function sendVerificationEmail(User $user): void
+    {
+        try {
+            Mail::to($user->email)->queue(new EmailVerificationMail(
+                user: $user,
+                verifyUrl: $this->buildVerificationUrl($user),
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send email verification link', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Build the front-end URL that carries the user id and verification hash.
+     */
+    public function buildVerificationUrl(User $user): string
+    {
+        $base = config('app.frontend_url') ?: config('app.url');
+
+        return rtrim($base, '/') . '/verify-email/' . $user->id . '/' . sha1($user->getEmailForVerification());
     }
 }

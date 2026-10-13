@@ -25,7 +25,6 @@ const formMode = ref('create');
 const originInput = ref('');
 const installationCode = ref('');
 const selectedWidget = ref(null);
-const sortOrder = ref(1);
 
 const filters = reactive({
     search: '',
@@ -59,10 +58,12 @@ const totalWidgets = computed(() => widgetStore.totalWidgets);
 const activeWidgets = computed(() => widgetStore.activeWidgets);
 const disabledWidgets = computed(() => widgetStore.disabledWidgets);
 
-const canViewWidgets = computed(() => authStore.hasPermission('widgets.view'));
 const canCreateWidgets = computed(() => authStore.hasPermission('widgets.create'));
 const canUpdateWidgets = computed(() => authStore.hasPermission('widgets.update'));
 const canDeleteWidgets = computed(() => authStore.hasPermission('widgets.delete'));
+const canEnableWidgets = computed(() => authStore.hasPermission('widgets.enable'));
+const canDisableWidgets = computed(() => authStore.hasPermission('widgets.disable'));
+const canRegenerateWidgetKey = computed(() => authStore.hasPermission('widgets.regenerate_key'));
 
 const statusOptions = [
     { label: 'All', value: null },
@@ -381,10 +382,10 @@ onMounted(() => {
                 <template #body="{ data }">
                     <div class="flex gap-1 flex-wrap">
                         <Button icon="pi pi-eye" severity="info" text rounded @click="viewWidget(data)" v-tooltip="'View Details'" />
-                        <Button v-if="canUpdateWidgets && data.status === 'disabled'" icon="pi pi-check" severity="success" text rounded @click="enableWidget(data)" v-tooltip="'Enable'" />
-                        <Button v-if="canUpdateWidgets && data.status === 'active'" icon="pi pi-times" severity="danger" text rounded @click="disableWidget(data)" v-tooltip="'Disable'" />
+                        <Button v-if="canEnableWidgets && data.status === 'disabled'" icon="pi pi-check" severity="success" text rounded @click="enableWidget(data)" v-tooltip="'Enable'" />
+                        <Button v-if="canDisableWidgets && data.status === 'active'" icon="pi pi-times" severity="danger" text rounded @click="disableWidget(data)" v-tooltip="'Disable'" />
                         <Button v-if="canUpdateWidgets" icon="pi pi-pencil" severity="warning" text rounded @click="openEditDialog(data)" v-tooltip="'Edit'" />
-                        <Button v-if="canUpdateWidgets" icon="pi pi-key" severity="secondary" text rounded @click="regenerateKey(data)" v-tooltip="'Regenerate Key'" />
+                        <Button v-if="canRegenerateWidgetKey" icon="pi pi-key" severity="secondary" text rounded @click="regenerateKey(data)" v-tooltip="'Regenerate Key'" />
                         <Button v-if="canDeleteWidgets" icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" v-tooltip="'Delete'" />
                         <Button icon="pi pi-code" severity="secondary" text rounded @click="showInstallationCode(data)" v-tooltip="'Installation Code'" />
                     </div>
@@ -490,8 +491,8 @@ onMounted(() => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'disabled'" icon="pi pi-check" label="Enable" severity="success" size="small" @click="enableWidget(selectedWidget)" />
-                        <Button v-if="canUpdateWidgets && selectedWidget.status === 'active'" icon="pi pi-times" label="Disable" severity="danger" size="small" @click="disableWidget(selectedWidget)" />
+                        <Button v-if="canEnableWidgets && selectedWidget.status === 'disabled'" icon="pi pi-check" label="Enable" severity="success" size="small" @click="enableWidget(selectedWidget)" />
+                        <Button v-if="canDisableWidgets && selectedWidget.status === 'active'" icon="pi pi-times" label="Disable" severity="danger" size="small" @click="disableWidget(selectedWidget)" />
                     </div>
                 </div>
 

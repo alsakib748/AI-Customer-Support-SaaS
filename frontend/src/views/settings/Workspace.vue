@@ -1,9 +1,13 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useWorkspaceStore } from '@/stores/workspace';
+import { useAuthStore } from '@/stores/auth';
 // import { toast } from 'vue3-toastify';
 
 const workspaceStore = useWorkspaceStore();
+const authStore = useAuthStore();
+
+const canUpdateWorkspace = computed(() => authStore.hasPermission('workspace.update'));
 
 // State
 const loading = ref(true);
@@ -285,8 +289,8 @@ onMounted(() => {
 
                                 <!-- Upload Buttons -->
                                 <div class="flex gap-2">
-                                    <Button type="button" icon="pi pi-upload" label="Upload" severity="primary" size="small" @click="handleLogoUpload" />
-                                    <Button v-if="form.logo" type="button" icon="pi pi-trash" label="Remove" severity="danger" size="small" outlined @click="handleLogoDelete" />
+                                    <Button v-if="canUpdateWorkspace" type="button" icon="pi pi-upload" label="Upload" severity="primary" size="small" @click="handleLogoUpload" />
+                                    <Button v-if="canUpdateWorkspace && form.logo" type="button" icon="pi pi-trash" label="Remove" severity="danger" size="small" outlined @click="handleLogoDelete" />
                                 </div>
                                 <input type="file" ref="logoInput" accept="image/*" class="hidden" @change="handleLogoChange" />
                             </div>
@@ -399,7 +403,7 @@ onMounted(() => {
                             </div>
                         </div>
                         <div class="flex justify-end mt-4">
-                            <Button type="button" label="Save Business Hours" severity="secondary" @click="handleBusinessHoursSave" />
+                            <Button v-if="canUpdateWorkspace" type="button" label="Save Business Hours" severity="secondary" @click="handleBusinessHoursSave" />
                         </div>
                     </div>
                 </template>
@@ -440,7 +444,7 @@ onMounted(() => {
             <!-- ============================================ -->
             <!-- SUBMIT BUTTON -->
             <!-- ============================================ -->
-            <div class="flex justify-end gap-3 pt-4">
+            <div v-if="canUpdateWorkspace" class="flex justify-end gap-3 pt-4">
                 <Button type="button" label="Reset" severity="secondary" outlined @click="resetForm" />
                 <Button type="submit" :label="saving ? 'Saving...' : 'Save Changes'" severity="primary" :loading="saving" :disabled="saving" icon="pi pi-save" />
             </div>

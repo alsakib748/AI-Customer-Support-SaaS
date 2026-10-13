@@ -62,13 +62,13 @@ class TenantIsolationTest extends TestCase
     public function test_member_without_the_permission_is_denied(): void
     {
         $tenant = $this->newTenant();
-        $viewer = $this->newTenantUser($tenant, 'viewer');
+        $outsider = $this->newTenantUser($tenant, 'ghost_role');
         $this->newSubscription($tenant);
 
-        $this->establishTenantContext($tenant, $viewer);
+        $this->establishTenantContext($tenant, $outsider);
         $this->withoutMiddleware($this->tenantHttpMiddlewareToBypass());
 
-        // 'viewer' is not a seeded role, so it holds no tenant permissions.
+        // 'ghost_role' is not a seeded role, so it holds no tenant permissions.
         $this->getJson('/api/v1/customers')->assertForbidden();
     }
 

@@ -114,15 +114,17 @@ Route::prefix('v1')->group(function () {
     // Public Routes - No Authentication Required
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register'])
-            ->middleware(['maintenance.mode:registration', 'throttle:auth']);
+            ->middleware(['maintenance.mode:registration', 'throttle:auth', 'turnstile']);
         Route::post('/login', [AuthController::class, 'login'])
-            ->middleware('throttle:auth');
+            ->middleware(['throttle:auth', 'turnstile']);
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
-            ->middleware('throttle:password');
+            ->middleware(['throttle:password', 'turnstile']);
         Route::post('/reset-password', [AuthController::class, 'resetPassword'])
             ->middleware('throttle:password');
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('/verification.verify');
+        Route::post('/resend-verification', [AuthController::class, 'resendVerification'])
+            ->middleware('throttle:6,1');
         Route::post('/validate-token', [AuthController::class, 'validateToken'])
             ->middleware('throttle:auth');
     });
@@ -134,7 +136,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/refresh', [AuthController::class, 'refresh']);
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/change-password', [AuthController::class, 'changePassword']);
-            Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
         });
 
         // Profile Routes — available to every authenticated role
@@ -200,6 +201,7 @@ Route::prefix('v1')->group(function () {
 
                 Route::get('/{id}', [TeamMemberController::class, 'show'])->middleware('permission:team.view');
                 Route::put('/{id}', [TeamMemberController::class, 'update'])->middleware('permission:team.update');
+                Route::post('/{id}/verify-email', [TeamMemberController::class, 'verifyEmail'])->middleware('permission:team.update');
                 Route::delete('/{id}', [TeamMemberController::class, 'destroy'])->middleware('permission:team.remove');
             });
 
@@ -599,6 +601,8 @@ Route::prefix('v1/admin/users')
             ->middleware('permission:platform.users.suspend');
         Route::post('/{user}/revoke-sessions', [UserSessionController::class, 'revokeAll'])
             ->middleware('permission:platform.users.revoke_sessions');
+        Route::post('/{user}/verify-email', [UserLifecycleController::class, 'verifyEmail'])
+            ->middleware('permission:platform.users.verify_email');
     });
 
 Route::prefix('v1/admin/rbac')
@@ -752,9 +756,9 @@ Route::prefix('v1/admin/system-health')
         Route::post('/checks/{check}/run',
             [SystemHealthController::class, 'runCheck'])
             ->middleware([
-        'permission:platform.system_health.run',
-        'throttle:'.config('health.on_demand.rate_limit', '10,1'),
-    ]);
+                'permission:platform.system_health.run',
+                'throttle:'.config('health.on_demand.rate_limit', '10,1'),
+            ]);
 
         Route::get('/metrics',
             [SystemHealthController::class, 'metrics'])

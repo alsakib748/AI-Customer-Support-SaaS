@@ -147,6 +147,23 @@ export const useAuthStore = defineStore('auth', () => {
             const response = await api.post('/auth/register', userData);
             const data = response.data.data;
 
+            // Email verification flow: the account exists but no token is
+            // issued until the address is verified. Surface the account for
+            // display and route the user to the "check your inbox" screen
+            // instead of logging them in.
+            if (data.email_verification_required && !data.token) {
+                user.value = data.user ?? null;
+
+                router.push({
+                    name: 'VerifyEmail',
+                    query: { email: data.user?.email }
+                });
+
+                toast.info('Please check your inbox to verify your email address.');
+
+                return data;
+            }
+
             setAuth(data);
 
             // Fetch full authorization context
@@ -296,6 +313,43 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     // =========================================================
+    // EMAIL VERIFICATION
+    // =========================================================
+    const verifyEmail = async (id, hash) => {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const response = await api.get(`/auth/verify-email/${id}/${hash}`, {
+                skipErrorToast: true
+            });
+
+            return response.data;
+        } catch (err) {
+            error.value = err.response?.data?.message || 'Email verification failed.';
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const resendVerification = async (email) => {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const response = await api.post('/auth/resend-verification', { email }, { skipErrorToast: true });
+
+            return response.data;
+        } catch (err) {
+            error.value = err.response?.data?.message || 'Could not send a verification email.';
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    // =========================================================
     // CHANGE PASSWORD
     // =========================================================
     const changePassword = async (passwords) => {
@@ -394,6 +448,8 @@ export const useAuthStore = defineStore('auth', () => {
         refreshPermissions,
         switchTenant,
         changePassword,
+        verifyEmail,
+        resendVerification,
         init,
         applyMe
     };

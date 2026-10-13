@@ -51,6 +51,10 @@ class UserService {
     revokeUserSessions(id, reason = null) {
         return api.post(`/admin/users/${id}/revoke-sessions`, { reason });
     }
+
+    verifyUserEmail(id) {
+        return api.post(`/admin/users/${id}/verify-email`);
+    }
 }
 
 export default new UserService();

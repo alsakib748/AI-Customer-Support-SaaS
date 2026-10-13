@@ -47,4 +47,17 @@ class UserLifecycleController extends Controller
         return (new UserDetailResource($user))
             ->additional(['message' => 'User suspended successfully.']);
     }
+
+    public function verifyEmail(User $user)
+    {
+        $guard = $this->protectSystemUser($user);
+        if ($guard) {
+            return $guard;
+        }
+
+        $user = $this->lifecycle->verifyEmail($user);
+
+        return (new UserDetailResource($user))
+            ->additional(['message' => 'Email marked as verified.']);
+    }
 }

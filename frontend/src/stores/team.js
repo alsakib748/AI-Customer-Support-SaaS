@@ -227,6 +227,53 @@ export const useTeamStore = defineStore('team', () => {
         }
     };
 
+    const verifyMember = async (id) => {
+        saving.value = true;
+        errors.value = {};
+
+        try {
+            const response = await teamService.verifyMember(id);
+
+            if (response.data.success) {
+                // Reflect the new verified state in the list
+                const index = members.value.findIndex((m) => m.id === id);
+                if (index !== -1) {
+                    members.value[index] = {
+                        ...members.value[index],
+                        email_verified: true,
+                        ...(response.data.data || {})
+                    };
+                }
+
+                if (currentMember.value?.id === id) {
+                    currentMember.value = {
+                        ...currentMember.value,
+                        email_verified: true,
+                        ...(response.data.data || {})
+                    };
+                }
+
+                toast.success(response.data.message || 'Member email verified successfully');
+                return response.data;
+            }
+        } catch (error) {
+            console.error('Failed to verify member email:', error);
+
+            if (error.response?.data?.errors) {
+                errors.value = error.response.data.errors;
+            } else if (error.response?.data?.message) {
+                errors.value = { general: [error.response.data.message] };
+            } else {
+                errors.value = { general: ['Failed to verify member email'] };
+            }
+
+            toast.error(errors.value.general?.[0] || 'Failed to verify member email');
+            throw error;
+        } finally {
+            saving.value = false;
+        }
+    };
+
     const fetchStatistics = async () => {
         try {
             const response = await teamService.getStatistics();
@@ -461,6 +508,7 @@ export const useTeamStore = defineStore('team', () => {
         fetchMember,
         updateMember,
         removeMember,
+        verifyMember,
         fetchStatistics,
         fetchDepartments,
 

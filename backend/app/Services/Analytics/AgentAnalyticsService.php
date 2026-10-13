@@ -1,10 +1,10 @@
 <?php
+
 // app/Services/Analytics/AgentAnalyticsService.php
 
 namespace App\Services\Analytics;
 
 use App\Models\Tenant\Conversation;
-use App\Models\Tenant\Ticket;
 use App\Support\Analytics\DurationFormatter;
 use Illuminate\Support\Facades\DB;
 
@@ -26,10 +26,10 @@ class AgentAnalyticsService extends BaseAnalyticsService
         $query = Conversation::query();
         $this->applyPeriodRange($query);
 
-        $result = $query->selectRaw("
+        $result = $query->selectRaw('
             COUNT(DISTINCT assigned_user_id) as active_agents,
             COUNT(*) FILTER (WHERE assigned_user_id IS NULL) as unassigned
-        ")->first();
+        ')->first();
 
         return [
             'active_agents' => (int) $result->active_agents,
@@ -44,7 +44,7 @@ class AgentAnalyticsService extends BaseAnalyticsService
             ->whereBetween('conversations.created_at', [$this->period->from, $this->period->to])
             ->whereNotNull('assigned_user_id');
 
-        if (!empty($this->filters['agent_id'])) {
+        if (! empty($this->filters['agent_id'])) {
             $query->where('assigned_user_id', $this->filters['agent_id']);
         }
 
@@ -54,13 +54,13 @@ class AgentAnalyticsService extends BaseAnalyticsService
             ->selectRaw("COUNT(*) FILTER (WHERE status = 'resolved') as resolved")
             ->selectRaw("COUNT(*) FILTER (WHERE status = 'closed') as closed")
             ->selectRaw("COUNT(*) FILTER (WHERE status IN ('open','pending')) as open")
-            ->selectRaw("
+            ->selectRaw('
                 AVG(
                     CASE WHEN resolved_at IS NOT NULL AND started_at IS NOT NULL
                     THEN EXTRACT(EPOCH FROM (resolved_at - started_at))
                     ELSE NULL END
                 ) as avg_resolution_seconds
-            ")
+            ')
             ->groupBy('assigned_user_id')
             ->orderByDesc('assigned')
             ->get();
@@ -71,9 +71,10 @@ class AgentAnalyticsService extends BaseAnalyticsService
 
         return $rows->map(function ($row) use ($agents) {
             $resolutionSeconds = (float) ($row->avg_resolution_seconds ?? 0);
+
             return [
                 'agent_id' => $row->assigned_user_id,
-                'agent_name' => $agents[$row->assigned_user_id] ?? 'User #' . $row->assigned_user_id,
+                'agent_name' => $agents[$row->assigned_user_id] ?? 'User #'.$row->assigned_user_id,
                 'assigned' => (int) $row->assigned,
                 'resolved' => (int) $row->resolved,
                 'closed' => (int) $row->closed,
@@ -103,8 +104,8 @@ class AgentAnalyticsService extends BaseAnalyticsService
         $agents = $this->getAgentNames($agentIds);
 
         return [
-            'labels' => $rows->map(fn($r) => $agents[$r->assigned_user_id] ?? 'User #' . $r->assigned_user_id)->toArray(),
-            'values' => $rows->pluck('open_count')->map(fn($v) => (int) $v)->toArray(),
+            'labels' => $rows->map(fn ($r) => $agents[$r->assigned_user_id] ?? 'User #'.$r->assigned_user_id)->toArray(),
+            'values' => $rows->pluck('open_count')->map(fn ($v) => (int) $v)->toArray(),
         ];
     }
 
@@ -123,8 +124,9 @@ class AgentAnalyticsService extends BaseAnalyticsService
             ->select('id', 'first_name', 'last_name')
             ->get()
             ->mapWithKeys(function ($user) {
-                $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
-                return [$user->id => $name ?: 'User #' . $user->id];
+                $name = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+
+                return [$user->id => $name ?: 'User #'.$user->id];
             })
             ->toArray();
     }
@@ -136,12 +138,12 @@ class AgentAnalyticsService extends BaseAnalyticsService
         // If current user is only an agent (not owner/admin/manager),
         // force scope to their own user ID.
         $user = auth()->user();
-        if ($user && $user->hasRole('agent') && !$user->hasAnyRole(['owner', 'admin', 'manager'])) {
+        if ($user && $user->hasRole('support_agent') && ! $user->hasAnyRole(['owner', 'admin', 'manager'])) {
             $filters['agent_id'] = $user->id;
         }
 
         parent::withFilters($filters);
+
         return $this;
     }
-
 }

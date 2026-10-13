@@ -493,6 +493,12 @@ const router = createRouter({
             meta: { title: 'Accept Invitation' }
         },
         {
+            path: '/verify-email/:id?/:hash?',
+            name: 'VerifyEmail',
+            component: () => import('@/views/pages/auth/VerifyEmail.vue'),
+            meta: { title: 'Verify Email' }
+        },
+        {
             path: '/403',
             name: 'Forbidden',
             component: () => import('@/views/pages/auth/Forbidden.vue'),
@@ -618,7 +624,7 @@ const router = createRouter({
                     path: '/settings/ai',
                     name: 'AISettings',
                     component: () => import('@/views/settings/AISettings.vue'),
-                    meta: { requiresAuth: true, permission: 'ai.configuration', title: 'AI Settings' }
+                    meta: { requiresAuth: true, permission: 'ai.configure', title: 'AI Settings' }
                 },
                 {
                     path: '/ai/analytics',
@@ -697,7 +703,7 @@ const router = createRouter({
                     path: '/analytics/my',
                     name: 'AnalyticsMy',
                     component: () => import('@/views/analytics/MyAnalytics.vue'),
-                    meta: { requiresAuth: true, permission: 'analytics.view', title: 'My Analytics' }
+                    meta: { requiresAuth: true, permission: 'analytics.agents', title: 'My Analytics' }
                 },
                 {
                     path: '/analytics/exports',

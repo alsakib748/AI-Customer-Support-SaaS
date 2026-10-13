@@ -87,6 +87,25 @@ class UserLifecycleService
     }
 
     /**
+     * Manually mark a user's email address as verified. Used by platform admins
+     * as an override for users who cannot complete the email link flow.
+     */
+    public function verifyEmail(User $user): User
+    {
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => ['This email address is already verified.'],
+            ]);
+        }
+
+        $user->markEmailAsVerified();
+
+        $this->audit(request()->user(), 'user.email_verified', $user);
+
+        return $user->fresh();
+    }
+
+    /**
      * Single audit helper so all lifecycle events are recorded consistently.
      */
     public function audit(?User $actor, string $action, User $user, ?array $metadata = null, ?array $newValues = null, ?array $oldValues = null): void

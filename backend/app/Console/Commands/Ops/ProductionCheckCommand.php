@@ -82,6 +82,11 @@ class ProductionCheckCommand extends Command
                 (array) config('billing.providers.paypal', []),
                 (array) config('payment.providers.paypal', [])
             ),
+            'turnstile' => [
+                'enabled' => (bool) config('services.turnstile.enabled'),
+                'site_key' => config('services.turnstile.site_key'),
+                'secret_key' => config('services.turnstile.secret_key'),
+            ],
             'ai_enabled' => (bool) config('ai.features.enabled'),
             'ai_default_provider' => config('ai.default'),
             'ai_embeddings_enabled' => (bool) config('ai.features.embedding'),
