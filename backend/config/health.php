@@ -1,5 +1,16 @@
 <?php
 
+use App\Health\Checks\AiProviderHealthCheck;
+use App\Health\Checks\ApplicationHealthCheck;
+use App\Health\Checks\BackupFreshnessCheck;
+use App\Health\Checks\BillingWebhookHealthCheck;
+use App\Health\Checks\CacheHealthCheck;
+use App\Health\Checks\DatabaseHealthCheck;
+use App\Health\Checks\MailHealthCheck;
+use App\Health\Checks\QueueHealthCheck;
+use App\Health\Checks\SchedulerHealthCheck;
+use App\Health\Checks\StorageHealthCheck;
+
 /*
 |--------------------------------------------------------------------------
 | System Health configuration
@@ -23,15 +34,16 @@ return [
     | The allow-list of health checks. Order controls display order.
     */
     'check_classes' => [
-        \App\Health\Checks\ApplicationHealthCheck::class,
-        \App\Health\Checks\DatabaseHealthCheck::class,
-        \App\Health\Checks\CacheHealthCheck::class,
-        \App\Health\Checks\QueueHealthCheck::class,
-        \App\Health\Checks\SchedulerHealthCheck::class,
-        \App\Health\Checks\StorageHealthCheck::class,
-        \App\Health\Checks\MailHealthCheck::class,
-        \App\Health\Checks\AiProviderHealthCheck::class,
-        \App\Health\Checks\BillingWebhookHealthCheck::class,
+        ApplicationHealthCheck::class,
+        DatabaseHealthCheck::class,
+        CacheHealthCheck::class,
+        QueueHealthCheck::class,
+        SchedulerHealthCheck::class,
+        StorageHealthCheck::class,
+        MailHealthCheck::class,
+        AiProviderHealthCheck::class,
+        BackupFreshnessCheck::class,
+        BillingWebhookHealthCheck::class,
     ],
 
     /*
@@ -50,83 +62,91 @@ return [
     */
     'checks' => [
         'application.api' => [
-            'label'    => 'Application',
+            'label' => 'Application',
             'critical' => true,
-            'enabled'  => true,
+            'enabled' => true,
         ],
 
         'database.postgres' => [
-            'label'                 => 'Database',
-            'critical'              => true,
-            'enabled'               => true,
-            'degraded_latency_ms'   => 250,
-            'unhealthy_latency_ms'  => 2000,
+            'label' => 'Database',
+            'critical' => true,
+            'enabled' => true,
+            'degraded_latency_ms' => 250,
+            'unhealthy_latency_ms' => 2000,
         ],
 
         'cache.default' => [
-            'label'               => 'Cache',
-            'critical'            => false,
-            'enabled'             => true,
+            'label' => 'Cache',
+            'critical' => false,
+            'enabled' => true,
             'degraded_latency_ms' => 50,
         ],
 
         'queue.default' => [
-            'label'                    => 'Queue',
-            'critical'                 => true,
-            'enabled'                  => true,
-            'degraded_pending'         => 100,
-            'unhealthy_pending'        => 1000,
-            'degraded_oldest_minutes'  => 10,
+            'label' => 'Queue',
+            'critical' => true,
+            'enabled' => true,
+            'degraded_pending' => 100,
+            'unhealthy_pending' => 1000,
+            'degraded_oldest_minutes' => 10,
             'unhealthy_oldest_minutes' => 60,
-            'degraded_failed'          => 1,
-            'unhealthy_failed'         => 50,
-            'worker_stale_seconds'     => 300,
+            'degraded_failed' => 1,
+            'unhealthy_failed' => 50,
+            'worker_stale_seconds' => 300,
         ],
 
         'scheduler.heartbeat' => [
-            'label'         => 'Scheduler',
-            'critical'      => true,
-            'enabled'       => true,
+            'label' => 'Scheduler',
+            'critical' => true,
+            'enabled' => true,
             'stale_seconds' => 180,
         ],
 
         'storage.default' => [
-            'label'     => 'Storage',
-            'critical'  => false,
-            'enabled'   => true,
-            'latency_ms'=> 1500,
+            'label' => 'Storage',
+            'critical' => false,
+            'enabled' => true,
+            'latency_ms' => 1500,
         ],
 
         'mail.default' => [
-            'label'    => 'Mail',
+            'label' => 'Mail',
             'critical' => false,
-            'enabled'  => true,
+            'enabled' => true,
         ],
 
         'ai.provider' => [
-            'label'        => 'AI Provider',
-            'critical'     => false,
-            'enabled'      => true,
-            'probe'        => env('HEALTH_AI_PROBE', true),
-            'timeout'      => env('HEALTH_AI_PROBE_TIMEOUT', 5),
-            'probe_paths'  => [
-                'openai'    => 'models',
-                'groq'      => 'models',
+            'label' => 'AI Provider',
+            'critical' => false,
+            'enabled' => true,
+            'probe' => env('HEALTH_AI_PROBE', true),
+            'timeout' => env('HEALTH_AI_PROBE_TIMEOUT', 5),
+            'probe_paths' => [
+                'openai' => 'models',
+                'groq' => 'models',
                 'anthropic' => 'models',
-                'gemini'    => 'models',
+                'gemini' => 'models',
             ],
         ],
 
         'billing.webhooks' => [
-            'label'                    => 'Billing Webhooks',
-            'critical'                 => false,
-            'enabled'                  => true,
-            'degraded_pending'         => 5,
-            'unhealthy_pending'        => 100,
-            'degraded_oldest_minutes'  => 15,
+            'label' => 'Billing Webhooks',
+            'critical' => false,
+            'enabled' => true,
+            'degraded_pending' => 5,
+            'unhealthy_pending' => 100,
+            'degraded_oldest_minutes' => 15,
             'unhealthy_oldest_minutes' => 120,
-            'degraded_failed'          => 1,
-            'unhealthy_failed'         => 25,
+            'degraded_failed' => 1,
+            'unhealthy_failed' => 25,
+        ],
+
+        'backup.freshness' => [
+            'label' => 'Backup Freshness',
+            'critical' => false,
+            'enabled' => env('HEALTH_BACKUP_CHECK_ENABLED', false),
+            'marker_path' => env('BACKUP_MARKER_PATH'),
+            'max_age_hours' => (int) env('BACKUP_MAX_AGE_HOURS', 26),
         ],
     ],
 
@@ -146,8 +166,8 @@ return [
     */
     'heartbeat' => [
         'scheduler_key' => 'health:heartbeat:scheduler',
-        'worker_key'    => 'health:heartbeat:worker',
-        'worker_ttl'    => 900,
+        'worker_key' => 'health:heartbeat:worker',
+        'worker_ttl' => 900,
     ],
 
     /*
@@ -158,10 +178,10 @@ return [
     'incidents' => [
         // A condition must be observed this many consecutive times before it
         // opens an incident, and this many times healthy before auto-resolving.
-        'failure_confirmation'  => (int) env('HEALTH_INCIDENT_FAILURE_CONFIRMATIONS', 2),
+        'failure_confirmation' => (int) env('HEALTH_INCIDENT_FAILURE_CONFIRMATIONS', 2),
         'recovery_confirmation' => (int) env('HEALTH_INCIDENT_RECOVERY_CONFIRMATIONS', 2),
         // Minimum seconds between duplicate incident updates (alert cooldown).
-        'cooldown_seconds'      => (int) env('HEALTH_INCIDENT_COOLDOWN', 300),
+        'cooldown_seconds' => (int) env('HEALTH_INCIDENT_COOLDOWN', 300),
     ],
 
     /*
@@ -174,9 +194,9 @@ return [
     ],
 
     'retention' => [
-        'check_results_days'  => (int) env('HEALTH_RETENTION_CHECK_DAYS', 30),
+        'check_results_days' => (int) env('HEALTH_RETENTION_CHECK_DAYS', 30),
         'metric_samples_days' => (int) env('HEALTH_RETENTION_METRIC_DAYS', 30),
-        'incident_events_days'=> (int) env('HEALTH_RETENTION_EVENT_DAYS', 365),
+        'incident_events_days' => (int) env('HEALTH_RETENTION_EVENT_DAYS', 365),
     ],
 
     /*
