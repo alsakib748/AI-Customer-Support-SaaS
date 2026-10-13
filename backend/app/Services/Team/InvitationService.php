@@ -22,7 +22,7 @@ class InvitationService
 {
     protected const EXPIRY_DAYS = 7;
 
-    protected Tenant $tenant;
+    protected ?Tenant $tenant = null;
 
     protected ?User $user;
 
@@ -48,11 +48,22 @@ class InvitationService
             $tenant = $this->user->tenants()->first();
         }
 
-        if (! $tenant) {
+        $this->tenant = $tenant;
+    }
+
+    /**
+     * Resolve the current tenant, failing when the request is not tenant-scoped.
+     * Public routes (e.g. accepting an invitation) have no tenant context and
+     * must not depend on it, so resolution is deferred to the tenant-scoped
+     * methods instead of the constructor.
+     */
+    protected function tenantOrFail(): Tenant
+    {
+        if (! $this->tenant) {
             throw new \RuntimeException('No tenant found in current context');
         }
 
-        $this->tenant = $tenant;
+        return $this->tenant;
     }
 
     /**
@@ -81,7 +92,7 @@ class InvitationService
 
         if ($existingUser) {
             $exists = TenantUser::query()
-                ->forTenant($this->tenant->id)
+                ->forTenant($this->tenantOrFail()->id)
                 ->where('user_id', $existingUser->id)
                 ->exists();
 
@@ -94,7 +105,7 @@ class InvitationService
 
         // Check for pending invitation
         $pending = TenantInvitation::query()
-            ->where('tenant_id', $this->tenant->id)
+            ->where('tenant_id', $this->tenantOrFail()->id)
             ->where('email', $data['email'])
             ->whereNull('accepted_at')
             ->whereNull('revoked_at')
@@ -112,7 +123,7 @@ class InvitationService
         $plainToken = Str::random(64);
 
         $invitation = TenantInvitation::create([
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->tenantOrFail()->id,
             'invited_by' => auth()->id(),
             'email' => $data['email'],
             'role' => $data['role'] ?? 'agent',
@@ -130,7 +141,7 @@ class InvitationService
         $this->sendInvitationEmail($invitation, $plainToken);
 
         Log::info('Team invitation created', [
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->tenantOrFail()->id,
             'email' => $data['email'],
             'invited_by' => auth()->id(),
         ]);
@@ -144,7 +155,7 @@ class InvitationService
     public function getInvitations(array $filters = [])
     {
         $query = TenantInvitation::query()
-            ->where('tenant_id', $this->tenant->id);
+            ->where('tenant_id', $this->tenantOrFail()->id);
 
         if (! empty($filters['search'])) {
             $query->search($filters['search']);
@@ -272,7 +283,7 @@ class InvitationService
     public function resendInvitation(int $id): TenantInvitation
     {
         $invitation = TenantInvitation::query()
-            ->where('tenant_id', $this->tenant->id)
+            ->where('tenant_id', $this->tenantOrFail()->id)
             ->findOrFail($id);
 
         if ($invitation->accepted_at) {
@@ -303,7 +314,7 @@ class InvitationService
         $this->sendInvitationEmail($invitation, $plainToken);
 
         Log::info('Team invitation resent', [
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->tenantOrFail()->id,
             'invitation_id' => $id,
             'resent_by' => auth()->id(),
         ]);
@@ -321,14 +332,14 @@ class InvitationService
 
             Mail::to($invitation->email)->queue(new TeamInvitationMail(
                 acceptUrl: $this->buildAcceptUrl($plainToken),
-                workspaceName: $this->tenant->name,
+                workspaceName: $this->tenantOrFail()->name,
                 role: $invitation->role,
                 inviterName: $inviter?->full_name,
                 expiresAt: $invitation->expires_at?->toDateTimeString(),
             ));
         } catch (\Throwable $e) {
             Log::error('Failed to send team invitation email', [
-                'tenant_id' => $this->tenant->id,
+                'tenant_id' => $this->tenantOrFail()->id,
                 'email' => $invitation->email,
                 'error' => $e->getMessage(),
             ]);
@@ -351,7 +362,7 @@ class InvitationService
     public function revokeInvitation(int $id): bool
     {
         $invitation = TenantInvitation::query()
-            ->where('tenant_id', $this->tenant->id)
+            ->where('tenant_id', $this->tenantOrFail()->id)
             ->findOrFail($id);
 
         if ($invitation->accepted_at) {
@@ -369,7 +380,7 @@ class InvitationService
         ]);
 
         Log::info('Team invitation revoked', [
-            'tenant_id' => $this->tenant->id,
+            'tenant_id' => $this->tenantOrFail()->id,
             'invitation_id' => $id,
             'revoked_by' => auth()->id(),
         ]);

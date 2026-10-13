@@ -116,6 +116,10 @@ class TeamInvitationTest extends TestCase
             'role' => 'agent',
         ], 'central');
         $this->assertNotNull(TenantInvitation::find($invitation->id)->accepted_at);
+
+        // Serialising the member (as the accept endpoint does) must resolve
+        // every appended accessor, including `avatar`.
+        $this->assertArrayHasKey('avatar', $member->toArray());
     }
 
     public function test_accepting_with_a_mismatched_email_is_rejected(): void
@@ -130,6 +134,38 @@ class TeamInvitationTest extends TestCase
         $this->service()->acceptInvitation($invitation->plain_token, [
             'email' => 'someoneelse@example.test',
         ]);
+    }
+
+    public function test_accepting_an_invitation_works_without_tenant_context(): void
+    {
+        $invitation = $this->service()->createInvitation([
+            'email' => 'publicjoiner@example.test',
+            'role' => 'agent',
+        ]);
+
+        // Simulate the public accept route: no authenticated user and no tenant
+        // resolved for the request. Constructing the service must not throw
+        // (it previously did, surfacing as a 500 on the accept endpoint).
+        auth()->forgetGuards();
+        $this->app->forgetInstance('current_tenant');
+
+        $service = new InvitationService(
+            Request::create('/api/v1/team/invitations/accept/'.$invitation->plain_token, 'POST')
+        );
+
+        $member = $service->acceptInvitation($invitation->plain_token, [
+            'email' => 'publicjoiner@example.test',
+            'first_name' => 'Public',
+            'last_name' => 'Joiner',
+            'password' => 'SecretPass!123',
+        ]);
+
+        $this->assertSame('agent', $member->role);
+        $this->assertDatabaseHas('tenant_user', [
+            'tenant_id' => $this->tenantId,
+            'role' => 'agent',
+        ], 'central');
+        $this->assertNotNull(TenantInvitation::find($invitation->id)->accepted_at);
     }
 
     public function test_resending_regenerates_the_token_and_emails_again(): void

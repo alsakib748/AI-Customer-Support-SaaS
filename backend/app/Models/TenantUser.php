@@ -149,6 +149,11 @@ class TenantUser extends Pivot
         return $this->user?->avatar;
     }
 
+    public function getAvatarAttribute()
+    {
+        return $this->user?->avatar;
+    }
+
     public function getIsOwnerAttribute()
     {
         return $this->role === 'owner';
