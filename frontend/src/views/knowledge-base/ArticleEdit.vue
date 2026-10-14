@@ -7,6 +7,7 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 // import { useToast } from 'primevue/usetoast';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import RichTextEditor from '@/components/common/RichTextEditor.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -162,7 +163,7 @@ onMounted(() => {
 
                 <div>
                     <label class="block text-sm font-medium mb-1">Content *</label>
-                    <Textarea v-model="form.content" class="w-full" rows="10" placeholder="Write the article content here..." :class="{ 'p-invalid': getFieldError('content') }" />
+                    <RichTextEditor v-model="form.content" placeholder="Write the article content here..." :error="!!getFieldError('content')" />
                     <small v-if="getFieldError('content')" class="text-red-500">
                         {{ getFieldError('content') }}
                     </small>

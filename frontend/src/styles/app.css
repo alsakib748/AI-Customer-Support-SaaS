@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+/*
+  Theme architecture
+  ------------------
+  Every colour in the marketing site comes from a --t-* token. A theme is one
+  [data-theme="..."] block that redefines those tokens, so cards, borders,
+  badges, code blocks and mock UI all change together.
+
+  Themes: light, dark (standard navy), black, deep-gray, gray, slate (#64748B).
+  "System" is resolved to light or dark in JS (see composables/useTheme.js).
+*/
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-page: var(--t-bg);
+  --color-alt: var(--t-alt);
+  --color-card: var(--t-card);
+  --color-card2: var(--t-card2);
+  --color-line: var(--t-line);
+  --color-ink: var(--t-ink);
+  --color-body: var(--t-body);
+  --color-muted: var(--t-muted);
+  --color-brand: var(--t-brand);
+  --color-brand-hover: var(--t-brand-hover);
+  --color-accent: var(--t-accent);
+  --color-soft: var(--t-soft);
+  --color-ai: var(--t-ai);
+  --color-ai-soft: var(--t-ai-soft);
+  --color-ai-line: var(--t-ai-line);
+  --color-ok-bg: var(--t-ok-bg);
+  --color-ok-fg: var(--t-ok-fg);
+  --color-warn-bg: var(--t-warn-bg);
+  --color-warn-fg: var(--t-warn-fg);
+  --color-blue-bg: var(--t-blue-bg);
+  --color-blue-fg: var(--t-blue-fg);
+  --color-gray-bg: var(--t-gray-bg);
+  --color-gray-fg: var(--t-gray-fg);
+  --color-danger-bg: var(--t-danger-bg);
+  --color-danger-fg: var(--t-danger-fg);
+  --color-nav: var(--t-nav);
+  --color-footer: var(--t-footer);
+  --color-cta: var(--t-cta);
+  --color-code: var(--t-code);
+  --color-note-bg: var(--t-note-bg);
+  --color-note-fg: var(--t-note-fg);
+  --color-note-line: var(--t-note-line);
+
+  --radius-card: 1.125rem;
+  --radius-control: 0.75rem;
+  --shadow-soft: var(--t-shadow);
+}
+
+/* ---------- Light (default) ---------- */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --t-bg: #ffffff;
+  --t-alt: #f8fafc;
+  --t-card: #ffffff;
+  --t-card2: #f1f5f9;
+  --t-line: #e2e8f0;
+  --t-ink: #0f172a;
+  --t-body: #475569;
+  --t-muted: #64748b;
+  --t-brand: #2563eb;
+  --t-brand-hover: #1d4ed8;
+  --t-accent: #2563eb;
+  --t-soft: #eff6ff;
+  --t-ai: #6d28d9;
+  --t-ai-soft: #faf5ff;
+  --t-ai-line: #ddd6fe;
+  --t-ok-bg: #dcfce7;
+  --t-ok-fg: #166534;
+  --t-warn-bg: #fef3c7;
+  --t-warn-fg: #92400e;
+  --t-blue-bg: #dbeafe;
+  --t-blue-fg: #1e40af;
+  --t-gray-bg: #f1f5f9;
+  --t-gray-fg: #334155;
+  --t-danger-bg: #fef2f2;
+  --t-danger-fg: #b91c1c;
+  --t-nav: rgba(255, 255, 255, 0.92);
+  --t-footer: #0b1220;
+  --t-cta: #0f172a;
+  --t-code: #0f172a;
+  --t-note-bg: #fef9c3;
+  --t-note-fg: #713f12;
+  --t-note-line: #fde68a;
+  --t-shadow: 0 24px 50px -28px rgb(15 23 42 / 0.28);
+}
+
+/* ---------- Shared values for every dark theme ---------- */
+[data-theme="dark"],
+[data-theme="black"],
+[data-theme="deep-gray"],
+[data-theme="gray"],
+[data-theme="slate"] {
+  color-scheme: dark;
+  --t-brand: #2563eb;
+  --t-brand-hover: #3b82f6;
+  --t-accent: #60a5fa;
+  --t-soft: rgb(37 99 235 / 0.16);
+  --t-ai: #c4b5fd;
+  --t-ai-soft: rgb(124 58 237 / 0.14);
+  --t-ai-line: rgb(167 139 250 / 0.35);
+  --t-ok-bg: rgb(34 197 94 / 0.16);
+  --t-ok-fg: #86efac;
+  --t-warn-bg: rgb(245 158 11 / 0.16);
+  --t-warn-fg: #fcd34d;
+  --t-blue-bg: rgb(59 130 246 / 0.18);
+  --t-blue-fg: #93c5fd;
+  --t-danger-bg: rgb(239 68 68 / 0.14);
+  --t-danger-fg: #fca5a5;
+  --t-note-bg: rgb(250 204 21 / 0.12);
+  --t-note-fg: #fde68a;
+  --t-note-line: rgb(250 204 21 / 0.3);
+  --t-code: #05070d;
+  --t-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.65);
+}
+
+/* ---------- Dark: standard navy ---------- */
+[data-theme="dark"] {
+  --t-bg: #0b1220;
+  --t-alt: #0f172a;
+  --t-card: #131d33;
+  --t-card2: #1a263f;
+  --t-line: #24324d;
+  --t-ink: #f1f5f9;
+  --t-body: #cbd5e1;
+  --t-muted: #94a3b8;
+  --t-gray-bg: rgb(148 163 184 / 0.16);
+  --t-gray-fg: #cbd5e1;
+  --t-nav: rgb(11 18 32 / 0.88);
+  --t-footer: #060b16;
+  --t-cta: #111c3a;
+}
+
+/* ---------- Black (OLED) ---------- */
+[data-theme="black"] {
+  --t-bg: #000000;
+  --t-alt: #09090b;
+  --t-card: #101012;
+  --t-card2: #18181b;
+  --t-line: #27272a;
+  --t-ink: #fafafa;
+  --t-body: #d4d4d8;
+  --t-muted: #a1a1aa;
+  --t-gray-bg: rgb(161 161 170 / 0.16);
+  --t-gray-fg: #d4d4d8;
+  --t-nav: rgb(0 0 0 / 0.86);
+  --t-footer: #000000;
+  --t-cta: #0a0a0b;
+  --t-code: #0a0a0b;
+}
+
+/* ---------- Deep gray ---------- */
+[data-theme="deep-gray"] {
+  --t-bg: #18181b;
+  --t-alt: #1e1e22;
+  --t-card: #27272a;
+  --t-card2: #303034;
+  --t-line: #3f3f46;
+  --t-ink: #fafafa;
+  --t-body: #d4d4d8;
+  --t-muted: #a1a1aa;
+  --t-gray-bg: rgb(161 161 170 / 0.18);
+  --t-gray-fg: #d4d4d8;
+  --t-nav: rgb(24 24 27 / 0.88);
+  --t-footer: #101012;
+  --t-cta: #0f0f11;
+}
+
+/* ---------- Gray (lighter neutral) ---------- */
+[data-theme="gray"] {
+  --t-bg: #2b2d31;
+  --t-alt: #313338;
+  --t-card: #3a3c42;
+  --t-card2: #43464d;
+  --t-line: #50535b;
+  --t-ink: #f4f4f5;
+  --t-body: #d4d4d8;
+  --t-muted: #a8abb3;
+  --t-gray-bg: rgb(212 212 216 / 0.16);
+  --t-gray-fg: #e4e4e7;
+  --t-nav: rgb(43 45 49 / 0.9);
+  --t-footer: #212327;
+  --t-cta: #1c1e22;
+}
+
+/* ---------- Slate (#64748B family) ---------- */
+[data-theme="slate"] {
+  --t-bg: #1e293b;
+  --t-alt: #243247;
+  --t-card: #2b3a52;
+  --t-card2: #34445f;
+  --t-line: #64748b;
+  --t-ink: #f8fafc;
+  --t-body: #e2e8f0;
+  --t-muted: #aab8cc;
+  --t-gray-bg: rgb(148 163 184 / 0.2);
+  --t-gray-fg: #e2e8f0;
+  --t-nav: rgb(30 41 59 / 0.9);
+  --t-footer: #172033;
+  --t-cta: #111827;
+}
+
+/* ---------- Base ---------- */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+  background: var(--t-bg);
+  color: var(--t-body);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--t-ink);
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+/* Fade-and-rise when a section enters the viewport (see directives/reveal.js). */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}

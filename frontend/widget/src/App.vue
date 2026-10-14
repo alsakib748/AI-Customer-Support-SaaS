@@ -46,7 +46,7 @@ const widgetConfig = reactive({
     welcomeMessage: 'Hi! How can we help?',
     offlineMessage: null,
     position: 'bottom-right',
-    primaryColor: '#4F46E5',
+    primaryColor: '#2563EB',
     logo: null,
     avatar: null,
     showBranding: true,
@@ -66,7 +66,7 @@ const customerForm = reactive({
 // COMPUTED
 // ============================================
 
-const primaryColor = computed(() => widgetConfig.primaryColor || '#4F46E5');
+const primaryColor = computed(() => widgetConfig.primaryColor || '#2563EB');
 
 const hasMessages = computed(() => messages.value.length > 0);
 
@@ -179,7 +179,7 @@ const bootstrapWidget = async () => {
             widgetConfig.welcomeMessage = config.welcome_message;
             widgetConfig.offlineMessage = config.offline_message;
             widgetConfig.position = config.position || 'bottom-right';
-            widgetConfig.primaryColor = config.primary_color || '#4F46E5';
+            widgetConfig.primaryColor = config.primary_color || '#2563EB';
             widgetConfig.logo = config.logo;
             widgetConfig.avatar = config.avatar;
             widgetConfig.showBranding = config.show_branding;
@@ -572,8 +572,15 @@ watch(
         <!-- Chat Button (Closed State) -->
         <div v-if="!isOpen" class="chat-button" @click="openWidget">
             <div class="chat-button-inner">
-                <svg v-if="!hasUnread" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                <svg v-if="!hasUnread" width="28" height="28" viewBox="24 14 470 440" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SupportAI" role="img">
+                    <path mask="url(#widget-symbol-mask)" d="M140 70H300A100 100 0 0 1 400 170V250A100 100 0 0 1 300 350H196L84 432Q70 442 68 424L40 290V170A100 100 0 0 1 140 70Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="14" stroke-linejoin="round" />
+                    <mask id="widget-symbol-mask">
+                        <rect width="512" height="512" fill="#fff" />
+                        <path d="M152 114H292A66 66 0 0 1 358 180V238A66 66 0 0 1 292 304H152A66 66 0 0 1 86 238V180A66 66 0 0 1 152 114Z" fill="#000" />
+                        <ellipse cx="178" cy="204" rx="25" ry="34" fill="#fff" />
+                        <ellipse cx="262" cy="204" rx="25" ry="34" fill="#fff" />
+                    </mask>
+                    <path d="M424 22Q432.06 75.94 486 84Q432.06 92.06 424 146Q415.94 92.06 362 84Q415.94 75.94 424 22Z" fill="#FFFFFF" />
                 </svg>
                 <span v-else class="unread-badge">{{ unreadCount }}</span>
             </div>

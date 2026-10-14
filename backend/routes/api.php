@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
+use App\Http\Controllers\Api\V1\Admin\DemoRequestAdminController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PlatformNotificationController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -41,6 +42,7 @@ use App\Http\Controllers\Api\V1\ChatWidget\ChatWidgetController;
 use App\Http\Controllers\Api\V1\ChatWidget\WidgetStatisticsController;
 use App\Http\Controllers\Api\V1\Conversation\ConversationController;
 use App\Http\Controllers\Api\V1\Customer\CustomerController;
+use App\Http\Controllers\Api\V1\DemoRequestController;
 use App\Http\Controllers\Api\V1\KnowledgeBase\ArticleController;
 use App\Http\Controllers\Api\V1\KnowledgeBase\CategoryController;
 use App\Http\Controllers\Api\V1\Message\MessageController;
@@ -816,4 +818,22 @@ Route::prefix('v1/admin/notifications')
         Route::delete('/{notification}',
             [PlatformNotificationController::class, 'destroy'])
             ->middleware('permission:platform.notifications');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Demo Requests (public intake + super admin management)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/demo-requests')->group(function () {
+    Route::post('/', [DemoRequestController::class, 'store'])
+        ->middleware('throttle:6,1');
+});
+
+Route::prefix('v1/admin/demo-requests')
+    ->middleware(['jwt.auth', 'super.admin', 'tenant.aware'])
+    ->group(function () {
+        Route::get('/', [DemoRequestAdminController::class, 'index']);
+        Route::get('/{id}', [DemoRequestAdminController::class, 'show']);
+        Route::put('/{id}', [DemoRequestAdminController::class, 'update']);
     });

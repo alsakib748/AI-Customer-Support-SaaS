@@ -321,6 +321,12 @@ const platformModel = () => [
                 icon: 'pi pi-history',
                 to: '/admin/audit-logs',
                 permission: 'platform.audit_logs'
+            },
+            {
+                label: 'Demo Requests',
+                icon: 'pi pi-calendar-plus',
+                to: '/admin/demo-requests',
+                permission: 'platform.demo_requests'
             }
         ]
     },

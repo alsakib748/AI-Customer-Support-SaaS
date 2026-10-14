@@ -23,9 +23,15 @@ import 'vue3-toastify/dist/index.css';
 
 import permission from '@/directives/permission';
 
+import { vReveal } from './directives/reveal';
+import { initTheme } from './composables/useTheme';
+
 import '@/assets/tailwind.css';
 import '@/assets/styles.scss';
 // import { closeButton } from '@primeuix/themes/aura/galleria';
+import './styles/app.css';
+
+initTheme();
 
 const pinia = createPinia();
 
@@ -51,6 +57,7 @@ app.component('InputMask', InputMask);
 app.use(ConfirmationService);
 app.directive('tooltip', Tooltip);
 app.directive('permission', permission);
+app.directive('reveal', vReveal);
 app.use(pinia);
 app.use(Vue3Toastify, {
     // autoClose: false,
