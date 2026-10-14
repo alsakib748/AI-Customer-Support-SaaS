@@ -1,0 +1,6 @@
+:root{
+  --brand-blue:#2563EB; --brand-purple:#7C3AED; --brand-teal:#14B8A6;
+  --brand-navy:#0F172A; --brand-slate:#64748B; --brand-cloud:#F8FAFC;
+  --brand-gradient:linear-gradient(135deg,#2563EB,#7C3AED);
+  font-family:'Inter',system-ui,sans-serif;
+}

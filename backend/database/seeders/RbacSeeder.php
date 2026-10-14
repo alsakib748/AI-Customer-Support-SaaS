@@ -102,6 +102,7 @@ class RbacSeeder extends Seeder
             'platform.system_health.run',
             'platform.system_health.manage',
             'platform.notifications', 'platform.profile',
+            'platform.demo_requests',
 
             // Tenants module (granular — Super Admin only)
             'platform.tenants.view',

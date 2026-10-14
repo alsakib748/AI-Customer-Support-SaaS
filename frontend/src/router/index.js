@@ -2,6 +2,7 @@ import AppLayout from '@/layout/AppLayout.vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
+import MarketingLayout from '@/views/pages/layouts/MarketingLayout.vue';
 
 const router = createRouter({
     history: createWebHistory(),
@@ -473,7 +474,22 @@ const router = createRouter({
         // =====================================================
         // PUBLIC
         // =====================================================
-        { path: '/', name: 'landing', component: () => import('@/views/pages/Landing.vue') },
+        // { path: '/', name: 'landing', component: () => import('@/views/pages/Landing.vue') },
+        {
+            path: '/',
+            component: MarketingLayout,
+            children: [
+                { path: '', name: 'home', component: () => import('@/views/pages/marketing/HomePage.vue') },
+                { path: 'features', name: 'features', component: () => import('@/views/pages/marketing/FeaturesPage.vue') },
+                { path: 'pricing', name: 'pricing', component: () => import('@/views/pages/marketing/PricingPage.vue') },
+                { path: 'about', name: 'about', component: () => import('@/views/pages/marketing/AboutPage.vue') },
+                { path: 'contact', name: 'contact', component: () => import('@/views/pages/marketing/ContactPage.vue') },
+                { path: 'privacy', name: 'privacy', component: () => import('@/views/pages/marketing/PrivacyPage.vue') },
+                { path: 'terms', name: 'terms', component: () => import('@/views/pages/marketing/TermsPage.vue') },
+                { path: 'faq', redirect: { name: 'home', hash: '#faq' } }
+            ]
+        },
+        { path: '/:pathMatch(.*)*', redirect: '/' },
         {
             path: '/login',
             name: 'Login',
@@ -485,6 +501,18 @@ const router = createRouter({
             name: 'Register',
             component: () => import('@/views/pages/auth/Register.vue'),
             meta: { requiresGuest: true, title: 'Register' }
+        },
+        {
+            path: '/forgot-password',
+            name: 'ForgotPassword',
+            component: () => import('@/views/pages/auth/ForgotPassword.vue'),
+            meta: { requiresGuest: true, title: 'Forgot Password' }
+        },
+        {
+            path: '/reset-password',
+            name: 'ResetPassword',
+            component: () => import('@/views/pages/auth/ResetPassword.vue'),
+            meta: { requiresGuest: true, title: 'Reset Password' }
         },
         {
             path: '/team/invitations/accept/:token',
@@ -918,6 +946,12 @@ const router = createRouter({
                     name: 'AdminAuditLogs',
                     component: () => import('@/views/admin/AuditLogs.vue'),
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.audit_logs', title: 'Audit Logs' }
+                },
+                {
+                    path: '/admin/demo-requests',
+                    name: 'AdminDemoRequests',
+                    component: () => import('@/views/admin/demo-requests/Index.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.demo_requests', title: 'Demo Requests' }
                 },
                 {
                     path: '/admin/settings',

@@ -192,12 +192,15 @@ class TurnstileProtectionTest extends TestCase
         $this->enableBotProtection();
         Http::fake(['*' => Http::response(['success' => true, 'hostname' => 'example.test'], 200)]);
 
+        // No such user: the failure must be the unknown-email validation error,
+        // which proves the request passed the captcha middleware.
         $this->postJson('/api/v1/auth/forgot-password', [
             'email' => 'someone@example.test',
             'turnstile_token' => 'valid-token',
         ])
-            ->assertStatus(200)
-            ->assertJsonPath('success', true);
+            ->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['email']])
+            ->assertJsonMissingPath('errors.captcha');
     }
 
     /**
