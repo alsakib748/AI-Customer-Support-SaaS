@@ -118,6 +118,7 @@ onMounted(() => billingStore.fetchAdminAnalytics());
             <div class="flex gap-2 flex-wrap">
                 <Button label="Manage Plans" icon="pi pi-box" @click="router.push('/admin/billing/plans')" />
                 <Button label="Subscriptions" icon="pi pi-users" outlined @click="router.push('/admin/billing/subscriptions')" />
+                <Button label="Overdue Payments" icon="pi pi-exclamation-triangle" severity="warning" outlined @click="router.push('/admin/billing/overdue')" />
                 <Button label="Invoices" icon="pi pi-file" outlined @click="router.push('/admin/billing/invoices')" />
                 <Button label="Payments" icon="pi pi-money-bill" outlined @click="router.push('/admin/billing/payments')" />
                 <Button label="Coupons" icon="pi pi-ticket" outlined @click="router.push('/admin/billing/coupons')" />

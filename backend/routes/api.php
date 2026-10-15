@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingController;
+use App\Http\Controllers\Api\V1\Admin\Billing\AdminBillingOverdueController;
 use App\Http\Controllers\Api\V1\Admin\Billing\AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PaymentRefundController;
 use App\Http\Controllers\Api\V1\Admin\Billing\PlanProviderPriceController;
@@ -539,6 +540,10 @@ Route::prefix('v1/admin/billing')
         Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show']);
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy']);
+
+        // Overdue / delinquent subscriptions
+        Route::get('/overdue', [AdminBillingOverdueController::class, 'index']);
+        Route::post('/overdue/{id}/send-email', [AdminBillingOverdueController::class, 'sendEmail']);
     });
 
 Route::prefix('v1/admin/tenants')

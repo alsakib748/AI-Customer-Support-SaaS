@@ -330,6 +330,17 @@ class BillingService {
         return api.get(`/admin/billing/tenants/${tenantId}`);
     }
 
+    // ============================================
+    // ADMIN - OVERDUE / DUNNING
+    // ============================================
+    getOverdueSubscriptions(params = {}) {
+        return api.get('/admin/billing/overdue', { params });
+    }
+
+    sendOverdueEmail(id, data = {}) {
+        return api.post(`/admin/billing/overdue/${id}/send-email`, data);
+    }
+
     getProviders() {
         return api.get('/subscription/providers');
     }

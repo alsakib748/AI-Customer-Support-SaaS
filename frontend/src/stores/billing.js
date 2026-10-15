@@ -877,6 +877,7 @@ export const useBillingStore = defineStore('billing', () => {
     const adminInvoices = ref([]);
     const adminPayments = ref([]);
     const adminCoupons = ref([]);
+    const adminOverdue = ref([]);
     const analytics = ref(null);
 
     const adminPagination = reactive({
@@ -884,7 +885,8 @@ export const useBillingStore = defineStore('billing', () => {
         subscriptions: null,
         invoices: null,
         payments: null,
-        coupons: null
+        coupons: null,
+        overdue: null
     });
 
     // ============================================
@@ -1493,6 +1495,40 @@ export const useBillingStore = defineStore('billing', () => {
         }
     };
 
+    // ============================================
+    // ADMIN - OVERDUE / DUNNING
+    // ============================================
+    const fetchAdminOverdue = async (params = {}) => {
+        loading.value = true;
+        try {
+            const response = await billingService.getOverdueSubscriptions(params);
+            if (response.data.success !== false) {
+                adminOverdue.value = response.data.data || [];
+                adminPagination.overdue = response.data.meta || null;
+                return adminOverdue.value;
+            }
+        } catch (error) {
+            toast.error('Failed to load overdue payments');
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const sendOverdueEmail = async (id, data = {}) => {
+        saving.value = true;
+        try {
+            const response = await billingService.sendOverdueEmail(id, data);
+            toast.success(response.data.message || 'Payment reminder sent');
+            return response.data;
+        } catch (error) {
+            toast.error(_extractError(error));
+            throw error;
+        } finally {
+            saving.value = false;
+        }
+    };
+
     const fetchProviders = async () => {
         try {
             const res = await billingService.getProviders();
@@ -1539,13 +1575,15 @@ export const useBillingStore = defineStore('billing', () => {
         adminInvoices.value = [];
         adminPayments.value = [];
         adminCoupons.value = [];
+        adminOverdue.value = [];
         analytics.value = null;
         Object.assign(adminPagination, {
             plans: null,
             subscriptions: null,
             invoices: null,
             payments: null,
-            coupons: null
+            coupons: null,
+            overdue: null
         });
         errors.value = {};
         resetFilters();
@@ -1573,6 +1611,7 @@ export const useBillingStore = defineStore('billing', () => {
         adminInvoices,
         adminPayments,
         adminCoupons,
+        adminOverdue,
         analytics,
         adminPagination,
 
@@ -1639,6 +1678,8 @@ export const useBillingStore = defineStore('billing', () => {
         deleteAdminCoupon,
         fetchAdminAnalytics,
         fetchAdminTenantSummary,
+        fetchAdminOverdue,
+        sendOverdueEmail,
 
         // Utility
         resetFilters,

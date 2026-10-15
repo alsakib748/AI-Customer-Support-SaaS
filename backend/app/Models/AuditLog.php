@@ -1,10 +1,11 @@
 <?php
+
 // app/Models/AuditLog.php
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AuditLog extends Model
@@ -90,7 +91,7 @@ class AuditLog extends Model
      */
     public function getResourceNameAttribute(): string
     {
-        if (!$this->resource_type || !$this->resource_id) {
+        if (! $this->resource_type || ! $this->resource_id) {
             return 'N/A';
         }
 
@@ -101,15 +102,16 @@ class AuditLog extends Model
                     return $model->getAttribute('name')
                         ?: $model->getAttribute('title')
                         ?: $model->getAttribute('email')
-                        ?: '#' . $this->resource_id;
+                        ?: '#'.$this->resource_id;
                 }
-                return '#' . $this->resource_id;
+
+                return '#'.$this->resource_id;
             }
         } catch (\Exception $e) {
             // Ignore
         }
 
-        return $this->resource_type . ' #' . $this->resource_id;
+        return $this->resource_type.' #'.$this->resource_id;
     }
 
     /**
@@ -122,31 +124,33 @@ class AuditLog extends Model
 
     /**
      * Get the resource model instance.
+     *
+     * Only central models are resolved here; tenant-scoped resources live on a
+     * different connection and are rendered as "type #id" instead.
      */
-    // protected function getResourceModel()
-    // {
-    //     $modelMap = [
-    //         'user' => User::class,
-    //         'tenant' => Tenant::class,
-    //         'customer' => Customer::class,
-    //         'conversation' => Conversation::class,
-    //         'ticket' => Ticket::class,
-    //         'message' => Message::class,
-    //     ];
+    protected function getResourceModel(): ?Model
+    {
+        $modelMap = [
+            'user' => User::class,
+            'tenant' => Tenant::class,
+        ];
 
-    //     if (isset($modelMap[$this->resource_type])) {
-    //         $modelClass = $modelMap[$this->resource_type];
-    //         if (class_exists($modelClass)) {
-    //             try {
-    //                 return $modelClass::withTrashed()->find($this->resource_id);
-    //             } catch (\Exception $e) {
-    //                 return null;
-    //             }
-    //         }
-    //     }
+        if (! isset($modelMap[$this->resource_type])) {
+            return null;
+        }
 
-    //     return null;
-    // }
+        $modelClass = $modelMap[$this->resource_type];
+
+        if (! class_exists($modelClass)) {
+            return null;
+        }
+
+        try {
+            return $modelClass::query()->find($this->resource_id);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     // ============================================
     // SCOPES
@@ -184,6 +188,7 @@ class AuditLog extends Model
         if ($tenant) {
             return $query->where('tenant_id', $tenant->id);
         }
+
         return $query;
     }
 

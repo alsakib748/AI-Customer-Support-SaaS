@@ -32,14 +32,13 @@ class TenantAware
             // Don't return here, allow tenant resolution to continue
         }
 
-
         $tenant = null;
 
         // 1. Try to get from the header or SSE query string.
         // EventSource cannot send custom headers, so streaming clients use tenant_id.
         $tenantId = $request->header('X-Tenant-ID') ?? $request->query('tenant_id');
         if ($tenantId) {
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required.',
@@ -47,14 +46,14 @@ class TenantAware
             }
 
             $tenant = Tenant::find($tenantId);
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tenant not found.',
                 ], 404);
             }
 
-            if (!$user->hasRole('super_admin') && !$user->hasTenantAccess($tenant->id)) {
+            if (! $user->hasRole('super_admin') && ! $user->hasTenantAccess($tenant->id)) {
                 Log::warning('Tenant access denied', [
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
@@ -71,7 +70,7 @@ class TenantAware
         }
 
         // 2. Try to get from authenticated user
-        if (!$tenant && $user) {
+        if (! $tenant && $user) {
             $tenantId = $user->current_tenant_id;
             if ($tenantId) {
                 $tenant = Tenant::find($tenantId);
@@ -82,7 +81,7 @@ class TenantAware
         }
 
         // 3. Try to get first tenant of user
-        if (!$tenant && $user) {
+        if (! $tenant && $user) {
             $tenant = $user->tenants()->first();
             if ($tenant) {
                 $user->update(['current_tenant_id' => $tenant->id]);
@@ -91,7 +90,7 @@ class TenantAware
         }
 
         // 4. Super Admin fallback to first available tenant in system
-        if (!$tenant && $user && $user->hasRole('super_admin')) {
+        if (! $tenant && $user && $user->hasRole('super_admin')) {
             $tenant = Tenant::first();
             if ($tenant) {
                 Log::info('Super Admin fallback to first system tenant', ['tenant_id' => $tenant->id]);
@@ -101,20 +100,32 @@ class TenantAware
         if ($tenant) {
             // Suspended / archived tenants are blocked for everyone except Super Admin
             // (who may still use the Manage Tenant context).
-            if ($user && !$user->hasRole('super_admin')) {
+            if ($user && ! $user->hasRole('super_admin')) {
+                $path = $request->path();
+
+                $allowedWhileSuspended = collect(config('billing.suspended_tenant_allowed_paths', [
+                    'api/v1/auth',
+                    'api/v1/subscription',
+                    'api/v1/billing',
+                    'api/v1/invoices',
+                    'api/v1/payments',
+                ]))->some(function ($prefix) use ($path) {
+                    return str_starts_with($path, trim($prefix, '/')) || $path === trim($prefix, '/');
+                });
+
                 $forbiddenStatuses = [Tenant::STATUS_SUSPENDED, Tenant::STATUS_ARCHIVED];
 
-                if (in_array($tenant->status, $forbiddenStatuses, true)) {
+                if (in_array($tenant->status, $forbiddenStatuses, true) && ! $allowedWhileSuspended) {
                     Log::warning('Tenant access blocked due to status', [
-                        'user_id'   => $user->id,
+                        'user_id' => $user->id,
                         'tenant_id' => $tenant->id,
-                        'status'    => $tenant->status,
-                        'path'      => $request->path(),
+                        'status' => $tenant->status,
+                        'path' => $request->path(),
                     ]);
 
                     return response()->json([
                         'success' => false,
-                        'message' => 'This tenant is ' . str_replace('_', ' ', $tenant->status) . ' and cannot be accessed.',
+                        'message' => 'This tenant is '.str_replace('_', ' ', $tenant->status).' and cannot be accessed.',
                     ], 403);
                 }
             }
@@ -127,11 +138,12 @@ class TenantAware
                 Log::error('Tenancy initialization failed', [
                     'tenant_id' => $tenant->id,
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tenant initialization failed: ' . $e->getMessage(),
+                    'message' => 'Tenant initialization failed: '.$e->getMessage(),
                 ], 500);
             }
             Log::info('Tenant set in request', ['tenant_id' => $tenant->id]);
@@ -141,6 +153,7 @@ class TenantAware
                 Log::info('Super Admin proceeding without tenant context', [
                     'path' => $request->path(),
                 ]);
+
                 return $next($request);
             }
 
@@ -155,7 +168,6 @@ class TenantAware
                 'message' => 'Tenant context is required.',
             ], 403);
         }
-
 
         return $next($request);
     }

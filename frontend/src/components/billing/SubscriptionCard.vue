@@ -43,6 +43,26 @@ const formatDate = (date) => {
                     </div>
                 </div>
 
+                <div v-if="subscription.is_suspended" class="p-3 bg-red-50 dark:bg-red-950 rounded-lg mb-4">
+                    <div class="flex items-start gap-2">
+                        <i class="pi pi-ban text-red-600 mt-1"></i>
+                        <div>
+                            <div class="font-medium text-red-700 dark:text-red-300">Access suspended</div>
+                            <div class="text-sm text-red-600 dark:text-red-400">Your payment is overdue and access to features has been suspended. Settle the outstanding balance to restore access.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="subscription.is_past_due" class="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg mb-4">
+                    <div class="flex items-start gap-2">
+                        <i class="pi pi-exclamation-triangle text-orange-600 mt-1"></i>
+                        <div>
+                            <div class="font-medium text-orange-700 dark:text-orange-300">Payment past due</div>
+                            <div class="text-sm text-orange-600 dark:text-orange-400">We couldn't process your last payment. Please update your payment method to avoid losing access.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div v-if="subscription.is_trialing" class="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg mb-4">
                     <i class="pi pi-clock text-blue-500 mr-2"></i>
                     Trial ends in {{ subscription.trial_days_remaining }} days

@@ -11,6 +11,7 @@ use App\Models\Coupon;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Payments\PaymentGatewayManager;
+use App\Services\Billing\BillingDunningService;
 use App\Services\Billing\BillingService;
 use App\Services\Billing\PlanService;
 use App\Services\Billing\SubscriptionService;
@@ -57,6 +58,15 @@ class SubscriptionController extends Controller
             }
 
             $subscription = $this->service->getActiveSubscription($tenant->id);
+
+            // Surface delinquent subscriptions so tenants can see their state
+            // and settle the outstanding balance from the billing page.
+            if (! $subscription) {
+                $latest = $this->service->getSubscription($tenant->id);
+                $subscription = $latest && in_array($latest->status, ['past_due', 'suspended'], true)
+                    ? $latest
+                    : null;
+            }
 
             if (! $subscription) {
                 return response()->json([
@@ -761,6 +771,10 @@ class SubscriptionController extends Controller
                     'provider_invoice_id' => $session['provider_invoice_id'] ?? null,
                     'source' => 'checkout.verify',
                 ]);
+
+                // A completed checkout recovers any billing suspension.
+                app(BillingDunningService::class)
+                    ->reactivateForRecoveredPayment($subscription);
             }
 
             if (! $subscription->relationLoaded('plan')) {

@@ -9,7 +9,12 @@ const billingStore = useBillingStore();
 const subscription = computed(() => billingStore.subscription);
 const planName = computed(() => billingStore.planName);
 
+const isSuspended = computed(() => !!subscription.value?.is_suspended);
+const isPastDue = computed(() => !!subscription.value?.is_past_due);
+
 const statusIcon = computed(() => {
+    if (isSuspended.value) return 'pi pi-ban';
+    if (isPastDue.value) return 'pi pi-exclamation-triangle';
     if (billingStore.isTrialing) return 'pi pi-clock';
     if (billingStore.isCancelled) return 'pi pi-times-circle';
     if (billingStore.isExpired) return 'pi pi-exclamation-circle';
@@ -18,6 +23,8 @@ const statusIcon = computed(() => {
 });
 
 const statusColor = computed(() => {
+    if (isSuspended.value) return '#EF4444';
+    if (isPastDue.value) return '#F97316';
     if (billingStore.isTrialing) return '#3B82F6';
     if (billingStore.isCancelled) return '#EF4444';
     if (billingStore.isExpired) return '#EF4444';
@@ -26,6 +33,8 @@ const statusColor = computed(() => {
 });
 
 const warningText = computed(() => {
+    if (isSuspended.value) return 'Suspended — payment overdue';
+    if (isPastDue.value) return 'Payment past due';
     if (billingStore.isTrialing) return `Trial: ${billingStore.trialDaysRemaining}d left`;
     if (billingStore.isCancelled) return 'Cancelled';
     if (billingStore.isExpired) return 'Expired';

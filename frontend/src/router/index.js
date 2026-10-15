@@ -865,6 +865,12 @@ const router = createRouter({
                     meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.subscriptions', title: 'Subscriptions' }
                 },
                 {
+                    path: '/admin/billing/overdue',
+                    name: 'AdminBillingOverdue',
+                    component: () => import('@/views/admin/billing/OverduePayments.vue'),
+                    meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'platform.billing.subscriptions', title: 'Overdue Payments' }
+                },
+                {
                     path: '/admin/billing/invoices',
                     name: 'AdminBillingInvoices',
                     component: () => import('@/views/admin/billing/Invoices.vue'),

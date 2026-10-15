@@ -1,18 +1,13 @@
 <?php
+
 namespace App\Models;
 
-use App\Models\CouponRedemption;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Plan;
-use App\Models\SubscriptionItem;
-use App\Models\Tenant;
-use App\Models\UsageRecord;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Subscription extends Model
 {
@@ -24,7 +19,7 @@ class Subscription extends Model
 
         static::creating(function ($model) {
             if (empty($model->uuid)) {
-                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+                $model->uuid = (string) Str::uuid();
             }
         });
     }
@@ -68,23 +63,28 @@ class Subscription extends Model
         'current_period_starts_at',
         'current_period_ends_at',
         'cancel_at_period_end',
+        'past_due_at',
+        'suspended_at',
+        'suspension_reason',
     ];
 
     protected $casts = [
-        'trial_starts_at'          => 'datetime',
-        'trial_ends_at'            => 'datetime',
-        'starts_at'                => 'datetime',
-        'ends_at'                  => 'datetime',
-        'cancelled_at'             => 'datetime',
-        'paused_at'                => 'datetime',
-        'resumed_at'               => 'datetime',
-        'next_billing_at'          => 'datetime',
-        'last_billing_at'          => 'datetime',
-        'auto_renew'               => 'boolean',
-        'metadata'                 => 'array',
+        'trial_starts_at' => 'datetime',
+        'trial_ends_at' => 'datetime',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'paused_at' => 'datetime',
+        'resumed_at' => 'datetime',
+        'next_billing_at' => 'datetime',
+        'last_billing_at' => 'datetime',
+        'auto_renew' => 'boolean',
+        'metadata' => 'array',
         'current_period_starts_at' => 'datetime',
-        'current_period_ends_at'   => 'datetime',
-        'cancel_at_period_end'     => 'boolean',
+        'current_period_ends_at' => 'datetime',
+        'cancel_at_period_end' => 'boolean',
+        'past_due_at' => 'datetime',
+        'suspended_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -94,6 +94,7 @@ class Subscription extends Model
         'is_trialing',
         'is_cancelled',
         'is_expired',
+        'is_suspended',
         'is_on_trial',
         'days_remaining',
         'trial_days_remaining',
@@ -145,6 +146,7 @@ class Subscription extends Model
     public function getGrandTotalAttribute(): float
     {
         $planPrice = $this->plan?->getPriceForCycle($this->billing_cycle) ?? 0;
+
         return $planPrice + $this->additional_charges;
     }
 
@@ -175,26 +177,30 @@ class Subscription extends Model
     public function getStatusLabelAttribute(): string
     {
         $labels = [
-            'trialing'  => 'Trial',
-            'active'    => 'Active',
-            'past_due'  => 'Past Due',
+            'trialing' => 'Trial',
+            'active' => 'Active',
+            'past_due' => 'Past Due',
             'cancelled' => 'Cancelled',
-            'expired'   => 'Expired',
-            'paused'    => 'Paused',
+            'expired' => 'Expired',
+            'paused' => 'Paused',
+            'suspended' => 'Suspended',
         ];
+
         return $labels[$this->status] ?? ucfirst($this->status);
     }
 
     public function getStatusColorAttribute(): string
     {
         $colors = [
-            'trialing'  => 'info',
-            'active'    => 'success',
-            'past_due'  => 'warning',
+            'trialing' => 'info',
+            'active' => 'success',
+            'past_due' => 'warning',
             'cancelled' => 'danger',
-            'expired'   => 'danger',
-            'paused'    => 'secondary',
+            'expired' => 'danger',
+            'paused' => 'secondary',
+            'suspended' => 'danger',
         ];
+
         return $colors[$this->status] ?? 'secondary';
     }
 
@@ -219,6 +225,11 @@ class Subscription extends Model
             || ($this->ends_at && $this->ends_at->isPast() && $this->status !== 'active');
     }
 
+    public function getIsSuspendedAttribute(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
     public function getIsOnTrialAttribute(): bool
     {
         return $this->is_trialing
@@ -231,6 +242,7 @@ class Subscription extends Model
         if (! $this->ends_at) {
             return null;
         }
+
         return max(0, now()->diffInDays($this->ends_at, false));
     }
 
@@ -239,16 +251,17 @@ class Subscription extends Model
         if (! $this->trial_ends_at) {
             return null;
         }
+
         return max(0, now()->diffInDays($this->trial_ends_at, false));
     }
 
     public function getUsagePercentageAttribute(): array
     {
         return [
-            'ai'            => $this->ai_limit > 0 ? round(($this->ai_used / $this->ai_limit) * 100, 1) : 0,
-            'agents'        => $this->agents_limit > 0 ? round(($this->agents_used / $this->agents_limit) * 100, 1) : 0,
-            'documents'     => $this->documents_limit > 0 ? round(($this->documents_used / $this->documents_limit) * 100, 1) : 0,
-            'storage'       => $this->storage_limit > 0 ? round(($this->storage_used / $this->storage_limit) * 100, 1) : 0,
+            'ai' => $this->ai_limit > 0 ? round(($this->ai_used / $this->ai_limit) * 100, 1) : 0,
+            'agents' => $this->agents_limit > 0 ? round(($this->agents_used / $this->agents_limit) * 100, 1) : 0,
+            'documents' => $this->documents_limit > 0 ? round(($this->documents_used / $this->documents_limit) * 100, 1) : 0,
+            'storage' => $this->storage_limit > 0 ? round(($this->storage_used / $this->storage_limit) * 100, 1) : 0,
             'conversations' => $this->conversations_limit > 0 ? round(($this->conversations_used / $this->conversations_limit) * 100, 1) : 0,
         ];
     }
@@ -270,6 +283,11 @@ class Subscription extends Model
     public function scopePastDue($query)
     {
         return $query->where('status', 'past_due');
+    }
+
+    public function scopeSuspended($query)
+    {
+        return $query->where('status', 'suspended');
     }
 
     public function scopeCancelled($query)
@@ -325,7 +343,7 @@ class Subscription extends Model
 
     public function isProviderManaged(): bool
     {
-        return !empty($this->provider) && !empty($this->provider_subscription_id);
+        return ! empty($this->provider) && ! empty($this->provider_subscription_id);
     }
 
     /**
@@ -338,7 +356,7 @@ class Subscription extends Model
             return false;
         }
 
-        $days  = (int) config('billing.grace_period.past_due_days', 3);
+        $days = (int) config('billing.grace_period.past_due_days', 3);
         $since = $this->current_period_ends_at ?? $this->updated_at ?? $this->created_at;
 
         return $since !== null && $since->copy()->addDays($days)->isFuture();
@@ -367,7 +385,7 @@ class Subscription extends Model
     {
         $this->update([
             'cancel_at_period_end' => true,
-            'auto_renew'           => false,
+            'auto_renew' => false,
         ]);
 
         return $this;
@@ -391,10 +409,10 @@ class Subscription extends Model
     public function cancel(bool $immediately = false): self
     {
         $this->update([
-            'status'       => $immediately ? 'cancelled' : $this->status,
+            'status' => $immediately ? 'cancelled' : $this->status,
             'cancelled_at' => now(),
-            'auto_renew'   => false,
-            'ends_at'      => $immediately ? now() : $this->ends_at,
+            'auto_renew' => false,
+            'ends_at' => $immediately ? now() : $this->ends_at,
         ]);
 
         return $this;
@@ -403,10 +421,10 @@ class Subscription extends Model
     public function resume(): self
     {
         $this->update([
-            'status'       => 'active',
+            'status' => 'active',
             'cancelled_at' => null,
-            'auto_renew'   => true,
-            'resumed_at'   => now(),
+            'auto_renew' => true,
+            'resumed_at' => now(),
         ]);
 
         return $this;
@@ -415,8 +433,8 @@ class Subscription extends Model
     public function pause(): self
     {
         $this->update([
-            'status'     => 'paused',
-            'paused_at'  => now(),
+            'status' => 'paused',
+            'paused_at' => now(),
             'auto_renew' => false,
         ]);
 
@@ -426,7 +444,7 @@ class Subscription extends Model
     public function expire(): self
     {
         $this->update([
-            'status'  => 'expired',
+            'status' => 'expired',
             'ends_at' => now(),
         ]);
 
@@ -436,7 +454,7 @@ class Subscription extends Model
     public function activate(): self
     {
         $this->update([
-            'status'    => 'active',
+            'status' => 'active',
             'starts_at' => $this->starts_at ?? now(),
         ]);
 
@@ -445,19 +463,53 @@ class Subscription extends Model
 
     public function markAsPastDue(): self
     {
-        $this->update(['status' => 'past_due']);
+        $this->update([
+            'status' => 'past_due',
+            'past_due_at' => $this->past_due_at ?? now(),
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Suspend the subscription for non-payment. The tenant itself is suspended
+     * by the billing lifecycle service so access is revoked across the platform.
+     */
+    public function suspend(?string $reason = null): self
+    {
+        $this->update([
+            'status' => 'suspended',
+            'suspended_at' => $this->suspended_at ?? now(),
+            'suspension_reason' => $reason,
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Clear a suspension once payment has been recovered.
+     */
+    public function unsuspend(): self
+    {
+        $this->update([
+            'status' => 'active',
+            'suspended_at' => null,
+            'suspension_reason' => null,
+            'past_due_at' => null,
+        ]);
+
         return $this;
     }
 
     public function renew(): self
     {
         $this->update([
-            'status'          => 'active',
+            'status' => 'active',
             'last_billing_at' => now(),
             'next_billing_at' => $this->billing_cycle === 'yearly'
                 ? now()->addYear()
                 : now()->addMonth(),
-            'ends_at'         => $this->billing_cycle === 'yearly'
+            'ends_at' => $this->billing_cycle === 'yearly'
                 ? now()->addYear()
                 : now()->addMonth(),
         ]);
@@ -467,7 +519,7 @@ class Subscription extends Model
 
     public function hasReachedLimit(string $type): bool
     {
-        $usedField  = "{$type}_used";
+        $usedField = "{$type}_used";
         $limitField = "{$type}_limit";
 
         if (! isset($this->$limitField) || $this->$limitField <= 0) {
@@ -502,26 +554,26 @@ class Subscription extends Model
     public function resetUsage(): self
     {
         $this->update([
-            'ai_used'            => 0,
+            'ai_used' => 0,
             'conversations_used' => 0,
         ]);
 
         return $this;
     }
 
-    public function switchPlan(Plan $plan, string $cycle = null): self
+    public function switchPlan(Plan $plan, ?string $cycle = null): self
     {
         $cycle = $cycle ?? $this->billing_cycle;
 
         $this->update([
-            'plan_id'             => $plan->id,
-            'billing_cycle'       => $cycle,
-            'ai_limit'            => $plan->getLimit('ai_messages', 1000),
-            'agents_limit'        => $plan->getLimit('agents', 5),
-            'documents_limit'     => $plan->getLimit('documents', 100),
-            'storage_limit'       => $plan->getLimit('storage_bytes', 1073741824),
+            'plan_id' => $plan->id,
+            'billing_cycle' => $cycle,
+            'ai_limit' => $plan->getLimit('ai_messages', 1000),
+            'agents_limit' => $plan->getLimit('agents', 5),
+            'documents_limit' => $plan->getLimit('documents', 100),
+            'storage_limit' => $plan->getLimit('storage_bytes', 1073741824),
             'conversations_limit' => $plan->getLimit('conversations', 500),
-            'next_billing_at'     => $cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
+            'next_billing_at' => $cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
         ]);
 
         return $this;

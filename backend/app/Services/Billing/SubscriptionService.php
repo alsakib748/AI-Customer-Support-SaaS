@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/Billing/SubscriptionService.php
 
 namespace App\Services\Billing;
@@ -10,9 +11,9 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\Tenant;
-use App\Services\Billing\InvoiceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SubscriptionService
 {
@@ -97,29 +98,29 @@ class SubscriptionService
         }
 
         return DB::transaction(function () use ($tenant, $plan, $billingCycle, $coupon) {
-            $now         = now();
-            $isTrialing  = $plan->trial_days > 0;
+            $now = now();
+            $isTrialing = $plan->trial_days > 0;
             $trialEndsAt = $isTrialing ? $now->copy()->addDays($plan->trial_days) : null;
-            $periodEnd   = $billingCycle === 'yearly'
+            $periodEnd = $billingCycle === 'yearly'
                 ? $now->copy()->addYear()
                 : $now->copy()->addMonth();
 
             // Create subscription
             $subscription = Subscription::create([
-                'tenant_id'           => $tenant->id,
-                'plan_id'             => $plan->id,
-                'status'              => $isTrialing ? 'trialing' : 'active',
-                'billing_cycle'       => $billingCycle,
-                'trial_starts_at'     => $isTrialing ? $now : null,
-                'trial_ends_at'       => $trialEndsAt,
-                'starts_at'           => $now,
-                'ends_at'             => $isTrialing ? $trialEndsAt : $periodEnd,
-                'auto_renew'          => true,
-                'next_billing_at'     => $isTrialing ? $trialEndsAt : $periodEnd,
-                'ai_limit'            => $plan->getLimit('ai_messages', 1000),
-                'agents_limit'        => $plan->getLimit('agents', 5),
-                'documents_limit'     => $plan->getLimit('documents', 100),
-                'storage_limit'       => $plan->getLimit('storage_bytes', 1073741824),
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'status' => $isTrialing ? 'trialing' : 'active',
+                'billing_cycle' => $billingCycle,
+                'trial_starts_at' => $isTrialing ? $now : null,
+                'trial_ends_at' => $trialEndsAt,
+                'starts_at' => $now,
+                'ends_at' => $isTrialing ? $trialEndsAt : $periodEnd,
+                'auto_renew' => true,
+                'next_billing_at' => $isTrialing ? $trialEndsAt : $periodEnd,
+                'ai_limit' => $plan->getLimit('ai_messages', 1000),
+                'agents_limit' => $plan->getLimit('agents', 5),
+                'documents_limit' => $plan->getLimit('documents', 100),
+                'storage_limit' => $plan->getLimit('storage_bytes', 1073741824),
                 'conversations_limit' => $plan->getLimit('conversations', 500),
             ]);
 
@@ -135,9 +136,9 @@ class SubscriptionService
 
             Log::info('Subscription created', [
                 'subscription_id' => $subscription->id,
-                'tenant_id'       => $tenant->id,
-                'plan_id'         => $plan->id,
-                'billing_cycle'   => $billingCycle,
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'billing_cycle' => $billingCycle,
             ]);
 
             return $subscription;
@@ -165,9 +166,9 @@ class SubscriptionService
             }
 
             Log::info('Subscription upgraded', [
-                'subscription_id'  => $subscription->id,
-                'old_plan_id'      => $oldPlan?->id,
-                'new_plan_id'      => $newPlan->id,
+                'subscription_id' => $subscription->id,
+                'old_plan_id' => $oldPlan?->id,
+                'new_plan_id' => $newPlan->id,
                 'proration_amount' => $prorationAmount,
             ]);
 
@@ -186,16 +187,16 @@ class SubscriptionService
             // Switch plan (takes effect at next billing cycle)
             $subscription->update([
                 'metadata' => array_merge($subscription->metadata ?? [], [
-                    'pending_plan_id'        => $newPlan->id,
-                    'pending_plan_name'      => $newPlan->name,
+                    'pending_plan_id' => $newPlan->id,
+                    'pending_plan_name' => $newPlan->name,
                     'downgrade_scheduled_at' => now()->toISOString(),
                 ]),
             ]);
 
             Log::info('Subscription downgrade scheduled', [
                 'subscription_id' => $subscription->id,
-                'old_plan_id'     => $oldPlan?->id,
-                'new_plan_id'     => $newPlan->id,
+                'old_plan_id' => $oldPlan?->id,
+                'new_plan_id' => $newPlan->id,
             ]);
 
             return $subscription->fresh();
@@ -228,9 +229,9 @@ class SubscriptionService
             $subscription->update([
                 'metadata' => array_merge($subscription->metadata ?? [], [
                     'cancellation_reason' => $reason,
-                    'cancelled_by'        => auth()->id(),
-                    'cancelled_at'        => now()->toISOString(),
-                    'immediately'         => $immediately,
+                    'cancelled_by' => auth()->id(),
+                    'cancelled_at' => now()->toISOString(),
+                    'immediately' => $immediately,
                 ]),
             ]);
 
@@ -303,7 +304,7 @@ class SubscriptionService
 
             Log::info('Subscription renewed', [
                 'subscription_id' => $subscription->id,
-                'new_period_end'  => $subscription->ends_at,
+                'new_period_end' => $subscription->ends_at,
             ]);
 
             return $subscription->fresh();
@@ -342,35 +343,35 @@ class SubscriptionService
 
         if (! $coupon) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Coupon not found.',
             ];
         }
 
         if (! $coupon->isValid()) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Coupon is expired or no longer valid.',
             ];
         }
 
         if (! $coupon->canBeRedeemedBy($subscription->tenant_id)) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'You have already used this coupon.',
             ];
         }
 
         if ($subscription->plan && ! $coupon->isApplicableToPlan($subscription->plan)) {
             return [
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Coupon is not applicable to your current plan.',
             ];
         }
 
         return [
-            'valid'    => true,
-            'coupon'   => $coupon,
+            'valid' => true,
+            'coupon' => $coupon,
             'discount' => $coupon->formatted_value,
         ];
     }
@@ -393,7 +394,7 @@ class SubscriptionService
 
             Log::info('Subscription expired', [
                 'subscription_id' => $subscription->id,
-                'tenant_id'       => $subscription->tenant_id,
+                'tenant_id' => $subscription->tenant_id,
             ]);
         }
 
@@ -413,13 +414,24 @@ class SubscriptionService
         $count = 0;
 
         foreach ($due as $subscription) {
+            if ($subscription->isProviderManaged()) {
+                // Do not locally renew provider-managed subscriptions; the
+                // payment gateway handles renewal and emits webhooks.
+                Log::info('Skipping local renewal for provider-managed subscription', [
+                    'subscription_id' => $subscription->id,
+                    'provider' => $subscription->provider,
+                ]);
+
+                continue;
+            }
+
             try {
                 $this->renew($subscription);
                 $count++;
             } catch (\Exception $e) {
                 Log::error('Failed to renew subscription', [
                     'subscription_id' => $subscription->id,
-                    'error'           => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
 
                 $subscription->markAsPastDue();
@@ -440,12 +452,12 @@ class SubscriptionService
             return 0;
         }
 
-        $now         = now();
+        $now = now();
         $periodStart = $subscription->starts_at ?? $now;
-        $periodEnd   = $subscription->ends_at;
+        $periodEnd = $subscription->ends_at;
 
         // Calculate remaining days
-        $totalDays     = $periodStart->diffInDays($periodEnd);
+        $totalDays = $periodStart->diffInDays($periodEnd);
         $remainingDays = $now->diffInDays($periodEnd);
 
         if ($totalDays <= 0) {
@@ -456,11 +468,11 @@ class SubscriptionService
 
         // Current plan value for remaining period
         $currentPlanPrice = $currentPlan->getPriceForCycle($subscription->billing_cycle);
-        $currentValue     = $currentPlanPrice * $remainingRatio;
+        $currentValue = $currentPlanPrice * $remainingRatio;
 
         // New plan value for remaining period
         $newPlanPrice = $newPlan->getPriceForCycle($subscription->billing_cycle);
-        $newValue     = $newPlanPrice * $remainingRatio;
+        $newValue = $newPlanPrice * $remainingRatio;
 
         // Proration = new plan value - current plan value (credit)
         return max(0, $newValue - $currentValue);
@@ -474,13 +486,13 @@ class SubscriptionService
         $query = Subscription::query();
 
         return [
-            'total'     => $query->count(),
-            'active'    => (clone $query)->where('status', 'active')->count(),
-            'trialing'  => (clone $query)->where('status', 'trialing')->count(),
-            'past_due'  => (clone $query)->where('status', 'past_due')->count(),
+            'total' => $query->count(),
+            'active' => (clone $query)->where('status', 'active')->count(),
+            'trialing' => (clone $query)->where('status', 'trialing')->count(),
+            'past_due' => (clone $query)->where('status', 'past_due')->count(),
             'cancelled' => (clone $query)->where('status', 'cancelled')->count(),
-            'expired'   => (clone $query)->where('status', 'expired')->count(),
-            'by_plan'   => (clone $query)
+            'expired' => (clone $query)->where('status', 'expired')->count(),
+            'by_plan' => (clone $query)
                 ->selectRaw('plan_id, count(*) as count')
                 ->groupBy('plan_id')
                 ->with('plan')
@@ -489,7 +501,7 @@ class SubscriptionService
                     return [$item->plan?->name ?? 'Unknown' => $item->count];
                 })
                 ->toArray(),
-            'by_cycle'  => (clone $query)
+            'by_cycle' => (clone $query)
                 ->selectRaw('billing_cycle, count(*) as count')
                 ->groupBy('billing_cycle')
                 ->pluck('count', 'billing_cycle')
@@ -502,24 +514,24 @@ class SubscriptionService
      */
     public function addItem(Subscription $subscription, array $data): SubscriptionItem
     {
-        $quantity  = $data['quantity'] ?? 1;
+        $quantity = $data['quantity'] ?? 1;
         $unitPrice = $data['unit_price'] ?? 0;
 
         $item = $subscription->items()->create([
-            'type'        => $data['type'],
-            'name'        => $data['name'],
-            'slug'        => \Illuminate\Support\Str::slug($data['name']),
+            'type' => $data['type'],
+            'name' => $data['name'],
+            'slug' => Str::slug($data['name']),
             'description' => $data['description'] ?? null,
-            'quantity'    => $quantity,
-            'unit_price'  => $unitPrice,
+            'quantity' => $quantity,
+            'unit_price' => $unitPrice,
             'total_price' => $quantity * $unitPrice,
-            'metadata'    => $data['metadata'] ?? null,
+            'metadata' => $data['metadata'] ?? null,
         ]);
 
         Log::info('Subscription item added', [
             'subscription_id' => $subscription->id,
-            'item_id'         => $item->id,
-            'type'            => $data['type'],
+            'item_id' => $item->id,
+            'type' => $data['type'],
         ]);
 
         return $item;
@@ -572,9 +584,9 @@ class SubscriptionService
         }
 
         return $this->addItem($subscription, [
-            'type'       => 'seat',
-            'name'       => 'Additional Agent Seat',
-            'quantity'   => $quantity,
+            'type' => 'seat',
+            'name' => 'Additional Agent Seat',
+            'quantity' => $quantity,
             'unit_price' => $pricePerSeat,
         ]);
     }
@@ -591,16 +603,16 @@ class SubscriptionService
             $tenant, $plan, $billingCycle, $provider, $providerSubscriptionId, $sessionId
         ) {
             return Subscription::create([
-                'uuid'                     => (string) \Illuminate\Support\Str::uuid(),
-                'tenant_id'                => $tenant->id,
-                'plan_id'                  => $plan->id,
-                'provider'                 => $provider,
+                'uuid' => (string) Str::uuid(),
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'provider' => $provider,
                 'provider_subscription_id' => $providerSubscriptionId,
-                'status'                   => 'pending',
-                'billing_cycle'            => $billingCycle,
-                'starts_at'                => now(),
-                'auto_renew'               => true,
-                'metadata'                 => [
+                'status' => 'pending',
+                'billing_cycle' => $billingCycle,
+                'starts_at' => now(),
+                'auto_renew' => true,
+                'metadata' => [
                     'checkout_session_id' => $sessionId,
                     'checkout_started_at' => now()->toISOString(),
                 ],
@@ -617,9 +629,9 @@ class SubscriptionService
         }
 
         $sub->update([
-            'status'                   => 'active',
+            'status' => 'active',
             'current_period_starts_at' => now(),
-            'current_period_ends_at'   => $sub->billing_cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
+            'current_period_ends_at' => $sub->billing_cycle === 'yearly' ? now()->addYear() : now()->addMonth(),
         ]);
 
         return $sub->fresh();
@@ -644,31 +656,31 @@ class SubscriptionService
                 ->where('id', '!=', $subscription->id)
                 ->active()
                 ->update([
-                    'status'       => 'cancelled',
+                    'status' => 'cancelled',
                     'cancelled_at' => now(),
                 ]);
 
-$plan        = $subscription->plan;
-            $isTrialing  = (int) ($plan?->trial_days ?? 0) > 0;
-            $periodEnd   = $subscription->billing_cycle === 'yearly'
+            $plan = $subscription->plan;
+            $isTrialing = (int) ($plan?->trial_days ?? 0) > 0;
+            $periodEnd = $subscription->billing_cycle === 'yearly'
                 ? now()->addYear()
                 : now()->addMonth();
             $trialEndsAt = $isTrialing ? now()->addDays((int) $plan->trial_days) : null;
 
             $subscription->update(array_merge([
-                'status'                   => $isTrialing ? 'trialing' : 'active',
+                'status' => $isTrialing ? 'trialing' : 'active',
                 'provider_subscription_id' => $providerData['provider_subscription_id'] ?? $subscription->provider_subscription_id,
-                'provider_customer_id'     => $providerData['provider_customer_id'] ?? $subscription->provider_customer_id,
-                'provider_price_id'        => $providerData['provider_price_id'] ?? $subscription->provider_price_id,
-                'trial_starts_at'          => $isTrialing ? now() : null,
-                'trial_ends_at'            => $trialEndsAt,
-                'ends_at'                  => $isTrialing ? $trialEndsAt : $periodEnd,
-                'next_billing_at'          => $isTrialing ? $trialEndsAt : $periodEnd,
+                'provider_customer_id' => $providerData['provider_customer_id'] ?? $subscription->provider_customer_id,
+                'provider_price_id' => $providerData['provider_price_id'] ?? $subscription->provider_price_id,
+                'trial_starts_at' => $isTrialing ? now() : null,
+                'trial_ends_at' => $trialEndsAt,
+                'ends_at' => $isTrialing ? $trialEndsAt : $periodEnd,
+                'next_billing_at' => $isTrialing ? $trialEndsAt : $periodEnd,
                 'current_period_starts_at' => $providerData['current_period_starts_at'] ?? now(),
-                'current_period_ends_at'   => $providerData['current_period_ends_at'] ?? ($trialEndsAt ?? $periodEnd),
-                'last_billing_at'          => $isTrialing ? null : now(),
-                'metadata'                 => array_merge($subscription->metadata ?? [], [
-                    'activated_at'      => now()->toISOString(),
+                'current_period_ends_at' => $providerData['current_period_ends_at'] ?? ($trialEndsAt ?? $periodEnd),
+                'last_billing_at' => $isTrialing ? null : now(),
+                'metadata' => array_merge($subscription->metadata ?? [], [
+                    'activated_at' => now()->toISOString(),
                     'activation_source' => $providerData['source'] ?? 'webhook',
                 ]),
             ]));
@@ -679,32 +691,32 @@ $plan        = $subscription->plan;
 
                 if ($isTrialing) {
                     $invoice->update([
-                        'due_at'          => $trialEndsAt,
-                        'period_ends_at'  => $trialEndsAt,
+                        'due_at' => $trialEndsAt,
+                        'period_ends_at' => $trialEndsAt,
                     ]);
                 } elseif (! empty($providerData['provider_payment_id'])) {
                     // Non-trial checkout charged immediately: record the payment.
                     $invoice->update([
-                        'payment_provider'  => $subscription->provider ?? 'stripe',
-                        'payment_method'    => 'card',
+                        'payment_provider' => $subscription->provider ?? 'stripe',
+                        'payment_method' => 'card',
                         'stripe_invoice_id' => $subscription->provider === 'paypal' ? null : ($providerData['provider_invoice_id'] ?? null),
                         'paypal_invoice_id' => $subscription->provider === 'paypal' ? ($providerData['provider_invoice_id'] ?? null) : null,
                     ]);
 
                     Payment::create([
-                        'tenant_id'                => $subscription->tenant_id,
-                        'invoice_id'               => $invoice->id,
-                        'subscription_id'          => $subscription->id,
-                        'provider'                 => $subscription->provider ?? 'stripe',
-                        'provider_payment_id'      => $providerData['provider_payment_id'],
+                        'tenant_id' => $subscription->tenant_id,
+                        'invoice_id' => $invoice->id,
+                        'subscription_id' => $subscription->id,
+                        'provider' => $subscription->provider ?? 'stripe',
+                        'provider_payment_id' => $providerData['provider_payment_id'],
                         'provider_subscription_id' => $subscription->provider_subscription_id,
-                        'provider_invoice_id'      => $providerData['provider_invoice_id'] ?? null,
-                        'amount'                   => (float) $invoice->total,
-                        'currency'                 => $invoice->currency ?? 'USD',
-                        'status'                   => 'completed',
-                        'payment_method'           => 'card',
-                        'payment_id'               => (string) \Illuminate\Support\Str::uuid(),
-                        'paid_at'                  => now(),
+                        'provider_invoice_id' => $providerData['provider_invoice_id'] ?? null,
+                        'amount' => (float) $invoice->total,
+                        'currency' => $invoice->currency ?? 'USD',
+                        'status' => 'completed',
+                        'payment_method' => 'card',
+                        'payment_id' => (string) Str::uuid(),
+                        'paid_at' => now(),
                     ]);
 
                     $this->invoiceService->markAsPaid($invoice, 'card', $providerData['provider_payment_id']);
@@ -714,5 +726,4 @@ $plan        = $subscription->plan;
             return $subscription->fresh(['plan']);
         });
     }
-
 }

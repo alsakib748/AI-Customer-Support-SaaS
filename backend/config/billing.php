@@ -1,8 +1,8 @@
 <?php
+
 // config/billing.php
 
 return [
-
 
     /*
     |--------------------------------------------------------------------------
@@ -71,6 +71,22 @@ return [
     'reminders' => [
         'renewal' => [7, 3, 1], // Days before renewal
         'payment_failed' => [1, 3, 7], // Days after failure
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Suspended Tenant Allowed Paths
+    |--------------------------------------------------------------------------
+    |
+    | Routes a suspended tenant may still reach so it can settle its balance.
+    |
+    */
+    'suspended_tenant_allowed_paths' => [
+        'api/v1/auth',
+        'api/v1/subscription',
+        'api/v1/billing',
+        'api/v1/invoices',
+        'api/v1/payments',
     ],
 
     /*

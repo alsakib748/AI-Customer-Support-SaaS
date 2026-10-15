@@ -282,6 +282,12 @@ const platformModel = () => [
                 permission: 'platform.billing.subscriptions'
             },
             {
+                label: 'Overdue Payments',
+                icon: 'pi pi-exclamation-triangle',
+                to: '/admin/billing/overdue',
+                permission: 'platform.billing.subscriptions'
+            },
+            {
                 label: 'Invoices',
                 icon: 'pi pi-file-edit',
                 to: '/admin/billing/invoices',

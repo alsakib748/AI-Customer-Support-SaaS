@@ -23,6 +23,8 @@ const currentPlan = computed(() => billingStore.currentPlan);
 const activePlans = computed(() => billingStore.activePlans);
 const invoices = computed(() => billingStore.invoices);
 const invoiceStats = computed(() => billingStore.invoiceStats);
+const isSuspended = computed(() => !!subscription.value?.is_suspended);
+const isPastDue = computed(() => !!subscription.value?.is_past_due);
 
 const usageItems = computed(() => {
     const u = billingStore.usage || {};
@@ -90,7 +92,9 @@ const handleResume = async () => {
     try {
         await billingStore.resumeSubscription();
         await loadData();
-    } catch (e) {}
+    } catch (e) {
+        console.error(e);
+    }
 };
 
 const getProgressClass = (percentage) => {
@@ -145,6 +149,23 @@ onMounted(async () => {
         </div>
 
         <template v-else>
+            <div v-if="isSuspended || isPastDue" class="mb-6 p-4 rounded-lg border-l-4" :class="isSuspended ? 'bg-red-50 border-red-500 dark:bg-red-950' : 'bg-orange-50 border-orange-500 dark:bg-orange-950'">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div class="flex items-start gap-3">
+                        <i :class="isSuspended ? 'pi pi-ban text-red-600' : 'pi pi-exclamation-triangle text-orange-600'" class="text-xl mt-0.5"></i>
+                        <div>
+                            <div class="font-semibold" :class="isSuspended ? 'text-red-700 dark:text-red-300' : 'text-orange-700 dark:text-orange-300'">
+                                {{ isSuspended ? 'Your account is suspended' : 'Your payment is past due' }}
+                            </div>
+                            <div class="text-sm" :class="isSuspended ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'">
+                                {{ isSuspended ? 'Settle the outstanding balance to restore access to all features.' : 'Complete your payment to keep your subscription active.' }}
+                            </div>
+                        </div>
+                    </div>
+                    <Button label="Pay Now" icon="pi pi-credit-card" :severity="isSuspended ? 'danger' : 'warning'" @click="showPlansDialog = true" />
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div class="lg:col-span-2">
                     <SubscriptionCard :subscription="subscription">
