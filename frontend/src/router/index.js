@@ -486,22 +486,22 @@ const router = createRouter({
                 { path: 'contact', name: 'contact', component: () => import('@/views/pages/marketing/ContactPage.vue') },
                 { path: 'privacy', name: 'privacy', component: () => import('@/views/pages/marketing/PrivacyPage.vue') },
                 { path: 'terms', name: 'terms', component: () => import('@/views/pages/marketing/TermsPage.vue') },
-                { path: 'faq', redirect: { name: 'home', hash: '#faq' } }
+                { path: 'faq', redirect: { name: 'home', hash: '#faq' } },
+                {
+                    path: 'login',
+                    name: 'Login',
+                    component: () => import('@/views/pages/auth/Login.vue'),
+                    meta: { requiresGuest: true, title: 'Login' }
+                },
+                {
+                    path: 'register',
+                    name: 'Register',
+                    component: () => import('@/views/pages/auth/Register.vue'),
+                    meta: { requiresGuest: true, title: 'Register' }
+                }
             ]
         },
         { path: '/:pathMatch(.*)*', redirect: '/' },
-        {
-            path: '/login',
-            name: 'Login',
-            component: () => import('@/views/pages/auth/Login.vue'),
-            meta: { requiresGuest: true, title: 'Login' }
-        },
-        {
-            path: '/register',
-            name: 'Register',
-            component: () => import('@/views/pages/auth/Register.vue'),
-            meta: { requiresGuest: true, title: 'Register' }
-        },
         {
             path: '/forgot-password',
             name: 'ForgotPassword',
