@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/KnowledgeBase/KnowledgeBaseCategoryService.php
 
 namespace App\Services\KnowledgeBase;
@@ -15,15 +16,19 @@ class KnowledgeBaseCategoryService
      */
     public function getCategories(array $filters = []): LengthAwarePaginator
     {
-        $query = KnowledgeBaseCategory::query();
+        $query = KnowledgeBaseCategory::query()
+            ->withCount([
+                'articles',
+                'articles as published_articles_count' => fn ($q) => $q->where('status', 'published'),
+            ]);
 
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
         // Filter by status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -39,7 +44,8 @@ class KnowledgeBaseCategoryService
             $query->orderBy('sort_order', 'asc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
+
         return $query->paginate($perPage);
     }
 
@@ -50,6 +56,10 @@ class KnowledgeBaseCategoryService
     {
         return KnowledgeBaseCategory::active()
             ->ordered()
+            ->withCount([
+                'articles',
+                'articles as published_articles_count' => fn ($q) => $q->where('status', 'published'),
+            ])
             ->get()
             ->toArray();
     }

@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/Conversation/ConversationService.php
 
 namespace App\Services\Conversation;
@@ -20,32 +21,32 @@ class ConversationService
             ->with('customer');
 
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
         // Filter by status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
         // Filter by priority
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->byPriority($filters['priority']);
         }
 
         // Filter by channel
-        if (!empty($filters['channel'])) {
+        if (! empty($filters['channel'])) {
             $query->byChannel($filters['channel']);
         }
 
         // Filter by assigned user
-        if (!empty($filters['assigned_user_id'])) {
+        if (! empty($filters['assigned_user_id'])) {
             $query->assignedTo($filters['assigned_user_id']);
         }
 
         // Filter unassigned
-        if (!empty($filters['unassigned']) && $filters['unassigned'] === 'true') {
+        if (! empty($filters['unassigned']) && $filters['unassigned'] === 'true') {
             $query->unassigned();
         }
 
@@ -68,7 +69,8 @@ class ConversationService
             $query->orderBy('last_message_at', 'desc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
+
         return $query->paginate($perPage);
     }
 
@@ -182,7 +184,7 @@ class ConversationService
      */
     public function resolve(Conversation $conversation): Conversation
     {
-        if (!$conversation->canResolve()) {
+        if (! $conversation->canResolve()) {
             throw new \Exception('Conversation cannot be resolved in its current state.');
         }
 
@@ -201,7 +203,7 @@ class ConversationService
      */
     public function reopen(Conversation $conversation): Conversation
     {
-        if (!$conversation->canReopen()) {
+        if (! $conversation->canReopen()) {
             throw new \Exception('Conversation cannot be reopened in its current state.');
         }
 
@@ -220,7 +222,7 @@ class ConversationService
      */
     public function close(Conversation $conversation): Conversation
     {
-        if (!$conversation->canClose()) {
+        if (! $conversation->canClose()) {
             throw new \Exception('Conversation cannot be closed in its current state.');
         }
 
@@ -239,7 +241,7 @@ class ConversationService
      */
     public function assign(Conversation $conversation, int $userId): Conversation
     {
-        if (!$conversation->canAssign()) {
+        if (! $conversation->canAssign()) {
             throw new \Exception('Conversation cannot be assigned in its current state.');
         }
 
@@ -303,7 +305,7 @@ class ConversationService
     {
         $tenant = app('current_tenant');
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \Exception('No tenant context found.');
         }
 
@@ -313,7 +315,7 @@ class ConversationService
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             throw new \Exception('User does not belong to this workspace.');
         }
     }

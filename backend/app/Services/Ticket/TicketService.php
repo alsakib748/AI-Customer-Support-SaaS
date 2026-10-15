@@ -1,16 +1,17 @@
 <?php
+
 // app/Services/Ticket/TicketService.php
 
 namespace App\Services\Ticket;
 
-use App\Models\Tenant\Ticket;
-use App\Models\Tenant\Customer;
-use App\Models\Tenant\Conversation;
-use App\Events\Ticket\TicketCreated;
 use App\Events\Ticket\TicketAssigned;
-use App\Events\Ticket\TicketResolved;
-use App\Events\Ticket\TicketReopened;
 use App\Events\Ticket\TicketClosed;
+use App\Events\Ticket\TicketCreated;
+use App\Events\Ticket\TicketReopened;
+use App\Events\Ticket\TicketResolved;
+use App\Models\Tenant\Conversation;
+use App\Models\Tenant\Customer;
+use App\Models\Tenant\Ticket;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -44,7 +45,7 @@ class TicketService
             $newNumber = '000001';
         }
 
-        return $prefix . $year . '-' . $newNumber;
+        return $prefix.$year.'-'.$newNumber;
     }
 
     /**
@@ -56,51 +57,51 @@ class TicketService
             ->with(['customer', 'conversation']);
 
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
         // Filter by status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
         // Filter by priority
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->byPriority($filters['priority']);
         }
 
         // Filter by type
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->byType($filters['type']);
         }
 
         // Filter by source
-        if (!empty($filters['source'])) {
+        if (! empty($filters['source'])) {
             $query->bySource($filters['source']);
         }
 
         // Filter by assigned user
-        if (!empty($filters['assigned_user_id'])) {
+        if (! empty($filters['assigned_user_id'])) {
             $query->assignedTo($filters['assigned_user_id']);
         }
 
         // Filter unassigned
-        if (!empty($filters['unassigned']) && $filters['unassigned'] === 'true') {
+        if (! empty($filters['unassigned']) && $filters['unassigned'] === 'true') {
             $query->unassigned();
         }
 
         // Filter overdue
-        if (!empty($filters['overdue']) && $filters['overdue'] === 'true') {
+        if (! empty($filters['overdue']) && $filters['overdue'] === 'true') {
             $query->overdue();
         }
 
         // Date range
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
@@ -125,7 +126,8 @@ class TicketService
             $query->orderBy('created_at', 'desc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
+
         return $query->paginate($perPage);
     }
 
@@ -145,16 +147,16 @@ class TicketService
     {
         // Validate customer belongs to tenant
         $customer = Customer::find($data['customer_id']);
-        if (!$customer) {
+        if (! $customer) {
             throw ValidationException::withMessages([
                 'customer_id' => ['Customer not found.'],
             ]);
         }
 
         // Validate conversation if provided
-        if (!empty($data['conversation_id'])) {
+        if (! empty($data['conversation_id'])) {
             $conversation = Conversation::find($data['conversation_id']);
-            if (!$conversation) {
+            if (! $conversation) {
                 throw ValidationException::withMessages([
                     'conversation_id' => ['Conversation not found.'],
                 ]);
@@ -226,7 +228,7 @@ class TicketService
      */
     public function assignTicket(Ticket $ticket, int $userId): Ticket
     {
-        if (!$ticket->canAssign()) {
+        if (! $ticket->canAssign()) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be assigned in its current state.'],
             ]);
@@ -268,7 +270,7 @@ class TicketService
      */
     public function startTicket(Ticket $ticket): Ticket
     {
-        if (!$ticket->canTransitionTo('in_progress')) {
+        if (! $ticket->canTransitionTo('in_progress')) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be started in its current state.'],
             ]);
@@ -289,7 +291,7 @@ class TicketService
      */
     public function setPending(Ticket $ticket): Ticket
     {
-        if (!$ticket->canTransitionTo('pending')) {
+        if (! $ticket->canTransitionTo('pending')) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be set to pending in its current state.'],
             ]);
@@ -310,7 +312,7 @@ class TicketService
      */
     public function resolveTicket(Ticket $ticket): Ticket
     {
-        if (!$ticket->canResolve()) {
+        if (! $ticket->canResolve()) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be resolved in its current state.'],
             ]);
@@ -333,7 +335,7 @@ class TicketService
      */
     public function reopenTicket(Ticket $ticket): Ticket
     {
-        if (!$ticket->canReopen()) {
+        if (! $ticket->canReopen()) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be reopened in its current state.'],
             ]);
@@ -356,7 +358,7 @@ class TicketService
      */
     public function closeTicket(Ticket $ticket): Ticket
     {
-        if (!$ticket->canClose()) {
+        if (! $ticket->canClose()) {
             throw ValidationException::withMessages([
                 'status' => ['Ticket cannot be closed in its current state.'],
             ]);
@@ -413,7 +415,7 @@ class TicketService
      */
     protected function verifyUserInTenant(int $userId): void
     {
-        if (!$this->tenant) {
+        if (! $this->tenant) {
             throw ValidationException::withMessages([
                 'tenant' => ['No tenant context found.'],
             ]);
@@ -425,7 +427,7 @@ class TicketService
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             throw ValidationException::withMessages([
                 'user' => ['User does not belong to this workspace.'],
             ]);

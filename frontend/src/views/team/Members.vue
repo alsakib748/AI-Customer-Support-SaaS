@@ -1,11 +1,12 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTeamStore } from '@/stores/team';
 // import { useToast } from 'primevue/usetoast';
 import api from '@/services/api';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const auth = useAuthStore();
 
@@ -110,6 +111,8 @@ const applyFilters = () => {
     teamStore.filters = { ...filters };
     teamStore.fetchMembers();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyFilters, 400);
 
 const clearFilters = () => {
     Object.assign(filters, {
@@ -274,16 +277,6 @@ const assignableRoles = computed(() => {
     return [];
 });
 
-const loadMembers = async () => {
-    loading.value = true;
-    try {
-        const { data } = await api.get('/team/members');
-        if (data.success) members.value = data.data;
-    } finally {
-        loading.value = false;
-    }
-};
-
 const changeRole = async (member, newRole) => {
     const tenantId = member.tenant?.id || auth.currentTenantId;
     if (!tenantId) {
@@ -294,7 +287,7 @@ const changeRole = async (member, newRole) => {
     try {
         await api.put(`/tenants/${tenantId}/users/${member.user_id}/role`, { role: newRole });
         toast.success('Role updated');
-        loadMembers();
+        teamStore.fetchMembers();
     } catch (e) {
         toast.error(e.response?.data?.message || 'Failed to update role');
     }
@@ -308,23 +301,9 @@ onMounted(async () => {
     if (isSuperAdmin.value) {
         await teamStore.fetchTenants();
     }
-    await teamStore.fetchMembers();
 
-    loadData();
-    loadMembers();
-    // console.log('Fetch Statistics: ', teamStore.fetchStatistics());
-    // console.log('Fetch Departments: ', teamStore.fetchDepartments());
-
-    // If Super Admin, load all tenants first
+    await loadData();
 });
-
-// Watch for search filter changes
-watch(
-    () => filters.search,
-    () => {
-        applyFilters();
-    }
-);
 </script>
 
 <!-- src/views/team/Members.vue -->
@@ -390,7 +369,7 @@ watch(
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search members..." class="w-full" @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search members..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-48">
                 <Select v-model="filters.department" :options="departments" placeholder="Department" class="w-full" @change="applyFilters" clearable />

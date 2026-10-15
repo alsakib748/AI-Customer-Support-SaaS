@@ -24,67 +24,58 @@ class CustomerService
     public function __construct(Request $request, BillingLimitService $limits)
     {
         $this->limits = $limits;
-        // Try multiple ways to get the tenant
+
+        // Tenant resolution order (same as before, without per-request logging):
+        // request attribute -> Stancl tenancy -> container binding ->
+        // authenticated user's current tenant -> header -> first tenant.
         $tenant = null;
 
-        // 1. From Stancl tenancy (most reliable)
-        try {
-            $tenant = tenancy()->tenant;
-        } catch (\Exception $e) {
-            // Ignore
-            Log::error($e->getMessage());
-        }
-
-        // 1. From request attributes (set by TenantAware middleware)
         if ($request->attributes->has('current_tenant')) {
             $tenant = $request->attributes->get('current_tenant');
-            Log::info('Tenant from attributes', ['tenant_id' => $tenant?->id]);
+        }
+
+        if (! $tenant) {
+            try {
+                $tenant = tenancy()->tenant;
+            } catch (\Exception $e) {
+                // Ignore — tenancy may not be initialized yet.
+            }
         }
 
         if (! $tenant) {
             try {
                 $tenant = app('current_tenant');
             } catch (\Exception $e) {
-                // Ignore
-                Log::error($e->getMessage());
+                // Ignore — no container binding.
             }
         }
 
-        // 2. From authenticated user's current tenant
         if (! $tenant && auth()->check()) {
             $user = auth()->user();
             if ($user && $user->current_tenant_id) {
                 $tenant = Tenant::find($user->current_tenant_id);
-                Log::info('Tenant from user', ['tenant_id' => $tenant?->id]);
             }
         }
 
-        // 3. From header
         if (! $tenant) {
             $tenantId = $request->header('X-Tenant-ID');
             if ($tenantId) {
                 $tenant = Tenant::find($tenantId);
-                Log::info('Tenant from header', ['tenant_id' => $tenantId]);
             }
         }
 
-        // 4. From first tenant of user
         if (! $tenant && auth()->check()) {
             $user = auth()->user();
             if ($user) {
                 $tenant = $user->tenants()->first();
                 if ($tenant) {
                     $user->update(['current_tenant_id' => $tenant->id]);
-                    Log::info('Tenant from first tenant', ['tenant_id' => $tenant->id]);
                 }
             }
         }
 
-        // 5. Check if user is Super Admin
         if (! $tenant && auth()->check() && auth()->user()->hasRole('super_admin')) {
-            Log::info('Super Admin accessing customer service - no tenant needed');
-            // For Super Admin, we can return empty data or all tenants
-            // We'll handle this in the methods
+            // For Super Admin, we can return empty data or all tenants.
             $this->tenant = null;
             $this->tenantId = null;
 
@@ -94,16 +85,12 @@ class CustomerService
         if (! $tenant) {
             Log::error('No tenant found in customer service', [
                 'user_id' => auth()->id(),
-                'headers' => $request->headers->all(),
-                'attributes' => $request->attributes->all(),
             ]);
             throw new \RuntimeException('No tenant found in current context. Please select a workspace.');
         }
 
         $this->tenant = $tenant;
         $this->tenantId = $tenant->id;
-
-        Log::info('CustomerService initialized', ['tenant_id' => $this->tenantId]);
     }
 
     /**
@@ -151,7 +138,7 @@ class CustomerService
 
         $query = $this->buildCustomerQuery($filters);
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
 
         return $query->paginate($perPage);
     }
@@ -527,6 +514,7 @@ class CustomerService
             // Method 1: Using Laravel's JSON WHERE with PostgreSQL
             $result = Customer::whereNotNull('tags')
                 ->where('tags', '!=', '[]')
+                ->select('tags')
                 ->get()
                 ->pluck('tags')
                 ->flatten()

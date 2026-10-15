@@ -165,8 +165,9 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // Handle 401 Unauthorized
-        if (error.response?.status === 401 && !error.config?._retry) {
+        // Handle 401 Unauthorized. Auth endpoints opt out of the refresh/retry
+        // dance (skipAuthRefresh) so a failed login or refresh is never retried.
+        if (error.response?.status === 401 && !error.config?._retry && !error.config?.skipAuthRefresh) {
             error.config._retry = true;
 
             const authStore = useAuthStore();

@@ -69,6 +69,7 @@ class KnowledgeBaseCategory extends Model
             'active' => 'Active',
             'inactive' => 'Inactive',
         ];
+
         return $labels[$this->status] ?? ucfirst($this->status);
     }
 
@@ -78,11 +79,17 @@ class KnowledgeBaseCategory extends Model
             'active' => 'success',
             'inactive' => 'secondary',
         ];
+
         return $colors[$this->status] ?? 'secondary';
     }
 
     public function getArticlesCountAttribute(): int
     {
+        // Prefer the eager-loaded aggregate (withCount) to avoid a query per row.
+        if (array_key_exists('articles_count', $this->attributes)) {
+            return (int) $this->attributes['articles_count'];
+        }
+
         return $this->articles()->count();
     }
 
@@ -129,6 +136,11 @@ class KnowledgeBaseCategory extends Model
 
     public function getPublishedArticlesCount(): int
     {
+        // Prefer the eager-loaded aggregate (withCount) to avoid a query per row.
+        if (array_key_exists('published_articles_count', $this->attributes)) {
+            return (int) $this->attributes['published_articles_count'];
+        }
+
         return $this->articles()->where('status', 'published')->count();
     }
 }

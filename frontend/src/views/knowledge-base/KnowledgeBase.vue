@@ -1,12 +1,13 @@
 <!-- src/views/knowledge-base/KnowledgeBase.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const router = useRouter();
 const knowledgeBaseStore = useKnowledgeBaseStore();
@@ -97,6 +98,8 @@ const applyFilters = () => {
     knowledgeBaseStore.fetchArticles();
 };
 
+const { debounced: debouncedArticles } = useDebounceFn(applyFilters, 400);
+
 const clearFilters = () => {
     Object.assign(filters, {
         search: '',
@@ -130,6 +133,8 @@ const onSortChange = (event) => {
 const loadCategories = () => {
     knowledgeBaseStore.fetchCategories({ search: categorySearch.value });
 };
+
+const { debounced: debouncedCategories } = useDebounceFn(loadCategories, 400);
 
 const viewArticle = (article) => {
     router.push(`/knowledge-base/articles/${article.id}`);
@@ -249,13 +254,6 @@ const getFieldError = (field) => {
 onMounted(() => {
     loadData();
 });
-
-watch(
-    () => filters.search,
-    () => {
-        applyFilters();
-    }
-);
 </script>
 <template>
     <div class="p-6">
@@ -317,7 +315,7 @@ watch(
                     </div>
 
                     <div class="mb-3">
-                        <InputText v-model="categorySearch" placeholder="Search categories..." class="w-full" size="small" @input="loadCategories" />
+                        <InputText v-model="categorySearch" placeholder="Search categories..." class="w-full" size="small" @input="debouncedCategories" />
                     </div>
 
                     <div class="space-y-1 max-h-[400px] overflow-y-auto">
@@ -349,7 +347,7 @@ watch(
                 <!-- Filters -->
                 <div class="mb-4 flex flex-wrap gap-3 items-center">
                     <div class="flex-1 min-w-[200px]">
-                        <InputText v-model="filters.search" placeholder="Search articles..." class="w-full" @input="applyFilters" />
+                        <InputText v-model="filters.search" placeholder="Search articles..." class="w-full" @input="debouncedArticles" />
                     </div>
                     <div class="w-40">
                         <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />

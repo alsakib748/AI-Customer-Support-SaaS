@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const planLimit = usePlanLimit();
 
@@ -91,6 +92,8 @@ const applyFilters = () => {
     widgetStore.filters = { ...filters };
     widgetStore.fetchWidgets();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyFilters, 400);
 
 const clearFilters = () => {
     Object.assign(filters, {
@@ -329,7 +332,7 @@ onMounted(() => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search widgets..." class="w-full" @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search widgets..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-48">
                 <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />

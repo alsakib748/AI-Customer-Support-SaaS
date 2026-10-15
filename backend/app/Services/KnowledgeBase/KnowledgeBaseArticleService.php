@@ -74,7 +74,7 @@ class KnowledgeBaseArticleService
             $query->orderBy('created_at', 'desc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
 
         return $query->paginate($perPage);
     }

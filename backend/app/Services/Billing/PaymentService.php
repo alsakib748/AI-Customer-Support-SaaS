@@ -1,11 +1,11 @@
 <?php
+
 // app/Services/Billing/PaymentService.php
 
 namespace App\Services\Billing;
 
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Subscription;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -13,9 +13,10 @@ use Illuminate\Support\Str;
 class PaymentService
 {
     protected InvoiceService $invoiceService;
+
     protected PaymentGatewayManager $gateways;
 
-    public function __construct(InvoiceService $invoiceService,PaymentGatewayManager $gateways,)
+    public function __construct(InvoiceService $invoiceService, PaymentGatewayManager $gateways)
     {
         $this->invoiceService = $invoiceService;
         $this->gateways = $gateways;
@@ -27,10 +28,10 @@ class PaymentService
     public function getForTenant(string $tenantId, array $filters = [])
     {
         return Payment::where('tenant_id', $tenantId)
-            ->when($filters['status']   ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($filters['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->when($filters['provider'] ?? null, fn ($q, $p) => $q->where('provider', $p))
             ->latest()
-            ->paginate($filters['per_page'] ?? 20);
+            ->paginate(min(max((int) ($filters['per_page'] ?? 20), 1), 100));
     }
 
     /**
@@ -40,16 +41,16 @@ class PaymentService
     {
         $query = Payment::forTenant($tenantId);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['provider'])) {
+        if (! empty($filters['provider'])) {
             $query->where('provider', $filters['provider']);
         }
 
         return $query->orderBy('created_at', 'desc')
-            ->paginate($filters['per_page'] ?? 20);
+            ->paginate(min(max((int) ($filters['per_page'] ?? 20), 1), 100));
     }
 
     /**
@@ -68,7 +69,7 @@ class PaymentService
             'tenant_id' => $tenantId,
             'invoice_id' => $invoiceId,
             'subscription_id' => $subscriptionId,
-            'payment_id' => 'pay_' . Str::random(24),
+            'payment_id' => 'pay_'.Str::random(24),
             'amount' => $amount,
             'currency' => 'USD',
             'status' => 'pending',
@@ -156,7 +157,7 @@ class PaymentService
 
         $amount = $amount ?? $refundable;
 
-        if (!$payment->provider_payment_id) {
+        if (! $payment->provider_payment_id) {
             throw new \RuntimeException('Cannot refund a payment without a provider reference.');
         }
 
@@ -169,12 +170,12 @@ class PaymentService
 
             $payment->update([
                 'refunded_amount' => $newRefunded,
-                'refunded_at'     => now(),
-                'refund_reason'   => $reason,
-                'status'          => $isFull ? 'refunded' : 'partially_refunded',
-                'metadata'        => array_merge($payment->metadata ?? [], [
-                    'last_refund_id'     => $result['refund_id'] ?? null,
-                    'last_refund_status' => $result['status']    ?? null,
+                'refunded_at' => now(),
+                'refund_reason' => $reason,
+                'status' => $isFull ? 'refunded' : 'partially_refunded',
+                'metadata' => array_merge($payment->metadata ?? [], [
+                    'last_refund_id' => $result['refund_id'] ?? null,
+                    'last_refund_status' => $result['status'] ?? null,
                 ]),
             ]);
 
@@ -210,13 +211,13 @@ class PaymentService
         $query = Payment::where('tenant_id', $tenantId);
 
         return [
-            'total'           => (clone $query)->count(),
-            'completed'       => (clone $query)->where('status', 'completed')->count(),
-            'failed'          => (clone $query)->where('status', 'failed')->count(),
-            'refunded'        => (clone $query)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
-            'total_revenue'   => (float) (clone $query)->where('status', 'completed')->sum('amount'),
-            'total_refunded'  => (float) (clone $query)->sum('refunded_amount'),
-            'by_provider'     => (clone $query)
+            'total' => (clone $query)->count(),
+            'completed' => (clone $query)->where('status', 'completed')->count(),
+            'failed' => (clone $query)->where('status', 'failed')->count(),
+            'refunded' => (clone $query)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
+            'total_revenue' => (float) (clone $query)->where('status', 'completed')->sum('amount'),
+            'total_refunded' => (float) (clone $query)->sum('refunded_amount'),
+            'by_provider' => (clone $query)
                 ->where('status', 'completed')
                 ->selectRaw('provider, count(*) as count, sum(amount) as total')
                 ->groupBy('provider')

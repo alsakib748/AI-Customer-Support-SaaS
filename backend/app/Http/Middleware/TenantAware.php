@@ -17,20 +17,12 @@ class TenantAware
      */
     public function handle(Request $request, Closure $next): Response
     {
-
-        // Check if user is Super Admin
         $user = auth()->user();
 
-        // Check if user is Super Admin
-        if ($user && $user->hasRole('super_admin')) {
-            Log::info('Super Admin accessing route', [
-                'user_id' => $user->id,
-                'path' => $request->path(),
-            ]);
-
-            $request->attributes->set('is_super_admin', true);
-            // Don't return here, allow tenant resolution to continue
-        }
+        // Resolve the super-admin flag exactly once per request and share it with
+        // downstream middleware so they don't repeat the Spatie role lookup.
+        $isSuperAdmin = $user ? $user->hasRole('super_admin') : false;
+        $request->attributes->set('is_super_admin', $isSuperAdmin);
 
         $tenant = null;
 
@@ -53,7 +45,7 @@ class TenantAware
                 ], 404);
             }
 
-            if (! $user->hasRole('super_admin') && ! $user->hasTenantAccess($tenant->id)) {
+            if (! $isSuperAdmin && ! $user->hasTenantAccess($tenant->id)) {
                 Log::warning('Tenant access denied', [
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
@@ -66,7 +58,8 @@ class TenantAware
                 ], 403);
             }
 
-            Log::info('Tenant from header', ['tenant_id' => $tenantId]);
+            // Membership was verified here (or is implicit for super admins).
+            $request->attributes->set('tenant_membership_verified', true);
         }
 
         // 2. Try to get from authenticated user
@@ -74,9 +67,6 @@ class TenantAware
             $tenantId = $user->current_tenant_id;
             if ($tenantId) {
                 $tenant = Tenant::find($tenantId);
-                if ($tenant) {
-                    Log::info('Tenant from user current_tenant_id', ['tenant_id' => $tenantId]);
-                }
             }
         }
 
@@ -85,22 +75,20 @@ class TenantAware
             $tenant = $user->tenants()->first();
             if ($tenant) {
                 $user->update(['current_tenant_id' => $tenant->id]);
-                Log::info('Tenant from first tenant', ['tenant_id' => $tenant->id]);
+                // The first-tenant lookup itself proves membership.
+                $request->attributes->set('tenant_membership_verified', true);
             }
         }
 
         // 4. Super Admin fallback to first available tenant in system
-        if (! $tenant && $user && $user->hasRole('super_admin')) {
+        if (! $tenant && $user && $isSuperAdmin) {
             $tenant = Tenant::first();
-            if ($tenant) {
-                Log::info('Super Admin fallback to first system tenant', ['tenant_id' => $tenant->id]);
-            }
         }
 
         if ($tenant) {
             // Suspended / archived tenants are blocked for everyone except Super Admin
             // (who may still use the Manage Tenant context).
-            if ($user && ! $user->hasRole('super_admin')) {
+            if ($user && ! $isSuperAdmin) {
                 $path = $request->path();
 
                 $allowedWhileSuspended = collect(config('billing.suspended_tenant_allowed_paths', [
@@ -146,14 +134,9 @@ class TenantAware
                     'message' => 'Tenant initialization failed: '.$e->getMessage(),
                 ], 500);
             }
-            Log::info('Tenant set in request', ['tenant_id' => $tenant->id]);
         } else {
             // Allow Super Admin to proceed without a tenant context
-            if ($user && $user->hasRole('super_admin')) {
-                Log::info('Super Admin proceeding without tenant context', [
-                    'path' => $request->path(),
-                ]);
-
+            if ($isSuperAdmin) {
                 return $next($request);
             }
 

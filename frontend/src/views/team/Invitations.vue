@@ -5,6 +5,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useTeamStore } from '@/stores/team';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const teamStore = useTeamStore();
 const authStore = useAuthStore();
@@ -62,6 +63,8 @@ const applyInvitationFilters = () => {
     teamStore.invitationFilters = { ...invitationFilters };
     teamStore.fetchInvitations();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyInvitationFilters, 400);
 
 const clearInvitationFilters = () => {
     Object.assign(invitationFilters, {
@@ -165,7 +168,7 @@ onMounted(() => {
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="invitationFilters.search" placeholder="Search invitations..." class="w-full" @input="applyInvitationFilters" />
+                <InputText v-model="invitationFilters.search" placeholder="Search invitations..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-48">
                 <Select v-model="invitationFilters.status" :options="statusFilterOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyInvitationFilters" />

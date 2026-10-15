@@ -1,12 +1,16 @@
 <?php
+
 // app/Services/Billing/InvoiceService.php
 
 namespace App\Services\Billing;
 
+use App\Events\Billing\InvoicePaid;
+use App\Models\Coupon;
 use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Models\Tenant;
-use App\Models\Coupon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -19,20 +23,20 @@ class InvoiceService
     {
         $query = Invoice::forTenant($tenantId);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
         return $query->orderBy('created_at', 'desc')
-            ->paginate($filters['per_page'] ?? 20);
+            ->paginate(min(max((int) ($filters['per_page'] ?? 20), 1), 100));
     }
 
     /**
@@ -117,10 +121,10 @@ class InvoiceService
             $amount = $plan->getPriceForCycle($subscription->billing_cycle);
 
             $lineItems = [[
-                'description' => $plan->name . ' — ' . ucfirst($subscription->billing_cycle),
-                'quantity'    => 1,
-                'unit_price'  => $amount,
-                'total'       => $amount,
+                'description' => $plan->name.' — '.ucfirst($subscription->billing_cycle),
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'total' => $amount,
             ]];
 
             // Apply coupon discounts if any
@@ -132,24 +136,22 @@ class InvoiceService
             $total = max(0, $amount - $discount);
 
             return Invoice::create([
-                'tenant_id'              => $subscription->tenant_id,
-                'subscription_id'        => $subscription->id,
-                'invoice_number'         => $this->generateInvoiceNumber(),
-                'subtotal'               => $amount,
-                'tax_amount'             => 0,
-                'discount_amount'        => $discount,
-                'total'                  => $total,
-                'currency'               => $plan->currency ?? 'USD',
-                'status'                 => 'open',
-                'due_at'                 => now()->addDays(config('billing.invoice.due_days', 7)),
-                'period_starts_at'       => $subscription->current_period_starts_at ?? $subscription->starts_at,
-                'period_ends_at'         => $subscription->current_period_ends_at   ?? $subscription->ends_at,
-                'line_items'             => $lineItems,
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'invoice_number' => $this->generateInvoiceNumber(),
+                'subtotal' => $amount,
+                'tax_amount' => 0,
+                'discount_amount' => $discount,
+                'total' => $total,
+                'currency' => $plan->currency ?? 'USD',
+                'status' => 'open',
+                'due_at' => now()->addDays(config('billing.invoice.due_days', 7)),
+                'period_starts_at' => $subscription->current_period_starts_at ?? $subscription->starts_at,
+                'period_ends_at' => $subscription->current_period_ends_at ?? $subscription->ends_at,
+                'line_items' => $lineItems,
             ]);
         });
     }
-
-
 
     /**
      * Create renewal invoice
@@ -216,18 +218,18 @@ class InvoiceService
         }
 
         $invoice->update([
-            'status'         => 'paid',
-            'paid_at'        => now(),
+            'status' => 'paid',
+            'paid_at' => now(),
             'payment_method' => $method,
             'transaction_id' => $transactionId,
         ]);
 
         Log::info('Invoice marked as paid', [
             'invoice_id' => $invoice->id,
-            'amount'     => $invoice->total,
+            'amount' => $invoice->total,
         ]);
 
-        event(new \App\Events\Billing\InvoicePaid($invoice));
+        event(new InvoicePaid($invoice));
 
         return $invoice->fresh();
     }
@@ -249,6 +251,7 @@ class InvoiceService
     public function void(Invoice $invoice): Invoice
     {
         $invoice->update(['status' => 'void']);
+
         return $invoice->fresh();
     }
 
@@ -260,37 +263,40 @@ class InvoiceService
         $prefix = config('billing.invoice.prefix', 'INV-');
         $period = date('Ym');
 
+        // Fetch only the highest number for the period instead of loading every
+        // invoice for the month into PHP. Numbers are fixed-width zero-padded,
+        // so lexicographic ordering matches numeric ordering.
         // Include soft-deleted rows: invoice_number is unique, and ignoring
         // trashed rows would let a deleted number be reused and collide.
-        $max = Invoice::withTrashed()
+        $latest = Invoice::withTrashed()
             ->where('invoice_number', 'LIKE', "{$prefix}{$period}%")
-            ->get(['invoice_number'])
-            ->reduce(function (?int $carry, $invoice) {
-                if (preg_match('/-(\d{6})$/', (string) $invoice->invoice_number, $m)) {
-                    return max($carry ?? 0, (int) $m[1]);
-                }
-                return $carry;
-            });
+            ->orderByDesc('invoice_number')
+            ->value('invoice_number');
 
-        $next = str_pad(($max ?? 0) + 1, 6, '0', STR_PAD_LEFT);
+        $max = 0;
+        if ($latest && preg_match('/-(\d{6})$/', (string) $latest, $m)) {
+            $max = (int) $m[1];
+        }
+
+        $next = str_pad($max + 1, 6, '0', STR_PAD_LEFT);
 
         return "{$prefix}{$period}-{$next}";
     }
 
-     /**
+    /**
      * Get invoices for a tenant.
      */
     public function getForTenant(string $tenantId, array $filters = [])
     {
         return Invoice::where('tenant_id', $tenantId)
-            ->when($filters['status']   ?? null, fn ($q, $s) => $q->where('status', $s))
-            ->when($filters['date_from']?? null, fn ($q, $d) => $q->where('created_at', '>=', $d))
-            ->when($filters['date_to']  ?? null, fn ($q, $d) => $q->where('created_at', '<=', $d))
+            ->when($filters['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($filters['date_from'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', $d))
+            ->when($filters['date_to'] ?? null, fn ($q, $d) => $q->where('created_at', '<=', $d))
             ->latest()
-            ->paginate($filters['per_page'] ?? 20);
+            ->paginate(min(max((int) ($filters['per_page'] ?? 20), 1), 100));
     }
 
-        /**
+    /**
      * Get invoice statistics
      */
     // public function getStatistics(string $tenantId): array
@@ -312,13 +318,13 @@ class InvoiceService
         $query = Invoice::where('tenant_id', $tenantId);
 
         return [
-            'total'                => (clone $query)->count(),
-            'paid'                 => (clone $query)->where('status', 'paid')->count(),
-            'open'                 => (clone $query)->where('status', 'open')->count(),
-            'overdue'              => (clone $query)->where('status', 'open')
-                                        ->where('due_at', '<', now())->count(),
-            'total_amount'         => (float) (clone $query)->where('status', 'paid')->sum('total'),
-            'outstanding_amount'   => (float) (clone $query)->where('status', 'open')->sum('total'),
+            'total' => (clone $query)->count(),
+            'paid' => (clone $query)->where('status', 'paid')->count(),
+            'open' => (clone $query)->where('status', 'open')->count(),
+            'overdue' => (clone $query)->where('status', 'open')
+                ->where('due_at', '<', now())->count(),
+            'total_amount' => (float) (clone $query)->where('status', 'paid')->sum('total'),
+            'outstanding_amount' => (float) (clone $query)->where('status', 'open')->sum('total'),
         ];
     }
 
@@ -334,17 +340,16 @@ class InvoiceService
 
         $html = view('billing.invoice-pdf', ['invoice' => $invoice])->render();
 
-        $options = new \Dompdf\Options();
+        $options = new Options;
         $options->set('isRemoteEnabled', false);
         $options->set('isHtml5ParserEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
 
-        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
         return $dompdf->output();
     }
-
 }

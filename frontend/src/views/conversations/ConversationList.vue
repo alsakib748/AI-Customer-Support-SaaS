@@ -1,6 +1,6 @@
 <!-- src/views/conversations/ConversationList.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConversationStore } from '@/stores/conversation';
 import { useCustomerStore } from '@/stores/customer';
@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const router = useRouter();
 const conversationStore = useConversationStore();
@@ -120,6 +121,8 @@ const applyFilters = () => {
     conversationStore.filters = { ...filters };
     conversationStore.fetchConversations();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyFilters, 400);
 
 const clearFilters = () => {
     Object.assign(filters, {
@@ -267,13 +270,6 @@ const getFieldError = (field) => {
 onMounted(() => {
     loadData();
 });
-
-watch(
-    () => filters.search,
-    () => {
-        applyFilters();
-    }
-);
 </script>
 
 <template>
@@ -329,7 +325,7 @@ watch(
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search conversations..." class="w-full" @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search conversations..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-40">
                 <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />

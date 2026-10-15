@@ -28,6 +28,7 @@ class UserListService
     public function paginate(array $filters = []): LengthAwarePaginator
     {
         $query = User::query()
+            ->with('roles')
             ->withCount('tenantUsers');
 
         // Search (name, email, username)
@@ -97,19 +98,19 @@ class UserListService
      */
     public function statistics(): array
     {
-        $total     = User::query()->count();
-        $active    = User::query()->where('is_active', true)->count();
+        $total = User::query()->count();
+        $active = User::query()->where('is_active', true)->count();
         $suspended = $total - $active;
-        $platform  = User::role('super_admin')->count();
-        $verified  = User::query()->whereNotNull('email_verified_at')->count();
+        $platform = User::role('super_admin')->count();
+        $verified = User::query()->whereNotNull('email_verified_at')->count();
 
         return [
-            'total'     => $total,
-            'active'    => $active,
+            'total' => $total,
+            'active' => $active,
             'suspended' => $suspended,
-            'platform'  => $platform,
-            'tenant'    => max(0, $total - $platform),
-            'verified'  => $verified,
+            'platform' => $platform,
+            'tenant' => max(0, $total - $platform),
+            'verified' => $verified,
             'unverified' => max(0, $total - $verified),
         ];
     }

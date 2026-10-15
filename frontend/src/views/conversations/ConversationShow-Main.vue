@@ -6,6 +6,7 @@ import { useConversationStore } from '@/stores/conversation';
 import { useMessageStore } from '@/stores/message';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const route = useRoute();
 const router = useRouter();
@@ -139,6 +140,8 @@ const searchConversations = () => {
     loadConversations();
 };
 
+const { debounced: debouncedSearchConversations } = useDebounceFn(searchConversations, 400);
+
 const scrollToBottom = () => {
     nextTick(() => {
         if (messagesEnd.value) {
@@ -185,7 +188,7 @@ watch(
         <div class="w-80 border-r border-surface-200 dark:border-surface-700 flex flex-col">
             <div class="p-4 border-b border-surface-200 dark:border-surface-700">
                 <h2 class="text-lg font-bold">Conversations</h2>
-                <InputText v-model="conversationFilters.search" placeholder="Search..." class="w-full mt-2" @input="searchConversations" />
+                <InputText v-model="conversationFilters.search" placeholder="Search..." class="w-full mt-2" @input="debouncedSearchConversations" />
             </div>
             <div class="flex-1 overflow-y-auto">
                 <div v-if="loadingConversations" class="p-4 text-center">

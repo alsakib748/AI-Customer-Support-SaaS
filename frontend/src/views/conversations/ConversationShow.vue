@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 // Import components
 import MessageBubble from '@/components/messages/MessageBubble.vue';
@@ -306,6 +307,8 @@ const searchConversations = () => {
     loadConversations();
 };
 
+const { debounced: debouncedSearchConversations } = useDebounceFn(searchConversations, 400);
+
 const scrollToBottom = () => {
     nextTick(() => {
         if (messagesEnd.value) {
@@ -358,7 +361,7 @@ onUnmounted(() => {
         <div class="w-80 border-r border-surface-200 dark:border-surface-700 flex flex-col">
             <div class="p-4 border-b border-surface-200 dark:border-surface-700">
                 <h2 class="text-lg font-bold">Conversations</h2>
-                <InputText v-model="conversationFilters.search" placeholder="Search..." class="w-full mt-2" @input="searchConversations" />
+                <InputText v-model="conversationFilters.search" placeholder="Search..." class="w-full mt-2" @input="debouncedSearchConversations" />
             </div>
             <div class="flex-1 overflow-y-auto">
                 <div v-if="loadingConversations" class="p-4 text-center">

@@ -166,8 +166,13 @@ export const useAuthStore = defineStore('auth', () => {
 
             setAuth(data);
 
-            // Fetch full authorization context
-            await fetchMe().catch(() => {});
+            // Fetch full authorization context only when the response did not
+            // already include it, then mark auth as initialized so the router
+            // guard does not refetch /auth/me on the next navigation.
+            if (!data.role || !Array.isArray(data.permissions)) {
+                await fetchMe().catch(() => {});
+            }
+            initialized.value = true;
 
             router.push('/dashboard');
             toast.success(`Welcome, ${data.user.first_name}`);
@@ -182,11 +187,15 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     const login = async (credentials) => {
+        // Guard against duplicate submissions (double-click / Enter + click).
+        // The login request must never be sent twice for the same intent.
+        if (loading.value) return;
+
         loading.value = true;
         error.value = null;
 
         try {
-            const response = await api.post('/auth/login', credentials);
+            const response = await api.post('/auth/login', credentials, { skipAuthRefresh: true });
 
             if (!response.data.success) {
                 throw new Error('Login failed');
@@ -195,12 +204,20 @@ export const useAuthStore = defineStore('auth', () => {
             const data = response.data.data;
             setAuth(data);
 
-            // Fetch authorization context (role + permissions)
-            try {
-                await fetchMe();
-            } catch (e) {
-                console.warn('Could not fetch /me after login:', e);
+            // The login response already carries the authorization context
+            // (role, permissions, tenant), so only fall back to /auth/me if it
+            // is missing. A successful login costs a single network request.
+            if (!data.role || !Array.isArray(data.permissions)) {
+                try {
+                    await fetchMe();
+                } catch (e) {
+                    console.warn('Could not fetch /me after login:', e);
+                }
             }
+
+            // Mark auth as initialized so the router guard does not issue a
+            // second /auth/me on the very next navigation.
+            initialized.value = true;
 
             const redirectTo = getRedirectPath();
             router.push(redirectTo);
@@ -232,7 +249,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     const refreshToken = async () => {
         try {
-            const response = await api.post('/auth/refresh');
+            const response = await api.post('/auth/refresh', {}, { skipAuthRefresh: true });
             const newToken = response.data.data.token;
 
             token.value = newToken;
@@ -411,6 +428,7 @@ export const useAuthStore = defineStore('auth', () => {
                 api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
 
                 await fetchMe().catch(() => {});
+                initialized.value = true;
             }
 
             return response.data;

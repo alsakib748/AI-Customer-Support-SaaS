@@ -1,6 +1,6 @@
 <!-- src/views/tickets/Tickets.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTicketStore } from '@/stores/ticket';
 import { useCustomerStore } from '@/stores/customer';
@@ -8,6 +8,7 @@ import { useConversationStore } from '@/stores/conversation';
 import { useTeamStore } from '@/stores/team';
 import { useAuthStore } from '@/stores/auth';
 // import { useToast } from 'primevue/usetoast';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const router = useRouter();
 const ticketStore = useTicketStore();
@@ -136,6 +137,8 @@ const applyFilters = () => {
     ticketStore.filters = { ...filters };
     ticketStore.fetchTickets();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyFilters, 400);
 
 const clearFilters = () => {
     Object.assign(filters, {
@@ -311,13 +314,6 @@ const getFieldError = (field) => {
 onMounted(() => {
     loadData();
 });
-
-watch(
-    () => filters.search,
-    () => {
-        applyFilters();
-    }
-);
 </script>
 
 <template>
@@ -381,7 +377,7 @@ watch(
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search tickets..." class="w-full" @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search tickets..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-40">
                 <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />

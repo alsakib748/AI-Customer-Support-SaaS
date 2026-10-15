@@ -179,7 +179,7 @@ class InvitationService
         }
 
         return $query->orderBy('created_at', 'desc')
-            ->paginate($filters['per_page'] ?? 20);
+            ->paginate(min(max((int) ($filters['per_page'] ?? 20), 1), 100));
     }
 
     /**

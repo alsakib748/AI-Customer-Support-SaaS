@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/Team/TeamMemberService.php
 
 namespace App\Services\Team;
@@ -7,14 +8,15 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class TeamMemberService
 {
     protected ?Tenant $tenant;
+
     protected ?User $user;
+
     protected ?string $tenantId;
 
     protected bool $isSuperAdmin = false;
@@ -27,6 +29,7 @@ class TeamMemberService
         if ($this->user && $this->user->hasRole('super_admin')) {
             $this->isSuperAdmin = true;
             Log::info('Super Admin accessing team service', ['user_id' => $this->user->id]);
+
             // Super Admin doesn't need a specific tenant
             return;
         }
@@ -40,7 +43,7 @@ class TeamMemberService
 
         $tenant = $request->attributes->get('current_tenant');
 
-        if (!$tenant) {
+        if (! $tenant) {
             $tenantId = $request->header('X-Tenant-Id')
                 ?? $request->header('X-Tenant-ID')
                 ?? $request->header('x-tenant-id');
@@ -51,12 +54,12 @@ class TeamMemberService
             }
         }
 
-        if (!$tenant && $this->user) {
+        if (! $tenant && $this->user) {
             $tenant = $this->user->tenants()->first();
             Log::info('Tenant from first tenant', ['tenant_id' => $tenant?->id]);
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             throw new \RuntimeException('No workspace found. Please create or select a workspace.');
         }
 
@@ -71,9 +74,10 @@ class TeamMemberService
      */
     protected function getTenantId(): string
     {
-        if (!$this->tenantId) {
+        if (! $this->tenantId) {
             throw new \RuntimeException('No tenant found in current context');
         }
+
         return $this->tenantId;
     }
 
@@ -82,7 +86,7 @@ class TeamMemberService
      */
     public function hasPermission(string $permission): bool
     {
-        if (!$this->user) {
+        if (! $this->user) {
             return false;
         }
 
@@ -100,7 +104,7 @@ class TeamMemberService
      */
     public function canManageTeam(): bool
     {
-        if (!$this->user) {
+        if (! $this->user) {
             return false;
         }
 
@@ -127,7 +131,7 @@ class TeamMemberService
      */
     public function canViewMembers(): bool
     {
-        if (!$this->user) {
+        if (! $this->user) {
             return false;
         }
 
@@ -142,7 +146,6 @@ class TeamMemberService
             'team.view',
         ]);
     }
-
 
     /**
      * Check if current user can invite members
@@ -222,14 +225,14 @@ class TeamMemberService
     public function getMembers(array $filters = [])
     {
         try {
-            $query = TenantUser::query()->with('user');
+            $query = TenantUser::query()->with(['user.roles', 'user.permissions', 'user.roles.permissions']);
 
             // If Super Admin, show all members across all tenants
             if ($this->isSuperAdmin) {
                 Log::info('Super Admin viewing all team members', ['user_id' => $this->user->id]);
 
                 // Optional: Add tenant filter if specified
-                if (!empty($filters['tenant_id'])) {
+                if (! empty($filters['tenant_id'])) {
                     $query->where('tenant_id', $filters['tenant_id']);
                 }
 
@@ -319,7 +322,7 @@ class TeamMemberService
     protected function applyFiltersAndPagination($query, array $filters = [])
     {
         // Search
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($userQuery) use ($search) {
@@ -333,22 +336,22 @@ class TeamMemberService
         }
 
         // Filter by department
-        if (!empty($filters['department'])) {
+        if (! empty($filters['department'])) {
             $query->where('department', $filters['department']);
         }
 
         // Filter by availability status
-        if (!empty($filters['availability_status'])) {
+        if (! empty($filters['availability_status'])) {
             $query->where('availability_status', $filters['availability_status']);
         }
 
         // Filter by role
-        if (!empty($filters['role'])) {
+        if (! empty($filters['role'])) {
             $query->where('role', $filters['role']);
         }
 
         // Filter by tenant (for Super Admin)
-        if (!empty($filters['tenant_id'])) {
+        if (! empty($filters['tenant_id'])) {
             $query->where('tenant_id', $filters['tenant_id']);
         }
 
@@ -370,7 +373,8 @@ class TeamMemberService
             $query->orderBy('created_at', 'desc');
         }
 
-        $perPage = $filters['per_page'] ?? 20;
+        $perPage = min(max((int) ($filters['per_page'] ?? 20), 1), 100);
+
         return $query->paginate($perPage);
     }
 
@@ -382,12 +386,13 @@ class TeamMemberService
         $query = TenantUser::query()->with('user');
 
         // Super Admin can access any member
-        if (!$this->isSuperAdmin) {
+        if (! $this->isSuperAdmin) {
             $tenantId = $this->getTenantId();
             $query->where('tenant_id', $tenantId);
         }
 
         $member = $query->findOrFail($id);
+
         return $member;
     }
 
@@ -399,9 +404,9 @@ class TeamMemberService
         $member = $this->getMember($id);
 
         // Prevent updating owner
-        if ($member->isOwner() && !$this->isSuperAdmin) {
+        if ($member->isOwner() && ! $this->isSuperAdmin) {
             throw ValidationException::withMessages([
-                'role' => ['Cannot update the owner. Owner permissions are managed separately.']
+                'role' => ['Cannot update the owner. Owner permissions are managed separately.'],
             ]);
         }
 
@@ -464,7 +469,7 @@ class TeamMemberService
         $member = $this->getMember($id);
 
         // Prevent removing the owner (unless Super Admin)
-        if ($member->isOwner() && !$this->isSuperAdmin) {
+        if ($member->isOwner() && ! $this->isSuperAdmin) {
             throw ValidationException::withMessages([
                 'member' => ['Cannot remove the workspace owner.'],
             ]);
@@ -540,7 +545,6 @@ class TeamMemberService
             ];
         }
 
-
         $tenantId = $this->getTenantId();
         $query->where('tenant_id', $tenantId);
 
@@ -579,6 +583,7 @@ class TeamMemberService
         // Super Admin sees all departments
         if ($this->isSuperAdmin) {
             Log::info('Super Admin viewing all departments', ['user_id' => $this->user->id]);
+
             return $query->whereNotNull('department')
                 ->select('department')
                 ->distinct()
@@ -598,7 +603,7 @@ class TeamMemberService
 
     public function getTenants(): array
     {
-        if (!$this->isSuperAdmin) {
+        if (! $this->isSuperAdmin) {
             return [];
         }
 
@@ -608,5 +613,4 @@ class TeamMemberService
             ->get()
             ->toArray();
     }
-
 }

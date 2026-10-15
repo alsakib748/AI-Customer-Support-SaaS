@@ -20,9 +20,13 @@ class SetPermissionTeam
         $tenant = $request->attributes->get('current_tenant')
             ?? app()->bound('current_tenant') ? app('current_tenant') : null;
 
+        // Reuse the flag resolved by TenantAware instead of re-running the
+        // Spatie role lookup on every request.
+        $isSuperAdmin = (bool) $request->attributes->get('is_super_admin', false);
+
         // Super admins always operate in platform scope: their role holds no
         // tenant_id, so scoping to a tenant would strip platform permissions.
-        if ($user && $user->isSuperAdmin()) {
+        if ($user && $isSuperAdmin) {
             setPermissionsTeamId(null);
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             $user->unsetRelation('roles');
@@ -32,7 +36,7 @@ class SetPermissionTeam
         }
 
         // If Super Admin with no tenant context, leave team unset (platform scope)
-        if (!$tenant) {
+        if (! $tenant) {
             // Ensure platform scope
             setPermissionsTeamId(null);
             app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -40,13 +44,15 @@ class SetPermissionTeam
             return $next($request);
         }
 
-        // Verify membership before setting team
-        if ($user && !$user->isSuperAdmin()) {
+        // Verify membership before setting team. TenantAware already proved
+        // membership for header- and first-tenant resolutions, so skip the
+        // duplicate exists() query in that case.
+        if ($user && ! $request->attributes->get('tenant_membership_verified', false)) {
             $belongs = $user->tenants()
                 ->where('tenants.id', $tenant->id)
                 ->exists();
 
-            if (!$belongs) {
+            if (! $belongs) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this workspace.',

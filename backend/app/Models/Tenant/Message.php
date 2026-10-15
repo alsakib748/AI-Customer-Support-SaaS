@@ -3,8 +3,8 @@
 namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Message extends Model
 {
@@ -57,16 +57,41 @@ class Message extends Model
     // ACCESSORS
     // ============================================
 
+    /**
+     * Memoized customer sender resolver. Avoids re-querying per accessor and
+     * allows the service layer to preload senders for a whole page in one query.
+     */
+    protected ?Customer $resolvedSender = null;
+
+    protected bool $senderResolved = false;
+
+    protected function resolveSenderCustomer(): ?Customer
+    {
+        if (! $this->senderResolved) {
+            $this->senderResolved = true;
+            $this->resolvedSender = $this->sender_type === 'customer' && $this->sender_id
+                ? Customer::find($this->sender_id)
+                : null;
+        }
+
+        return $this->resolvedSender;
+    }
+
+    public function setSenderCustomerAttribute(?Customer $customer): void
+    {
+        $this->resolvedSender = $customer;
+        $this->senderResolved = true;
+    }
+
     public function getSenderNameAttribute(): string
     {
         if ($this->sender_type === 'customer') {
-            $customer = Customer::find($this->sender_id);
-            return $customer?->full_name ?? 'Unknown Customer';
+            return $this->resolveSenderCustomer()?->full_name ?? 'Unknown Customer';
         }
 
         if ($this->sender_type === 'agent') {
             // Will be resolved from central DB
-            return 'Agent #' . $this->sender_id;
+            return 'Agent #'.$this->sender_id;
         }
 
         if ($this->sender_type === 'ai') {
@@ -83,8 +108,7 @@ class Message extends Model
     public function getSenderAvatarAttribute(): ?string
     {
         if ($this->sender_type === 'customer') {
-            $customer = Customer::find($this->sender_id);
-            return $customer?->avatar_url;
+            return $this->resolveSenderCustomer()?->avatar_url;
         }
 
         return null;
@@ -117,7 +141,7 @@ class Message extends Model
 
     public function getIsTextMessageAttribute(): bool
     {
-        return $this->message_type === 'text' && !$this->is_internal;
+        return $this->message_type === 'text' && ! $this->is_internal;
     }
 
     public function getTimeAgoAttribute(): string
@@ -217,7 +241,7 @@ class Message extends Model
 
     public function isPublic(): bool
     {
-        return !$this->is_internal;
+        return ! $this->is_internal;
     }
 
     public function isText(): bool

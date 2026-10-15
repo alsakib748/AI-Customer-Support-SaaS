@@ -4,9 +4,7 @@ namespace App\Services\Billing;
 
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Plan;
 use App\Models\Subscription;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class BillingAnalyticsService
@@ -59,14 +57,14 @@ class BillingAnalyticsService
 
     public function calculateMrr(): float
     {
-        $rows = Subscription::with('plan')
+        $rows = Subscription::with(['plan', 'items'])
             ->whereIn('status', ['active', 'past_due'])
             ->get();
 
         $mrr = 0.0;
 
         foreach ($rows as $subscription) {
-            if (!$subscription->plan) {
+            if (! $subscription->plan) {
                 continue;
             }
 
@@ -96,7 +94,7 @@ class BillingAnalyticsService
             ->groupBy('plan_id')
             ->with('plan:id,name,slug')
             ->get()
-            ->map(fn($row) => [
+            ->map(fn ($row) => [
                 'plan_id' => $row->plan_id,
                 'plan_name' => $row->plan?->name ?? 'Unknown',
                 'count' => (int) $row->total,

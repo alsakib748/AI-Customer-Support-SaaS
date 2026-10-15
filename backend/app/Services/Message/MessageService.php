@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/Message/MessageService.php
 
 namespace App\Services\Message;
@@ -8,6 +9,7 @@ use App\Models\Tenant\Conversation;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Message;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 class MessageService
 {
     protected $tenant;
+
     protected $currentUser;
 
     public function __construct()
@@ -37,26 +40,58 @@ class MessageService
         $user = auth()->user();
         $isAgent = $user && $user->hasPermissionTo('conversations.view');
 
-        if (!$isAgent) {
+        if (! $isAgent) {
             // Customers don't see internal messages
             $query->public();
         }
 
         // Filter by message type
-        if (!empty($filters['message_type'])) {
+        if (! empty($filters['message_type'])) {
             $query->where('message_type', $filters['message_type']);
         }
 
         // Filter by sender type
-        if (!empty($filters['sender_type'])) {
+        if (! empty($filters['sender_type'])) {
             $query->where('sender_type', $filters['sender_type']);
         }
 
         // Order by oldest first (for chat display)
         $query->orderBy('created_at', 'asc');
 
-        $perPage = $filters['per_page'] ?? 30;
-        return $query->paginate($perPage);
+        $perPage = min(max((int) ($filters['per_page'] ?? 30), 1), 100);
+        $paginator = $query->paginate($perPage);
+
+        $this->preloadCustomerSenders($paginator->getCollection());
+
+        return $paginator;
+    }
+
+    /**
+     * Resolve every customer sender on the page with a single query instead of
+     * one Customer::find() per message row (N+1).
+     *
+     * @param  Collection<int, Message>  $messages
+     */
+    protected function preloadCustomerSenders($messages): void
+    {
+        $senderIds = $messages
+            ->where('sender_type', 'customer')
+            ->pluck('sender_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($senderIds->isEmpty()) {
+            return;
+        }
+
+        $customers = Customer::whereIn('id', $senderIds)->get()->keyBy('id');
+
+        foreach ($messages as $message) {
+            if ($message->sender_type === 'customer') {
+                $message->sender_customer = $customers->get($message->sender_id);
+            }
+        }
     }
 
     /**
@@ -70,7 +105,7 @@ class MessageService
         // Check if user can see internal messages
         if ($message->is_internal) {
             $user = auth()->user();
-            if (!$user || !$user->hasPermissionTo('conversations.view')) {
+            if (! $user || ! $user->hasPermissionTo('conversations.view')) {
                 throw ValidationException::withMessages([
                     'message' => ['You do not have permission to view this message.'],
                 ]);
@@ -103,7 +138,7 @@ class MessageService
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'auth' => ['You must be authenticated to send messages.'],
             ]);
@@ -113,7 +148,7 @@ class MessageService
         $this->verifyUserInTenant($user->id);
 
         // Check permission
-        if (!$user->hasPermissionTo('conversations.reply')) {
+        if (! $user->hasPermissionTo('conversations.reply')) {
             throw ValidationException::withMessages([
                 'permission' => ['You do not have permission to reply to conversations.'],
             ]);
@@ -170,14 +205,14 @@ class MessageService
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'auth' => ['You must be authenticated to add notes.'],
             ]);
         }
 
         // Check permission
-        if (!$user->hasPermissionTo('conversations.reply')) {
+        if (! $user->hasPermissionTo('conversations.reply')) {
             throw ValidationException::withMessages([
                 'permission' => ['You do not have permission to add notes.'],
             ]);
@@ -238,7 +273,7 @@ class MessageService
 
         // Check permission
         $user = auth()->user();
-        if (!$user || !$user->hasPermissionTo('conversations.delete')) {
+        if (! $user || ! $user->hasPermissionTo('conversations.delete')) {
             throw ValidationException::withMessages([
                 'permission' => ['You do not have permission to delete messages.'],
             ]);
@@ -268,7 +303,7 @@ class MessageService
     protected function getSystemEventMessage(string $event, array $data = []): string
     {
         $messages = [
-            'conversation_assigned' => 'Conversation assigned to user #' . ($data['assigned_user_id'] ?? 'unknown'),
+            'conversation_assigned' => 'Conversation assigned to user #'.($data['assigned_user_id'] ?? 'unknown'),
             'conversation_unassigned' => 'Conversation unassigned',
             'conversation_resolved' => 'Conversation resolved',
             'conversation_reopened' => 'Conversation reopened',
@@ -285,7 +320,7 @@ class MessageService
      */
     protected function verifyConversationAccess(Conversation $conversation): void
     {
-        if (!$this->tenant) {
+        if (! $this->tenant) {
             throw ValidationException::withMessages([
                 'tenant' => ['No tenant context found.'],
             ]);
@@ -293,7 +328,7 @@ class MessageService
 
         // Since we're in tenant database, the conversation is automatically scoped
         // But we verify the conversation exists
-        if (!$conversation->exists) {
+        if (! $conversation->exists) {
             throw ValidationException::withMessages([
                 'conversation' => ['Conversation not found.'],
             ]);
@@ -317,7 +352,7 @@ class MessageService
      */
     protected function verifyUserInTenant(int $userId): void
     {
-        if (!$this->tenant) {
+        if (! $this->tenant) {
             throw ValidationException::withMessages([
                 'tenant' => ['No tenant context found.'],
             ]);
@@ -329,7 +364,7 @@ class MessageService
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             throw ValidationException::withMessages([
                 'user' => ['User does not belong to this workspace.'],
             ]);

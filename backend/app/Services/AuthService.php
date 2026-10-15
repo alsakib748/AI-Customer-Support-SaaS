@@ -314,13 +314,23 @@ class AuthService
             throw new ValidationException($validator);
         }
 
-        // Check if user exists
+        // Load the user once. The credential check, tenant resolution and
+        // response building below all reuse this model, so login performs a
+        // single user lookup.
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user) {
             throw ValidationException::withMessages([
                 'email' => ['No account found with this email address.'],
-                // 'No account found with this email address.'
+            ]);
+        }
+
+        // Verify the password before revealing any account state, so a
+        // deactivated or unverified account cannot be enumerated without the
+        // correct credentials.
+        if (! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['The password you entered is incorrect.'],
             ]);
         }
 
@@ -328,15 +338,6 @@ class AuthService
         if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'account' => ['Your account has been deactivated. Please contact support.'],
-                // 'Your account has been deactivated. Please contact support.'
-            ]);
-        }
-
-        // Verify the password first so an unverified account cannot be
-        // enumerated without knowing the correct credentials.
-        if (! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'password' => ['The password you entered is incorrect.'],
             ]);
         }
 
@@ -345,27 +346,33 @@ class AuthService
             throw new EmailNotVerifiedException('Please verify your email address before logging in.');
         }
 
-        // Attempt login with JWT
-        if (! $token = JWTAuth::attempt($credentials)) {
+        // The password was already verified above, so issue the token directly.
+        // JWTAuth::attempt() would repeat both the user lookup and the bcrypt
+        // hash comparison — the two most expensive steps of the request.
+        if (! $token = JWTAuth::fromUser($user)) {
             throw ValidationException::withMessages([
                 'password' => ['The password you entered is incorrect.'],
             ]);
         }
 
-        $user = auth()->user();
+        // Resolve the active tenant from the memberships we already need for
+        // the response, avoiding extra per-tenant queries.
+        $user->load('tenants');
+        $currentTenant = $user->current_tenant_id
+            ? $user->tenants->firstWhere('id', $user->current_tenant_id)
+            : null;
+        $currentTenant = $currentTenant ?? $user->tenants->first();
 
-        // Update last login
-        $user->update([
+        // Record login metadata and, when the stored tenant pointer is stale,
+        // the resolved tenant — in a single write.
+        $updates = [
             'last_login_at' => now(),
             'last_login_ip' => request()->ip(),
-        ]);
-
-        // Get current tenant
-        $currentTenant = $user->currentTenant ?? $user->tenants()->first();
-
+        ];
         if ($currentTenant && $user->current_tenant_id !== $currentTenant->id) {
-            $user->update(['current_tenant_id' => $currentTenant->id]);
+            $updates['current_tenant_id'] = $currentTenant->id;
         }
+        $user->update($updates);
 
         ['role' => $role, 'roles' => $roles, 'permissions' => $permissions, 'scope' => $scope]
             = $this->authContext($user, $currentTenant?->id);
@@ -384,6 +391,7 @@ class AuthService
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
+                'avatar_url' => $user->avatar_url,
                 'timezone' => $user->timezone,
                 'language' => $user->language,
                 'is_active' => $user->is_active,

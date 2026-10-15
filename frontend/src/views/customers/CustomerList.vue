@@ -1,10 +1,11 @@
 <!-- src/views/customers/CustomerList.vue -->
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useCustomerStore } from '@/stores/customer';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'vue3-toastify';
 import { isPlanLimitError, usePlanLimit } from '@/utils/planLimit';
+import { useDebounceFn } from '@/composables/useDebounceFn';
 
 const planLimit = usePlanLimit();
 
@@ -96,6 +97,8 @@ const applyFilters = () => {
     customerStore.filters = { ...filters };
     customerStore.fetchCustomers();
 };
+
+const { debounced: debouncedSearch } = useDebounceFn(applyFilters, 400);
 
 const clearFilters = () => {
     Object.assign(filters, {
@@ -253,13 +256,6 @@ const getFieldError = (field) => {
 onMounted(() => {
     loadData();
 });
-
-watch(
-    () => filters.search,
-    () => {
-        applyFilters();
-    }
-);
 </script>
 
 <template>
@@ -272,7 +268,7 @@ watch(
             </div>
             <div class="flex gap-3">
                 <!-- Fixed: Use openCreateModal instead of showCreateDialog -->
-                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal" v-if="authStore.hasPermission('customers.create')" />
+                <Button label="Add Customer" icon="pi pi-user-plus" severity="primary" @click="openCreateModal" v-if="canCreateCustomers" />
                 <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined @click="refreshData" :loading="loading" />
             </div>
         </div>
@@ -316,7 +312,7 @@ watch(
         <!-- Filters -->
         <div class="mb-4 flex flex-wrap gap-3 items-center">
             <div class="flex-1 min-w-[200px]">
-                <InputText v-model="filters.search" placeholder="Search customers..." class="w-full" @input="applyFilters" />
+                <InputText v-model="filters.search" placeholder="Search customers..." class="w-full" @input="debouncedSearch" />
             </div>
             <div class="w-48">
                 <Select v-model="filters.status" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full" @change="applyFilters" clearable />
